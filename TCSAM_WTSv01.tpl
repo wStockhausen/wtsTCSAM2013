@@ -9,7 +9,10 @@
 //--20140506: added parameter jitter functionality
 //
 //IMPORTANT: CPT assessment model has RKC params for 1992+ discard mortality TURNED OFF. 
-//           Model is currently set w/ these OFF. Modify lines near 899 to turn ON/OFF.
+//           Model is currently set w/ these ON. Modify lines near 919 to turn ON/OFF.
+//
+//--20140523: updated to use wtsADMB library.
+//
 //********
 //to run mcmc 
 //scmysr2003bayes -nox -mcmc 1000000 -mcsave 200
