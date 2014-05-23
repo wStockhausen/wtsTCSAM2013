@@ -26,8 +26,7 @@ GLOBALS_SECTION
     #include <math.h>
     #include <time.h>
     #include <admodel.h>
-    #include "admbFunctions.hpp" 
-    #include "rFunctions.hpp" 
+    #include "wtsADMB.hpp" 
     #include "ModelConstants.hpp"
     #include "ModelConfiguration.hpp"
     #include "FisheryData.hpp"
@@ -5216,7 +5215,7 @@ FUNCTION void myWriteParamsToR(ostream& os)
             os<<"Mmult.imm="<<Mmult_imat<<cc;
             os<<"Mmult.m="<<Mmultm<<cc;
             os<<"Mmult.f="<<Mmultf<<cc;
-            os<<"big.mort="; R::writeToR(os,value(mat_big),strXs); 
+            os<<"big.mort="; wts::writeToR(os,value(mat_big),strXs); 
         os<<")"<<cc;
         os<<"molting=list(";
             os<<"a="<<moltp_ammat<<cc;
@@ -5225,31 +5224,31 @@ FUNCTION void myWriteParamsToR(ostream& os)
         os<<"recruitment=list(";
             strp = str(1974)+":"+str(endyr);
             os<<"pMnLnRec="<<pMnLnRec<<cc;
-            os<<"pRecDevs="; R::writeToR(os,value(pRecDevs),strp);  os<<cc;
+            os<<"pRecDevs="; wts::writeToR(os,value(pRecDevs),strp);  os<<cc;
             strp = str(styr)+":"+str(1973);
             os<<"pMnLnRecEarly="<<pMnLnRecEarly<<cc;
-            os<<"pRecDevsEarly="; R::writeToR(os,value(pRecDevsEarly),strp); 
+            os<<"pRecDevsEarly="; wts::writeToR(os,value(pRecDevsEarly),strp); 
         os<<")"<<cc;
         os<<"fishery.mortality=list(";
             os<<"tcf=list(";
                 strp = wts::to_qcsv(ptrMDS->pTCFR->yrsCatch);
                 os<<"pAvgLnFM="<<pAvgLnFmTCF<<cc;
-                os<<"pFmDevs="; R::writeToR(os,value(pFmDevsTCF),strp); 
+                os<<"pFmDevs="; wts::writeToR(os,value(pFmDevsTCF),strp); 
             os<<"),";
             os<<"scf=list(";
                 strp = wts::to_qcsv(ptrMDS->pSCF->yrsCatch);
                 os<<"pAvgLnFM="<<pAvgLnFmSCF<<cc;
-                os<<"pFmDevs="; R::writeToR(os,value(pFmDevsSCF),strp); 
+                os<<"pFmDevs="; wts::writeToR(os,value(pFmDevsSCF),strp); 
             os<<"),";
             os<<"rkf=list(";
                 strp = wts::to_qcsv(ptrMDS->pRKF->yrsCatch);
                 os<<"pAvgLnFM="<<pAvgLnFmRKF<<cc;
-                os<<"pFmDevs="; R::writeToR(os,value(pFmDevsRKF),strp); 
+                os<<"pFmDevs="; wts::writeToR(os,value(pFmDevsRKF),strp); 
             os<<"),";
             os<<"gtf=list(";
                 strp = wts::to_qcsv(ptrMDS->pGTF->yrsCatch);
                 os<<"pAvgLnFM="<<pAvgLnFmGTF<<cc;
-                os<<"pFmDevs="; R::writeToR(os,value(pFmDevsGTF),strp); 
+                os<<"pFmDevs="; wts::writeToR(os,value(pFmDevsGTF),strp); 
             os<<")";
         os<<")"<<cc;
         os<<"fishery.selectivity=list(";
@@ -5258,7 +5257,7 @@ FUNCTION void myWriteParamsToR(ostream& os)
                 dvar_vector sel(1,2); dvar_vector slp(1,2); 
                 sel(1) = fish_fit_sel50_mn1; sel(2) = fish_fit_sel50_mn2;
                 slp(1) = fish_fit_slope_mn1; slp(2) = fish_fit_slope_mn2;
-                os<<"retention=list(z50="; R::writeToR(os,value(sel)); os<<", slope="; R::writeToR(os,value(slp)); os<<"),";
+                os<<"retention=list(z50="; wts::writeToR(os,value(sel)); os<<", slope="; wts::writeToR(os,value(slp)); os<<"),";
                 os<<"male=list(";
                     if (phase_logistic_sel<0){
                       os<<"=list(z50="<<fish_sel50_1<<cc<<"slope="<<fish_slope_1<<"),";
@@ -5266,7 +5265,7 @@ FUNCTION void myWriteParamsToR(ostream& os)
                         sel(1) = fish_sel50_1; sel(2) = mfexp(log_avg_sel50_3);
                         slp(1) = fish_slope_1; slp(2) = fish_slope_yr_3;
                         strp = qt+str(1)+":"+str(nlog_sel50_dev_3)+qt;
-                        os<<"z50="; R::writeToR(os,value(sel)); os<<", slope="; R::writeToR(os,value(slp)); os<<cc<<"devs.lnSel50="; R::writeToR(os,value(log_sel50_dev_3),strp);
+                        os<<"z50="; wts::writeToR(os,value(sel)); os<<", slope="; wts::writeToR(os,value(slp)); os<<cc<<"devs.lnSel50="; wts::writeToR(os,value(log_sel50_dev_3),strp);
                         if (phase_fishsel) os<<",descending.limb=list(z50="<<fish_sel50_mn2<<cc<<"slope="<<fish_slope_mn2<<")";
                     }
                 os<<"),";
@@ -5278,14 +5277,14 @@ FUNCTION void myWriteParamsToR(ostream& os)
                 dvar_vector sel(1,3); dvar_vector slp(1,3);
                 sel(1) = snowfish_disc_sel50_f_1; sel(2) = snowfish_disc_sel50_f_2; sel(3) = snowfish_disc_sel50_f_3;
                 slp(1) = snowfish_disc_slope_f_1; slp(2) = snowfish_disc_slope_f_2; slp(3) = snowfish_disc_slope_f_3;
-                os<<"female=list(z50="; R::writeToR(os,value(sel)); os<<", slope="; R::writeToR(os,value(slp)); os<<"),";
+                os<<"female=list(z50="; wts::writeToR(os,value(sel)); os<<", slope="; wts::writeToR(os,value(slp)); os<<"),";
                 os<<"male=list(";
                     sel(1) = snowfish_disc_sel50_m_1; sel(2) = snowfish_disc_sel50_m_2; sel(3) = snowfish_disc_sel50_m_3;
                     slp(1) = snowfish_disc_slope_m_1; slp(2) = snowfish_disc_slope_m_2; slp(3) = snowfish_disc_slope_m_3;
-                    os<<"ascending.limb=list(z50="; R::writeToR(os,value(sel)); os<<", slope="; R::writeToR(os,value(slp)); os<<"),";
+                    os<<"ascending.limb=list(z50="; wts::writeToR(os,value(sel)); os<<", slope="; wts::writeToR(os,value(slp)); os<<"),";
                     sel(1) = snowfish_disc_sel50_m2_1; sel(2) = snowfish_disc_sel50_m2_2; sel(3) = snowfish_disc_sel50_m2_3;
                     slp(1) = snowfish_disc_slope_m2_1; slp(2) = snowfish_disc_slope_m2_2; slp(3) = snowfish_disc_slope_m2_3;
-                    os<<"descending.limb=list(z50="; R::writeToR(os,value(sel)); os<<", slope="; R::writeToR(os,value(slp)); os<<")";
+                    os<<"descending.limb=list(z50="; wts::writeToR(os,value(sel)); os<<", slope="; wts::writeToR(os,value(slp)); os<<")";
                 os<<")";
             os<<"),"<<endl;
             }
@@ -5294,10 +5293,10 @@ FUNCTION void myWriteParamsToR(ostream& os)
                 dvar_vector sel(1,3); dvar_vector slp(1,3);
                 sel(1) = rkfish_disc_sel50_f1; sel(2) = rkfish_disc_sel50_f2; sel(3) = rkfish_disc_sel50_f3;
                 slp(1) = rkfish_disc_slope_f1; slp(2) = rkfish_disc_slope_f2; slp(3) = rkfish_disc_slope_f3;
-                os<<"female=list(z50="; R::writeToR(os,value(sel)); os<<", slope="; R::writeToR(os,value(slp)); os<<"),";
+                os<<"female=list(z50="; wts::writeToR(os,value(sel)); os<<", slope="; wts::writeToR(os,value(slp)); os<<"),";
                 sel(1) = rkfish_disc_sel50_m1; sel(2) = rkfish_disc_sel50_m2; sel(3) = rkfish_disc_sel50_m3;
                 slp(1) = rkfish_disc_slope_m1; slp(2) = rkfish_disc_slope_m2; slp(3) = rkfish_disc_slope_m3;
-                os<<"male=list(z50="; R::writeToR(os,value(sel)); os<<", slope="; R::writeToR(os,value(slp)); os<<")";
+                os<<"male=list(z50="; wts::writeToR(os,value(sel)); os<<", slope="; wts::writeToR(os,value(slp)); os<<")";
             os<<"),";
             }
             {
@@ -5305,10 +5304,10 @@ FUNCTION void myWriteParamsToR(ostream& os)
                 dvar_vector sel(1,3); dvar_vector slp(1,3);
                 sel(1) = fish_disc_sel50_tf1; sel(2) = fish_disc_sel50_tf2; sel(3) = fish_disc_sel50_tf3;
                 slp(1) = fish_disc_slope_tf1; slp(2) = fish_disc_slope_tf2; slp(3) = fish_disc_slope_tf3;
-                os<<"female=list(z50="; R::writeToR(os,value(sel)); os<<", slope="; R::writeToR(os,value(slp)); os<<"),";
+                os<<"female=list(z50="; wts::writeToR(os,value(sel)); os<<", slope="; wts::writeToR(os,value(slp)); os<<"),";
                 sel(1) = fish_disc_sel50_tm1; sel(2) = fish_disc_sel50_tm2; sel(3) = fish_disc_sel50_tm3;
                 slp(1) = fish_disc_slope_tm1; slp(2) = fish_disc_slope_tm2; slp(3) = fish_disc_slope_tm3;
-                os<<"male=list(z50="; R::writeToR(os,value(sel)); os<<", slope="; R::writeToR(os,value(slp)); os<<")";
+                os<<"male=list(z50="; wts::writeToR(os,value(sel)); os<<", slope="; wts::writeToR(os,value(slp)); os<<")";
             os<<")";
             }
         os<<")";
@@ -5330,9 +5329,9 @@ FUNCTION void myWriteModPopInfoToR(ostream& os)
     }
     
     os<<"mod.pop=list("<<endl;
-        os<<"rec="; R::writeToR(os,value(rec_y),strYrs);                             os<<cc<<endl;
-        os<<"MMB="; R::writeToR(os,value(mspbio_matetime),strYrsm1);                 os<<cc<<endl;
-        os<<"nAtZ="<<endl; R::writeToR(os,nAtZ,strXs,strSCs,strMSs,strYrs,strZBins); os<<endl;
+        os<<"rec="; wts::writeToR(os,value(rec_y),strYrs);                             os<<cc<<endl;
+        os<<"MMB="; wts::writeToR(os,value(mspbio_matetime),strYrsm1);                 os<<cc<<endl;
+        os<<"nAtZ="<<endl; wts::writeToR(os,nAtZ,strXs,strSCs,strMSs,strYrs,strZBins); os<<endl;
     os<<")";
     
     cout<<"finished myWriteModPopInfoToR"<<endl;
@@ -5352,9 +5351,9 @@ FUNCTION void myWriteModFshInfoToR(ostream& os)
     }
     
     os<<"mod.pop=list("<<endl;
-        os<<"rec="; R::writeToR(os,value(rec_y),strYrs);                             os<<cc<<endl;
-        os<<"MMB="; R::writeToR(os,value(mspbio_matetime),strYrsm1);                 os<<cc<<endl;
-        os<<"nAtZ="<<endl; R::writeToR(os,nAtZ,strXs,strSCs,strMSs,strYrs,strZBins); os<<endl;
+        os<<"rec="; wts::writeToR(os,value(rec_y),strYrs);                             os<<cc<<endl;
+        os<<"MMB="; wts::writeToR(os,value(mspbio_matetime),strYrsm1);                 os<<cc<<endl;
+        os<<"nAtZ="<<endl; wts::writeToR(os,nAtZ,strXs,strSCs,strMSs,strYrs,strZBins); os<<endl;
     os<<")";
     
     cout<<"finished myWriteModPopToR"<<endl;
@@ -5386,9 +5385,9 @@ FUNCTION void myWriteMCMCToR(ostream& os)
     
     os<<"list("<<endl;
         myWriteParamsToR(os); os<<cc<<endl;
-        os<<"rec="; R::writeToR(os,value(rec_y),strYrs); os<<cc<<endl;
-        os<<"MMB="; R::writeToR(os,value(mspbio_matetime),strYrsm1); os<<cc<<endl;
-        os<<"nAtZ.last="; R::writeToR(os,nAtZlast,strXs,strSCs,strMSs,strZBins); os<<cc<<endl;
+        os<<"rec="; wts::writeToR(os,value(rec_y),strYrs); os<<cc<<endl;
+        os<<"MMB="; wts::writeToR(os,value(mspbio_matetime),strYrsm1); os<<cc<<endl;
+        os<<"nAtZ.last="; wts::writeToR(os,nAtZlast,strXs,strSCs,strMSs,strZBins); os<<cc<<endl;
         
     os<<"dummy=0),"<<endl;
     

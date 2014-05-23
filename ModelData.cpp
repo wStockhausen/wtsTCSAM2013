@@ -1,7 +1,5 @@
 #include <admodel.h>
-#include "ModelConstants.hpp"
-#include "admbFunctions.hpp"
-#include "rFunctions.hpp"
+#include "wtsADMB.hpp"
 #include "ModelConstants.hpp"
 #include "ModelConfiguration.hpp"
 #include "FisheryData.hpp"
@@ -253,7 +251,7 @@ void BioData::writeToR(ostream& os, char* nm, int indent) {
     indent++;
         //size bins
         for (int n=0;n<indent;n++) os<<tb;
-        os<<"zBins=";R::writeToR(os,zBins); os<<","<<endl;
+        os<<"zBins=";wts::writeToR(os,zBins); os<<","<<endl;
         
         //weight-at-size
         {for (int n=0;n<indent;n++) os<<tb;
@@ -264,7 +262,7 @@ void BioData::writeToR(ostream& os, char* nm, int indent) {
             adstring x = qt+STR_FEMALE+qt    +cc+ qt+STR_MALE+qt;
             adstring s = qt+STR_IMMATURE+qt  +cc+ qt+STR_MATURE+qt;
             adstring c = wts::to_qcsv(zBins);
-            R::writeToR(os,wAtZ_xmz,x,s,c); os<<endl;
+            wts::writeToR(os,wAtZ_xmz,x,s,c); os<<endl;
         indent--;}
         for (int n=0;n<indent;n++) os<<tb; os<<"),"<<endl;
         
@@ -275,7 +273,7 @@ void BioData::writeToR(ostream& os, char* nm, int indent) {
             for (int n=0;n<indent;n++) os<<tb;
             adstring x = qt+STR_FEMALE+qt    +cc+ qt+STR_MALE+qt;
             adstring z = wts::to_qcsv(zBins);
-            R::writeToR(os,prMature_xz,x,z); os<<","<<endl;
+            wts::writeToR(os,prMature_xz,x,z); os<<","<<endl;
         indent--;}
         
         //fraction mature-at-size
@@ -286,7 +284,7 @@ void BioData::writeToR(ostream& os, char* nm, int indent) {
             adstring x = qt+STR_FEMALE+qt     +cc+ qt+STR_MALE+qt;
             adstring s = qt+STR_NEW_SHELL+qt  +cc+ qt+STR_OLD_SHELL+qt;
             adstring z = wts::to_qcsv(zBins);
-            R::writeToR(os,frMature_xsz,x,s,z); os<<","<<endl;
+            wts::writeToR(os,frMature_xsz,x,s,z); os<<","<<endl;
         indent--;}
         
         //cv for min, max sizes
@@ -296,7 +294,7 @@ void BioData::writeToR(ostream& os, char* nm, int indent) {
             for (int n=0;n<indent;n++) os<<tb;
             adstring x = qt+STR_FEMALE+qt    +cc+ qt+STR_MALE+qt;
             adstring c = "'minZ','maxZ'";
-            R::writeToR(os,cvMnMxZ_xc,x,c); os<<","<<endl;
+            wts::writeToR(os,cvMnMxZ_xc,x,c); os<<","<<endl;
         indent--;}
         
         //fishery season midpoints
@@ -306,7 +304,7 @@ void BioData::writeToR(ostream& os, char* nm, int indent) {
             for (int n=0;n<indent;n++) os<<tb;
             adstring cols = "'year','midpt'";
             ivector yrs = wts::to_ivector(column(mdptFshSeasons_yc,1));
-            R::writeToR(os,mdptFshSeasons_yc,yrs,cols); os<<endl;
+            wts::writeToR(os,mdptFshSeasons_yc,yrs,cols); os<<endl;
         indent--;}
     indent--;
     for (int n=0;n<indent;n++) os<<tb;
@@ -465,11 +463,11 @@ void TrawlSurveyData::writeToR(ostream& os, char* nm, int indent) {
             os<<"abundance=list(units="<<qt<<unitsAbund<<qt<<cc<<endl;
             indent++; 
                 for (int n=0;n<indent;n++) os<<tb;
-                os<<"years="; R::writeToR(os,yrsAbund); os<<cc<<endl;
+                os<<"years="; wts::writeToR(os,yrsAbund); os<<cc<<endl;
                 for (int n=0;n<indent;n++) os<<tb;
-                os<<"cvs="; R::writeToR(os,cvsAbund_xy,x,y); os<<cc<<endl;
+                os<<"cvs="; wts::writeToR(os,cvsAbund_xy,x,y); os<<cc<<endl;
                 for (int n=0;n<indent;n++) os<<tb;
-                os<<"data="; R::writeToR(os,abund_y,y); os<<endl;
+                os<<"data="; wts::writeToR(os,abund_y,y); os<<endl;
             indent--;
         for (int n=0;n<indent;n++) os<<tb; os<<"),"<<endl;
         indent--;}
@@ -484,14 +482,14 @@ void TrawlSurveyData::writeToR(ostream& os, char* nm, int indent) {
             adstring z = wts::to_qcsv(zBins);        
             os<<"nAtZ=list(units="<<qt<<unitsNatZ<<qt<<cc<<endl; 
             for (int n=0;n<indent;n++) os<<tb;
-            os<<"years="; R::writeToR(os,yrsNatZ); os<<cc<<endl;
+            os<<"years="; wts::writeToR(os,yrsNatZ); os<<cc<<endl;
             for (int n=0;n<indent;n++) os<<tb;
-            os<<"cutpts="; R::writeToR(os,zCutPts); os<<cc<<endl;
+            os<<"cutpts="; wts::writeToR(os,zCutPts); os<<cc<<endl;
             for (int n=0;n<indent;n++) os<<tb;
-            os<<"sample.sizes="; R::writeToR(os,ssNatZ_xsmy,x,s,m,y); os<<cc<<endl;
+            os<<"sample.sizes="; wts::writeToR(os,ssNatZ_xsmy,x,s,m,y); os<<cc<<endl;
             for (int n=0;n<indent;n++) os<<tb;
             os<<"data="<<endl;
-            R::writeToR(os,nAtZ_xsmyz,x,s,m,y,z); os<<endl;
+            wts::writeToR(os,nAtZ_xsmyz,x,s,m,y,z); os<<endl;
         indent--;}
         for (int n=0;n<indent;n++) os<<tb; os<<")"<<endl;
     indent--;
@@ -553,7 +551,6 @@ void ModelDatasets::read(cifstream & is){
     {pBio = new BioData();
     cifstream strm(fnBioData,ios::in);
     strm>>(*pBio);
-    strm.close();
     if (debug){
         cout<<endl<<"#Bio Data"<<endl;
         cout<<(*pBio)<<endl;
@@ -564,7 +561,6 @@ void ModelDatasets::read(cifstream & is){
     {pTSD = new TrawlSurveyData();
     cifstream strm(fnSurveyData_Trawl,ios::in);
     strm>>(*pTSD);
-    strm.close();
     if (debug){
         cout<<endl<<"#Trawl Survey Data"<<endl;
         cout<<(*pTSD)<<endl;
@@ -575,7 +571,6 @@ void ModelDatasets::read(cifstream & is){
     {pTCFR = new RetainedFisheryData();
     cifstream strm(fnFisheryData_TCFR,ios::in);
     strm>>(*pTCFR);
-    strm.close();
     if (debug){
         cout<<endl<<"#Directed Fishery Data (retained)"<<endl;
         cout<<(*pTCFR)<<endl;
@@ -585,7 +580,6 @@ void ModelDatasets::read(cifstream & is){
     {pTCFD = new DiscardFisheryData();
     cifstream strm(fnFisheryData_TCFD,ios::in);
     strm>>(*pTCFD);
-    strm.close();
     if (debug){
         cout<<endl<<"#Directed Fishery Data (discarded)"<<endl;
         cout<<(*pTCFD)<<endl;
@@ -595,7 +589,6 @@ void ModelDatasets::read(cifstream & is){
     {pSCF = new DiscardFisheryData();
     cifstream strm(fnFisheryData_SnCF,ios::in);
     strm>>(*pSCF);
-    strm.close();
     if (debug){
         cout<<endl<<"#Snow Crab Fishery Data"<<endl;
         cout<<(*pSCF)<<endl;
@@ -605,7 +598,6 @@ void ModelDatasets::read(cifstream & is){
     {pRKF = new DiscardFisheryData();
     cifstream strm(fnFisheryData_RKCF,ios::in);
     strm>>(*pRKF);
-    strm.close();
     if (debug){
         cout<<endl<<"#BB Red King Crab Fishery Data (discarded)"<<endl;
         cout<<(*pRKF)<<endl;
@@ -616,7 +608,6 @@ void ModelDatasets::read(cifstream & is){
     {pGTF = new GroundfishTrawlFisheryData();
     cifstream strm(fnFisheryData_GrTF,ios::in);
     strm>>(*pGTF);
-    strm.close();
     if (debug){
         cout<<endl<<"#Groundfish Trawl Fishery (discarded)"<<endl;
         cout<<(*pGTF)<<endl;

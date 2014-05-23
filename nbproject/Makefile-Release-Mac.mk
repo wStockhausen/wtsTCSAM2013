@@ -23,7 +23,7 @@ AS=as
 # Macros
 CND_PLATFORM=GNU-MacOSX
 CND_DLIB_EXT=dylib
-CND_CONF=Release
+CND_CONF=Release-Mac
 CND_DISTDIR=dist
 CND_BUILDDIR=build
 
@@ -39,9 +39,7 @@ OBJECTFILES= \
 	${OBJECTDIR}/ModelConfiguration.o \
 	${OBJECTDIR}/ModelConstants.o \
 	${OBJECTDIR}/ModelData.o \
-	${OBJECTDIR}/TCSAM_WTSv01.o \
-	${OBJECTDIR}/admbFunctions.o \
-	${OBJECTDIR}/rFunctions.o
+	${OBJECTDIR}/TCSAM_WTSv01.o
 
 
 # C Compiler Flags
@@ -92,16 +90,6 @@ ${OBJECTDIR}/TCSAM_WTSv01.o: TCSAM_WTSv01.cpp
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
 	$(COMPILE.cc) -O2 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/TCSAM_WTSv01.o TCSAM_WTSv01.cpp
-
-${OBJECTDIR}/admbFunctions.o: admbFunctions.cpp 
-	${MKDIR} -p ${OBJECTDIR}
-	${RM} "$@.d"
-	$(COMPILE.cc) -O2 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/admbFunctions.o admbFunctions.cpp
-
-${OBJECTDIR}/rFunctions.o: rFunctions.cpp 
-	${MKDIR} -p ${OBJECTDIR}
-	${RM} "$@.d"
-	$(COMPILE.cc) -O2 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/rFunctions.o rFunctions.cpp
 
 # Subprojects
 .build-subprojects:

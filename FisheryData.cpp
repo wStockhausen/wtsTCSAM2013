@@ -1,7 +1,6 @@
 #include <admodel.h>
+#include "wtsADMB.hpp"
 #include "ModelConstants.hpp"
-#include "admbFunctions.hpp"
-#include "rFunctions.hpp"
 #include "ModelConfiguration.hpp"
 #include "FisheryData.hpp"
 //**********************************************************************
@@ -125,7 +124,7 @@ void RetainedFisheryData::read(cifstream & is){
 /***************************************************************
 *   write.                                                     *
 ***************************************************************/
-void RetainedFisheryData::write(ostream & os){
+void RetainedFisheryData::write(std::ostream & os){
     if (debug) cout<<"start RetainedFisheryData::write(...) "<<this<<endl;
     os<<"#-----------------------------------------------------#"<<endl;
     os<<"#-----------------------------------------------------#"<<endl;
@@ -159,7 +158,7 @@ void RetainedFisheryData::write(ostream & os){
 /***************************************************************
 *   Function to write object to R list.                        *
 ***************************************************************/
-void RetainedFisheryData::writeToR(ostream& os, char* nm, int indent) {
+void RetainedFisheryData::writeToR(std::ostream& os, char* nm, int indent) {
     if (debug) cout<<"RetainedFisheryData::writing to R"<<endl;
     for (int n=0;n<indent;n++) os<<tb;
         os<<nm<<"=list(name="<<qt<<fishery<<qt<<cc<<endl;
@@ -170,11 +169,11 @@ void RetainedFisheryData::writeToR(ostream& os, char* nm, int indent) {
             os<<"catch=list("<<endl;
             indent++; 
                 for (int n=0;n<indent;n++) os<<tb;
-                os<<"years="; R::writeToR(os,yrsCatch); os<<cc<<endl;
+                os<<"years="; wts::writeToR(os,yrsCatch); os<<cc<<endl;
                 for (int n=0;n<indent;n++) os<<tb;
-                os<<"numbers=list(units="<<qt<<unitsN<<qt<<cc<<"data="; R::writeToR(os,catch_ty(1),y); os<<"),"<<endl;
+                os<<"numbers=list(units="<<qt<<unitsN<<qt<<cc<<"data="; wts::writeToR(os,catch_ty(1),y); os<<"),"<<endl;
                 for (int n=0;n<indent;n++) os<<tb; 
-                os<<"biomass=list(units="<<qt<<unitsB<<qt<<cc<<"data="; R::writeToR(os,catch_ty(2),y); os<<")"<<endl;
+                os<<"biomass=list(units="<<qt<<unitsB<<qt<<cc<<"data="; wts::writeToR(os,catch_ty(2),y); os<<")"<<endl;
             indent--;
         for (int n=0;n<indent;n++) os<<tb; os<<"),"<<endl;
         indent--;}
@@ -187,14 +186,14 @@ void RetainedFisheryData::writeToR(ostream& os, char* nm, int indent) {
             adstring z = wts::to_qcsv(zBins);        
             os<<"nAtZ=list(units="<<qt<<unitsNatZ<<qt<<cc<<endl; 
             for (int n=0;n<indent;n++) os<<tb;
-            os<<"years="; R::writeToR(os,yrsNatZ); os<<cc<<endl;
+            os<<"years="; wts::writeToR(os,yrsNatZ); os<<cc<<endl;
             for (int n=0;n<indent;n++) os<<tb;
-            os<<"cutpts="; R::writeToR(os,zCutPts); os<<cc<<endl;
+            os<<"cutpts="; wts::writeToR(os,zCutPts); os<<cc<<endl;
             for (int n=0;n<indent;n++) os<<tb;
-            os<<"sample.sizes="; R::writeToR(os,ssNatZ_sy,s,y); os<<cc<<endl;
+            os<<"sample.sizes="; wts::writeToR(os,ssNatZ_sy,s,y); os<<cc<<endl;
             for (int n=0;n<indent;n++) os<<tb;
             os<<"data="<<endl;
-            R::writeToR(os,nAtZ_syz,s,y,z); os<<endl;
+            wts::writeToR(os,nAtZ_syz,s,y,z); os<<endl;
         indent--;}
         for (int n=0;n<indent;n++) os<<tb; os<<")"<<endl;
     indent--;
@@ -322,7 +321,7 @@ void DiscardFisheryData::read(cifstream & is){
 /***************************************************************
 *   write.                                                     *
 ***************************************************************/
-void DiscardFisheryData::write(ostream & os){
+void DiscardFisheryData::write(std::ostream & os){
     if (debug) cout<<"start DiscardFisheryData::write(...) "<<this<<endl;
     os<<"#-----------------------------------------------------#"<<endl;
     os<<"#-----------------------------------------------------#"<<endl;
@@ -362,7 +361,7 @@ void DiscardFisheryData::write(ostream & os){
 /***************************************************************
 *   Function to write object to R list.                        *
 ***************************************************************/
-void DiscardFisheryData::writeToR(ostream& os, char* nm, int indent) {
+void DiscardFisheryData::writeToR(std::ostream& os, char* nm, int indent) {
     if (debug) cout<<"DiscardFisheryData::writing to R"<<endl;
     for (int n=0;n<indent;n++) os<<tb;
         os<<nm<<"=list(name="<<qt<<fishery<<qt<<cc<<endl;
@@ -374,9 +373,9 @@ void DiscardFisheryData::writeToR(ostream& os, char* nm, int indent) {
             os<<"catch=list("<<endl;
             indent++; 
                 for (int n=0;n<indent;n++) os<<tb;
-                os<<"years="; R::writeToR(os,yrsCatch); os<<cc<<endl;
+                os<<"years="; wts::writeToR(os,yrsCatch); os<<cc<<endl;
                 for (int n=0;n<indent;n++) os<<tb;
-                os<<"biomass=list(units="<<qt<<unitsCatch<<qt<<cc<<"data="; R::writeToR(os,catch_xy,x,y); os<<")"<<endl;
+                os<<"biomass=list(units="<<qt<<unitsCatch<<qt<<cc<<"data="; wts::writeToR(os,catch_xy,x,y); os<<")"<<endl;
             indent--;
         for (int n=0;n<indent;n++) os<<tb; os<<"),"<<endl;
         indent--;}
@@ -390,9 +389,9 @@ void DiscardFisheryData::writeToR(ostream& os, char* nm, int indent) {
                 for (int n=0;n<indent;n++) os<<tb;
                 os<<"units="<<qt<<unitsPLs<<qt<<cc<<endl;
                 for (int n=0;n<indent;n++) os<<tb;
-                os<<"years="; R::writeToR(os,yrsEffort); os<<cc<<endl;
+                os<<"years="; wts::writeToR(os,yrsEffort); os<<cc<<endl;
                 for (int n=0;n<indent;n++) os<<tb;
-                os<<"data="; R::writeToR(os,effort_y,y); os<<endl;
+                os<<"data="; wts::writeToR(os,effort_y,y); os<<endl;
             indent--;
         for (int n=0;n<indent;n++) os<<tb; os<<"),"<<endl;
         indent--;}
@@ -406,14 +405,14 @@ void DiscardFisheryData::writeToR(ostream& os, char* nm, int indent) {
             adstring z = wts::to_qcsv(zBins);        
             os<<"nAtZ=list(units="<<qt<<unitsNatZ<<qt<<cc<<endl; 
             for (int n=0;n<indent;n++) os<<tb;
-            os<<"years="; R::writeToR(os,yrsNatZ); os<<cc<<endl;
+            os<<"years="; wts::writeToR(os,yrsNatZ); os<<cc<<endl;
             for (int n=0;n<indent;n++) os<<tb;
-            os<<"cutpts="; R::writeToR(os,zCutPts); os<<cc<<endl;
+            os<<"cutpts="; wts::writeToR(os,zCutPts); os<<cc<<endl;
             for (int n=0;n<indent;n++) os<<tb;
-            os<<"sample.sizes="; R::writeToR(os,ssNatZ_xsy,x,s,y); os<<cc<<endl;
+            os<<"sample.sizes="; wts::writeToR(os,ssNatZ_xsy,x,s,y); os<<cc<<endl;
             for (int n=0;n<indent;n++) os<<tb;
             os<<"data="<<endl;
-            R::writeToR(os,nAtZ_xsyz,x,s,y,z); os<<endl;
+            wts::writeToR(os,nAtZ_xsyz,x,s,y,z); os<<endl;
         indent--;}
         for (int n=0;n<indent;n++) os<<tb; os<<")"<<endl;
     indent--;
@@ -527,7 +526,7 @@ void GroundfishTrawlFisheryData::read(cifstream & is){
 /***************************************************************
 *   write.                                                     *
 ***************************************************************/
-void GroundfishTrawlFisheryData::write(ostream & os){
+void GroundfishTrawlFisheryData::write(std::ostream & os){
     if (debug) cout<<"start GroundfishTrawlFisheryData::write(...) "<<this<<endl;
     os<<"#-----------------------------------------------------#"<<endl;
     os<<"#-----------------------------------------------------#"<<endl;
@@ -562,7 +561,7 @@ void GroundfishTrawlFisheryData::write(ostream & os){
 /***************************************************************
 *   Function to write object to R list.                        *
 ***************************************************************/
-void GroundfishTrawlFisheryData::writeToR(ostream& os, char* nm, int indent) {
+void GroundfishTrawlFisheryData::writeToR(std::ostream& os, char* nm, int indent) {
     if (debug) cout<<"GroundfishTrawlFisheryData::writing to R"<<endl;
     for (int n=0;n<indent;n++) os<<tb;
         os<<nm<<"=list(name="<<qt<<fishery<<qt<<cc<<endl;
@@ -573,9 +572,9 @@ void GroundfishTrawlFisheryData::writeToR(ostream& os, char* nm, int indent) {
             os<<"catch=list("<<endl;
             indent++; 
                 for (int n=0;n<indent;n++) os<<tb;
-                os<<"years="; R::writeToR(os,yrsCatch); os<<cc<<endl;
+                os<<"years="; wts::writeToR(os,yrsCatch); os<<cc<<endl;
                 for (int n=0;n<indent;n++) os<<tb;
-                os<<"biomass=list(units="<<qt<<unitsCatch<<qt<<cc<<"data="; R::writeToR(os,catch_y,y); os<<")"<<endl;
+                os<<"biomass=list(units="<<qt<<unitsCatch<<qt<<cc<<"data="; wts::writeToR(os,catch_y,y); os<<")"<<endl;
             indent--;
         for (int n=0;n<indent;n++) os<<tb; os<<"),"<<endl;
         indent--;}
@@ -589,14 +588,14 @@ void GroundfishTrawlFisheryData::writeToR(ostream& os, char* nm, int indent) {
             adstring z = wts::to_qcsv(zBins);        
             os<<"nAtZ=list(units="<<qt<<unitsNatZ<<qt<<cc<<endl; 
             for (int n=0;n<indent;n++) os<<tb;
-            os<<"years="; R::writeToR(os,yrsNatZ); os<<cc<<endl;
+            os<<"years="; wts::writeToR(os,yrsNatZ); os<<cc<<endl;
             for (int n=0;n<indent;n++) os<<tb;
-            os<<"cutpts="; R::writeToR(os,zCutPts); os<<cc<<endl;
+            os<<"cutpts="; wts::writeToR(os,zCutPts); os<<cc<<endl;
             for (int n=0;n<indent;n++) os<<tb;
-            os<<"sample.sizes="; R::writeToR(os,ssNatZ_xsy,x,s,y); os<<cc<<endl;
+            os<<"sample.sizes="; wts::writeToR(os,ssNatZ_xsy,x,s,y); os<<cc<<endl;
             for (int n=0;n<indent;n++) os<<tb;
             os<<"data="<<endl;
-            R::writeToR(os,nAtZ_xsyz,x,s,y,z); os<<endl;
+            wts::writeToR(os,nAtZ_xsyz,x,s,y,z); os<<endl;
         indent--;}
         for (int n=0;n<indent;n++) os<<tb; os<<")"<<endl;
     indent--;

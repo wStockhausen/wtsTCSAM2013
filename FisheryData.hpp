@@ -45,10 +45,10 @@
         RetainedFisheryData(){}
         ~RetainedFisheryData(){}
         void read(cifstream & is);//read file in ADMB format
-        void write(ostream & os); //write object to file in ADMB format
-        void writeToR(ostream& os, char* nm, int indent=0);//write object to R file as list
+        void write(std::ostream & os); //write object to file in ADMB format
+        void writeToR(std::ostream& os, char* nm, int indent=0);//write object to R file as list
         friend cifstream& operator >>(cifstream & is, RetainedFisheryData & obj){obj.read(is); return is;}
-        friend ostream&   operator <<(ostream & os,   RetainedFisheryData & obj){obj.write(os); return os;}
+        friend std::ostream&   operator <<(std::ostream & os,   RetainedFisheryData & obj){obj.write(os); return os;}
     };
 
 //--------------------------------------------------------------------------------
@@ -88,10 +88,10 @@
         DiscardFisheryData(){}
         ~DiscardFisheryData(){}
         void read(cifstream & is);//read file in ADMB format
-        void write(ostream & os); //write object to file in ADMB format
-        void writeToR(ostream& os, char* nm, int indent=0);//write object to R file as list
+        void write(std::ostream & os); //write object to file in ADMB format
+        void writeToR(std::ostream& os, char* nm, int indent=0);//write object to R file as list
         friend cifstream& operator >>(cifstream & is, DiscardFisheryData & obj){obj.read(is); return is;}
-        friend ostream&   operator <<(ostream & os,   DiscardFisheryData & obj){obj.write(os); return os;}
+        friend std::ostream&   operator <<(std::ostream & os,   DiscardFisheryData & obj){obj.write(os); return os;}
     };
 
 //--------------------------------------------------------------------------------
@@ -125,10 +125,10 @@
         GroundfishTrawlFisheryData(){}
         ~GroundfishTrawlFisheryData(){}
         void read(cifstream & is);//read file in ADMB format
-        void write(ostream & os); //write object to file in ADMB format
-        void writeToR(ostream& os, char* nm, int indent=0);//write object to R file as list
+        void write(std::ostream & os); //write object to file in ADMB format
+        void writeToR(std::ostream& os, char* nm, int indent=0);//write object to R file as list
         friend cifstream& operator >>(cifstream & is, GroundfishTrawlFisheryData & obj){obj.read(is); return is;}
-        friend ostream&   operator <<(ostream & os,   GroundfishTrawlFisheryData & obj){obj.write(os); return os;}
+        friend std::ostream&   operator <<(std::ostream & os,   GroundfishTrawlFisheryData & obj){obj.write(os); return os;}
     };
 
 #endif	/* FISHERYDATA_HPP */

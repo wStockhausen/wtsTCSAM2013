@@ -12,11 +12,11 @@
             <sourceRootList/>
             <confList>
                 <confElem>
-                    <name>Debug</name>
+                    <name>Debug-Mac</name>
                     <type>1</type>
                 </confElem>
                 <confElem>
-                    <name>Release</name>
+                    <name>Release-Mac</name>
                     <type>1</type>
                 </confElem>
             </confList>

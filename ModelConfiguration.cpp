@@ -1,7 +1,6 @@
 #include <admodel.h>
+#include "wtsADMB.hpp"
 #include "ModelConstants.hpp"
-#include "admbFunctions.hpp"
-#include "rFunctions.hpp"
 #include "ModelConfiguration.hpp"
 
 //**********************************************************************
@@ -154,8 +153,8 @@ void ModelConfiguration::writeToR(std::ostream& os, char* nm, int indent) {
     for (int n=0;n<indent;n++) os<<tb;
         os<<"configName='"<<cfgName<<"', mnYr="<<mnYr<<", mxYr="<<mxYr<<", assYr="<<asmtYr<<cc<<"jitFrac="<<jitFrac<<cc<<std::endl;
         os<<"nZBins="<<nZBins<<cc;
-        os<<"zBins=";      R::writeToR(os,zBins);     os<<cc<<std::endl;
-        os<<"zBinCutPts="; R::writeToR(os,zBinCutPts);os<<cc<<std::endl;
+        os<<"zBins=";      wts::writeToR(os,zBins);     os<<cc<<std::endl;
+        os<<"zBinCutPts="; wts::writeToR(os,zBinCutPts);os<<cc<<std::endl;
 //        writeVector(os,zBinCutPts,"zBinCutpts"); os<<cc<<std::endl;
     for (int n=0;n<indent;n++) os<<tb;
         os<<"flags=list(";
