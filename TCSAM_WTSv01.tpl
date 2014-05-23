@@ -913,12 +913,12 @@ PARAMETER_SECTION
     init_bounded_dev_vector pFmDevsGTF(1973,endyr-1,-15,15,3)         // trawl fishery f-devs       (IMPORTANT CHANGE: used to be "endyr") 1973 seems OK
     init_number pAvgLnFmSCF(3)                                        // fishing mortality snow crab fishery discards
     init_bounded_dev_vector pFmDevsSCF(1992,endyr-1,-15,15,4)         // snow crab fishery f-devs   (IMPORTANT CHANGE: used to be "endyr")  1992 is OK
-    //wts:following lines were used in 2013 assessment (i.e., RKF Fm NOT estimated)
-    init_bounded_number pAvgLnFmRKF(-5.25,-5.25,-4)                   // fishing mortality red king crab fishery discards //this is NOT estimated (why?)
-    init_bounded_dev_vector pFmDevsRKF(1,nobs_discardc_rkc,-15,15,-5) //this is NOT estimated (why?)  IMPORTANT CHANGEA: was nobs_discardc_rkc-1.  why -1 in "nobs_discardc_rkc-1"
-//    //wts:following lines turn ON Fm for RKF
-//    init_bounded_number pAvgLnFmRKF(-10,5,5)                   // fishing mortality red king crab fishery discards //IMPORTANT CHANGE: now estimated
-//    init_bounded_dev_vector pFmDevsRKF(1,nobs_discardc_rkc,-15,15,6) //this is NOT estimated (why?)  IMPORTANT CHANGE: now estimated!
+//    //wts:following lines were used in 2013 assessment (i.e., RKF Fm NOT estimated)
+//    init_bounded_number pAvgLnFmRKF(-5.25,-5.25,-4)                   // fishing mortality red king crab fishery discards //this is NOT estimated (why?)
+//    init_bounded_dev_vector pFmDevsRKF(1,nobs_discardc_rkc,-15,15,-5) //this is NOT estimated (why?)  IMPORTANT CHANGEA: was nobs_discardc_rkc-1.  why -1 in "nobs_discardc_rkc-1"
+    //wts:following lines turn ON Fm for RKF
+    init_bounded_number pAvgLnFmRKF(-10,5,5)                   // fishing mortality red king crab fishery discards //IMPORTANT CHANGE: now estimated
+    init_bounded_dev_vector pFmDevsRKF(1,nobs_discardc_rkc,-15,15,6) //this is NOT estimated (why?)  IMPORTANT CHANGE: now estimated!
     
     // Selectivity pattern for males (directed fishery)
     // Set -phase so not estimated if using @3 selectivity periods
