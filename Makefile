@@ -45,13 +45,16 @@
 
 
 # Environment 
-ADMB_HOME=/Users/WilliamStockhausen/Programs/admb/build/dist
+PLATFORM=WIN
+ADMB_HOME_WIN=C:/Programs/ADMB64
+ADMB_HOME_MAC=/Users/WilliamStockhausen/Programs/admb/build/dist
+ADMB_HOME=${ADMB_HOME_WIN}
 TPL=TCSAM_WTSv01
 MKDIR=mkdir
 CP=cp
 CCADMIN=CCadmin
 
-.PRECIOUIS: %.cpp %.htp
+.PRECIOUS: %.cpp %.htp
 	
 %.cpp: %.tpl
 	"${ADMB_HOME}/bin/tpl2cpp" $*

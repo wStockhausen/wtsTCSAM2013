@@ -23,7 +23,7 @@ AS=as
 # Macros
 CND_PLATFORM=MinGW64-Windows
 CND_DLIB_EXT=dll
-CND_CONF=Release-Mac
+CND_CONF=Debug-Win
 CND_DISTDIR=dist
 CND_BUILDDIR=build
 
@@ -46,8 +46,8 @@ OBJECTFILES= \
 CFLAGS=
 
 # CC Compiler Flags
-CCFLAGS=
-CXXFLAGS=
+CCFLAGS=-O3 -DSAFE_ALL -Wno-deprecated
+CXXFLAGS=-O3 -DSAFE_ALL -Wno-deprecated
 
 # Fortran Compiler Flags
 FFLAGS=
@@ -56,7 +56,7 @@ FFLAGS=
 ASFLAGS=
 
 # Link Libraries and Options
-LDLIBSOPTIONS=
+LDLIBSOPTIONS=-L/Y/StockAssessments-Crab/AssessmentModelDevelopment/wtsADMB/dist/Debug-Windows/MinGW64-Windows -L/C/Programs/ADMB64/lib -L/C/Programs/ADMB64/contrib/lib -lwtsadmb -ladmb -lcontrib -lwtsadmb -ladmb -lcontrib
 
 # Build Targets
 .build-conf: ${BUILD_SUBPROJECTS}
@@ -69,27 +69,27 @@ ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/tcsam2013.exe: ${OBJECTFILES}
 ${OBJECTDIR}/FisheryData.o: FisheryData.cpp 
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
-	$(COMPILE.cc) -O2 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/FisheryData.o FisheryData.cpp
+	$(COMPILE.cc) -g -DUSE_LAPLACE -D__GNUDOS__ -Dlinux -I. -I/Y/StockAssessments-Crab/AssessmentModelDevelopment/wtsADMB/include -I/C/Programs/ADMB64/include -I/C/Programs/ADMB64/contrib/include -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/FisheryData.o FisheryData.cpp
 
 ${OBJECTDIR}/ModelConfiguration.o: ModelConfiguration.cpp 
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
-	$(COMPILE.cc) -O2 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/ModelConfiguration.o ModelConfiguration.cpp
+	$(COMPILE.cc) -g -DUSE_LAPLACE -D__GNUDOS__ -Dlinux -I. -I/Y/StockAssessments-Crab/AssessmentModelDevelopment/wtsADMB/include -I/C/Programs/ADMB64/include -I/C/Programs/ADMB64/contrib/include -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/ModelConfiguration.o ModelConfiguration.cpp
 
 ${OBJECTDIR}/ModelConstants.o: ModelConstants.cpp 
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
-	$(COMPILE.cc) -O2 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/ModelConstants.o ModelConstants.cpp
+	$(COMPILE.cc) -g -DUSE_LAPLACE -D__GNUDOS__ -Dlinux -I. -I/Y/StockAssessments-Crab/AssessmentModelDevelopment/wtsADMB/include -I/C/Programs/ADMB64/include -I/C/Programs/ADMB64/contrib/include -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/ModelConstants.o ModelConstants.cpp
 
 ${OBJECTDIR}/ModelData.o: ModelData.cpp 
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
-	$(COMPILE.cc) -O2 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/ModelData.o ModelData.cpp
+	$(COMPILE.cc) -g -DUSE_LAPLACE -D__GNUDOS__ -Dlinux -I. -I/Y/StockAssessments-Crab/AssessmentModelDevelopment/wtsADMB/include -I/C/Programs/ADMB64/include -I/C/Programs/ADMB64/contrib/include -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/ModelData.o ModelData.cpp
 
 ${OBJECTDIR}/TCSAM_WTSv01.o: TCSAM_WTSv01.cpp 
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
-	$(COMPILE.cc) -O2 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/TCSAM_WTSv01.o TCSAM_WTSv01.cpp
+	$(COMPILE.cc) -g -DUSE_LAPLACE -D__GNUDOS__ -Dlinux -I. -I/Y/StockAssessments-Crab/AssessmentModelDevelopment/wtsADMB/include -I/C/Programs/ADMB64/include -I/C/Programs/ADMB64/contrib/include -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/TCSAM_WTSv01.o TCSAM_WTSv01.cpp
 
 # Subprojects
 .build-subprojects:

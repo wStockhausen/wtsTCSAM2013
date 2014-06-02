@@ -39,6 +39,93 @@
   </logicalFolder>
   <projectmakefile>Makefile</projectmakefile>
   <confs>
+    <conf name="Debug-Win" type="1">
+      <toolsSet>
+        <compilerSet>default</compilerSet>
+        <dependencyChecking>true</dependencyChecking>
+        <rebuildPropChanged>false</rebuildPropChanged>
+      </toolsSet>
+      <compileType>
+        <ccTool>
+          <incDir>
+            <pElem>.</pElem>
+            <pElem>Y:/StockAssessments-Crab/AssessmentModelDevelopment/wtsADMB/include</pElem>
+            <pElem>C:/Programs/ADMB64/include</pElem>
+            <pElem>C:/Programs/ADMB64/contrib/include</pElem>
+          </incDir>
+          <commandLine>-O3 -DSAFE_ALL -Wno-deprecated</commandLine>
+          <preprocessorList>
+            <Elem>USE_LAPLACE</Elem>
+            <Elem>__GNUDOS__</Elem>
+            <Elem>linux</Elem>
+          </preprocessorList>
+        </ccTool>
+        <linkerTool>
+          <linkerAddLib>
+            <pElem>Y:/StockAssessments-Crab/AssessmentModelDevelopment/wtsADMB/dist/Debug-Windows/MinGW64-Windows</pElem>
+            <pElem>C:/Programs/ADMB64/lib</pElem>
+            <pElem>C:/Programs/ADMB64/contrib/lib</pElem>
+          </linkerAddLib>
+          <linkerLibItems>
+            <linkerLibLibItem>wtsadmb</linkerLibLibItem>
+            <linkerLibLibItem>admb</linkerLibLibItem>
+            <linkerLibLibItem>contrib</linkerLibLibItem>
+            <linkerLibLibItem>wtsadmb</linkerLibLibItem>
+            <linkerLibLibItem>admb</linkerLibLibItem>
+            <linkerLibLibItem>contrib</linkerLibLibItem>
+          </linkerLibItems>
+        </linkerTool>
+      </compileType>
+      <item path="FisheryData.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="FisheryData.hpp" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="ModelConfiguration.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="ModelConfiguration.hpp" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="ModelConstants.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="ModelConstants.hpp" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="ModelData.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="ModelData.hpp" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="TCSAM_WTSv01.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="TCSAM_WTSv01.htp" ex="false" tool="3" flavor2="0">
+      </item>
+    </conf>
+    <conf name="Release-Win" type="1">
+      <toolsSet>
+        <compilerSet>default</compilerSet>
+        <dependencyChecking>true</dependencyChecking>
+        <rebuildPropChanged>false</rebuildPropChanged>
+      </toolsSet>
+      <compileType>
+      </compileType>
+      <item path="FisheryData.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="FisheryData.hpp" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="ModelConfiguration.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="ModelConfiguration.hpp" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="ModelConstants.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="ModelConstants.hpp" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="ModelData.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="ModelData.hpp" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="TCSAM_WTSv01.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="TCSAM_WTSv01.htp" ex="false" tool="3" flavor2="0">
+      </item>
+    </conf>
     <conf name="Debug-Mac" type="1">
       <toolsSet>
         <compilerSet>CLang|CLang</compilerSet>

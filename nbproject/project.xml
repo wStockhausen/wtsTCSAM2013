@@ -12,6 +12,14 @@
             <sourceRootList/>
             <confList>
                 <confElem>
+                    <name>Debug-Win</name>
+                    <type>1</type>
+                </confElem>
+                <confElem>
+                    <name>Release-Win</name>
+                    <type>1</type>
+                </confElem>
+                <confElem>
                     <name>Debug-Mac</name>
                     <type>1</type>
                 </confElem>

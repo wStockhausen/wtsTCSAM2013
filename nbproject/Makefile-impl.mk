@@ -27,11 +27,11 @@ CLEAN_SUBPROJECTS=${CLEAN_SUBPROJECTS_${SUBPROJECTS}}
 PROJECTNAME=TCSAM2013
 
 # Active Configuration
-DEFAULTCONF=Debug-Mac
+DEFAULTCONF=Debug-Win
 CONF=${DEFAULTCONF}
 
 # All Configurations
-ALLCONFS=Debug-Mac Release-Mac 
+ALLCONFS=Debug-Win Release-Win Debug-Mac Release-Mac 
 
 
 # build

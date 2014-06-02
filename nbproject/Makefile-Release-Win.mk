@@ -23,7 +23,7 @@ AS=as
 # Macros
 CND_PLATFORM=MinGW64-Windows
 CND_DLIB_EXT=dll
-CND_CONF=Release-Mac
+CND_CONF=Release-Win
 CND_DISTDIR=dist
 CND_BUILDDIR=build
 
@@ -69,27 +69,27 @@ ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/tcsam2013.exe: ${OBJECTFILES}
 ${OBJECTDIR}/FisheryData.o: FisheryData.cpp 
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
-	$(COMPILE.cc) -O2 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/FisheryData.o FisheryData.cpp
+	$(COMPILE.cc) -g -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/FisheryData.o FisheryData.cpp
 
 ${OBJECTDIR}/ModelConfiguration.o: ModelConfiguration.cpp 
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
-	$(COMPILE.cc) -O2 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/ModelConfiguration.o ModelConfiguration.cpp
+	$(COMPILE.cc) -g -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/ModelConfiguration.o ModelConfiguration.cpp
 
 ${OBJECTDIR}/ModelConstants.o: ModelConstants.cpp 
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
-	$(COMPILE.cc) -O2 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/ModelConstants.o ModelConstants.cpp
+	$(COMPILE.cc) -g -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/ModelConstants.o ModelConstants.cpp
 
 ${OBJECTDIR}/ModelData.o: ModelData.cpp 
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
-	$(COMPILE.cc) -O2 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/ModelData.o ModelData.cpp
+	$(COMPILE.cc) -g -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/ModelData.o ModelData.cpp
 
 ${OBJECTDIR}/TCSAM_WTSv01.o: TCSAM_WTSv01.cpp 
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
-	$(COMPILE.cc) -O2 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/TCSAM_WTSv01.o TCSAM_WTSv01.cpp
+	$(COMPILE.cc) -g -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/TCSAM_WTSv01.o TCSAM_WTSv01.cpp
 
 # Subprojects
 .build-subprojects:
