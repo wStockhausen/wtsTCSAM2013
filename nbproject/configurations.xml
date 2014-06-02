@@ -9,8 +9,6 @@
       <itemPath>ModelConstants.hpp</itemPath>
       <itemPath>ModelData.hpp</itemPath>
       <itemPath>TCSAM_WTSv01.htp</itemPath>
-      <itemPath>admbFunctions.hpp</itemPath>
-      <itemPath>rFunctions.hpp</itemPath>
     </logicalFolder>
     <logicalFolder name="ResourceFiles"
                    displayName="Resource Files"
@@ -24,8 +22,6 @@
       <itemPath>ModelConstants.cpp</itemPath>
       <itemPath>ModelData.cpp</itemPath>
       <itemPath>TCSAM_WTSv01.cpp</itemPath>
-      <itemPath>admbFunctions.cpp</itemPath>
-      <itemPath>rFunctions.cpp</itemPath>
     </logicalFolder>
     <logicalFolder name="TestFiles"
                    displayName="Test Files"
@@ -43,9 +39,9 @@
   </logicalFolder>
   <projectmakefile>Makefile</projectmakefile>
   <confs>
-    <conf name="Debug" type="1">
+    <conf name="Debug-Mac" type="1">
       <toolsSet>
-        <compilerSet>default</compilerSet>
+        <compilerSet>CLang|CLang</compilerSet>
         <dependencyChecking>true</dependencyChecking>
         <rebuildPropChanged>false</rebuildPropChanged>
       </toolsSet>
@@ -55,6 +51,7 @@
             <pElem>.</pElem>
             <pElem>/Users/WilliamStockhausen/Programs/admb/build/dist/include</pElem>
             <pElem>/Users/WilliamStockhausen/Programs/admb/build/dist/contrib/include</pElem>
+            <pElem>/Users/WilliamStockhausen/StockAssessments-Crab/AssessmentModelDevelopment/wtsADMB/include</pElem>
           </incDir>
           <commandLine>-O3 -DSAFE_ALL -Wno-deprecated</commandLine>
           <preprocessorList>
@@ -70,10 +67,13 @@
           <linkerAddLib>
             <pElem>/Users/WilliamStockhausen/Programs/admb/build/dist/lib</pElem>
             <pElem>/Users/WilliamStockhausen/Programs/admb/build/dist/contrib/lib</pElem>
+            <pElem>/Users/WilliamStockhausen/StockAssessments-Crab/AssessmentModelDevelopment/wtsADMB/dist/Debug-MacOSX/CLang-MacOSX</pElem>
           </linkerAddLib>
           <linkerLibItems>
+            <linkerLibLibItem>wtsadmb</linkerLibLibItem>
             <linkerLibLibItem>admb</linkerLibLibItem>
             <linkerLibLibItem>contrib</linkerLibLibItem>
+            <linkerLibLibItem>wtsadmb</linkerLibLibItem>
             <linkerLibLibItem>admb</linkerLibLibItem>
             <linkerLibLibItem>contrib</linkerLibLibItem>
           </linkerLibItems>
@@ -99,16 +99,8 @@
       </item>
       <item path="TCSAM_WTSv01.htp" ex="false" tool="3" flavor2="0">
       </item>
-      <item path="admbFunctions.cpp" ex="false" tool="1" flavor2="0">
-      </item>
-      <item path="admbFunctions.hpp" ex="false" tool="3" flavor2="0">
-      </item>
-      <item path="rFunctions.cpp" ex="false" tool="1" flavor2="0">
-      </item>
-      <item path="rFunctions.hpp" ex="false" tool="3" flavor2="0">
-      </item>
     </conf>
-    <conf name="Release" type="1">
+    <conf name="Release-Mac" type="1">
       <toolsSet>
         <compilerSet>default</compilerSet>
         <dependencyChecking>true</dependencyChecking>
@@ -147,14 +139,6 @@
       <item path="TCSAM_WTSv01.cpp" ex="false" tool="1" flavor2="0">
       </item>
       <item path="TCSAM_WTSv01.htp" ex="false" tool="3" flavor2="0">
-      </item>
-      <item path="admbFunctions.cpp" ex="false" tool="1" flavor2="0">
-      </item>
-      <item path="admbFunctions.hpp" ex="false" tool="3" flavor2="0">
-      </item>
-      <item path="rFunctions.cpp" ex="false" tool="1" flavor2="0">
-      </item>
-      <item path="rFunctions.hpp" ex="false" tool="3" flavor2="0">
       </item>
     </conf>
   </confs>

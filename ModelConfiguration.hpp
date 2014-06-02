@@ -47,10 +47,10 @@
         void read(const adstring & fn);   //read file in ADMB format
         void write(const adstring & fn);  //write object to file in ADMB format
         void read(cifstream & is);        //read file in ADMB format
-        void write(ostream & os);         //write object to file in ADMB format
-        void writeToR(ostream& os, char* nm, int indent=0);//write object to R file as list
+        void write(std::ostream & os);         //write object to file in ADMB format
+        void writeToR(std::ostream& os, char* nm, int indent=0);//write object to R file as list
         friend cifstream& operator >>(cifstream & is, ModelConfiguration & obj){obj.read(is);return is;}
-        friend ostream&   operator <<(ostream & os,   ModelConfiguration & obj){obj.write(os);;return os;}
+        friend std::ostream&   operator <<(std::ostream & os,   ModelConfiguration & obj){obj.write(os);;return os;}
     };
     
     

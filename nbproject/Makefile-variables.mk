@@ -6,22 +6,22 @@
 CND_BASEDIR=`pwd`
 CND_BUILDDIR=build
 CND_DISTDIR=dist
-# Debug configuration
-CND_PLATFORM_Debug=GNU-MacOSX
-CND_ARTIFACT_DIR_Debug=dist/Debug/GNU-MacOSX
-CND_ARTIFACT_NAME_Debug=tcsam2013
-CND_ARTIFACT_PATH_Debug=dist/Debug/GNU-MacOSX/tcsam2013
-CND_PACKAGE_DIR_Debug=dist/Debug/GNU-MacOSX/package
-CND_PACKAGE_NAME_Debug=tcsam2013.tar
-CND_PACKAGE_PATH_Debug=dist/Debug/GNU-MacOSX/package/tcsam2013.tar
-# Release configuration
-CND_PLATFORM_Release=GNU-MacOSX
-CND_ARTIFACT_DIR_Release=dist/Release/GNU-MacOSX
-CND_ARTIFACT_NAME_Release=tcsam2013
-CND_ARTIFACT_PATH_Release=dist/Release/GNU-MacOSX/tcsam2013
-CND_PACKAGE_DIR_Release=dist/Release/GNU-MacOSX/package
-CND_PACKAGE_NAME_Release=tcsam2013.tar
-CND_PACKAGE_PATH_Release=dist/Release/GNU-MacOSX/package/tcsam2013.tar
+# Debug-Mac configuration
+CND_PLATFORM_Debug-Mac=CLang-MacOSX
+CND_ARTIFACT_DIR_Debug-Mac=dist/Debug-Mac/CLang-MacOSX
+CND_ARTIFACT_NAME_Debug-Mac=tcsam2013
+CND_ARTIFACT_PATH_Debug-Mac=dist/Debug-Mac/CLang-MacOSX/tcsam2013
+CND_PACKAGE_DIR_Debug-Mac=dist/Debug-Mac/CLang-MacOSX/package
+CND_PACKAGE_NAME_Debug-Mac=tcsam2013.tar
+CND_PACKAGE_PATH_Debug-Mac=dist/Debug-Mac/CLang-MacOSX/package/tcsam2013.tar
+# Release-Mac configuration
+CND_PLATFORM_Release-Mac=GNU-MacOSX
+CND_ARTIFACT_DIR_Release-Mac=dist/Release-Mac/GNU-MacOSX
+CND_ARTIFACT_NAME_Release-Mac=tcsam2013
+CND_ARTIFACT_PATH_Release-Mac=dist/Release-Mac/GNU-MacOSX/tcsam2013
+CND_PACKAGE_DIR_Release-Mac=dist/Release-Mac/GNU-MacOSX/package
+CND_PACKAGE_NAME_Release-Mac=tcsam2013.tar
+CND_PACKAGE_PATH_Release-Mac=dist/Release-Mac/GNU-MacOSX/package/tcsam2013.tar
 #
 # include compiler specific variables
 #

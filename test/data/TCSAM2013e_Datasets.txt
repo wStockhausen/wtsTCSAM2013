@@ -1,0 +1,20 @@
+###############################################################
+#TCSAM_WTS datasets file                                      #
+#                                                             #
+#"a" datasets are same as used in 2013-09 assessment,         #
+#although the names are different.                            #
+#"b" datasets are corrected versions.                         #
+#"c" datassets are updated for new retained size frequencies  #
+#"d" datassets are updated for new total size frequencies     #
+#    in crab fisheries                                        #
+#"e" datassets are updated for new total size frequencies     #
+#    in groundfish fisheries                                  #
+#                                                             #
+###############################################################
+../data/TCSAM2013a_BioData.txt                            #bio data file      
+../data/TCSAM2013b_TrawlSurveyData.txt                    #trawl survey data  survey  data
+../data/TCSAM2013c_DirectedFisheryData.RetainedCatch.txt  #directed tanner crab fishery data (retained catch)     
+../data/TCSAM2013d_DirectedFisheryData.DiscardedCatch.txt #directed tanner crab fishery data (discarded catch)        
+../data/TCSAM2013d_FisheryData.SCF.txt                    #snow crab fishery (discards)       
+../data/TCSAM2013d_FisheryData.RKF.txt                    #Bristol Bay red king crab fishery (discards)       
+../data/TCSAM2013e_FisheryData.GTF.txt                    #groundfish fishery (discards)      

@@ -41,10 +41,10 @@ class GroundfishTrawlFisheryData;
         BioData(){}
         ~BioData(){}
         void read(cifstream & is);//read file in ADMB format
-        void write(ostream & os); //write object to file in ADMB format
-        void writeToR(ostream& os, char* nm, int indent=0);//write object to R file as list
+        void write(std::ostream & os); //write object to file in ADMB format
+        void writeToR(std::ostream& os, char* nm, int indent=0);//write object to R file as list
         friend cifstream& operator >>(cifstream & is, BioData & obj){obj.read(is); return is;}
-        friend ostream&   operator <<(ostream & os,   BioData & obj){obj.write(os); return os;}
+        friend std::ostream&   operator <<(std::ostream & os,   BioData & obj){obj.write(os); return os;}
     };
 
 //--------------------------------------------------------------------------------
@@ -77,10 +77,10 @@ class GroundfishTrawlFisheryData;
         TrawlSurveyData(){}
         ~TrawlSurveyData(){}
         void read(cifstream & is);//read file in ADMB format
-        void write(ostream & os); //write object to file in ADMB format
-        void writeToR(ostream& os, char* nm, int indent=0);//write object to R file as list
+        void write(std::ostream & os); //write object to file in ADMB format
+        void writeToR(std::ostream& os, char* nm, int indent=0);//write object to R file as list
         friend cifstream& operator >>(cifstream & is, TrawlSurveyData & obj){obj.read(is); return is;}
-        friend ostream&   operator <<(ostream & os,   TrawlSurveyData & obj){obj.write(os); return os;}
+        friend std::ostream&   operator <<(std::ostream & os,   TrawlSurveyData & obj){obj.write(os); return os;}
     };
 
 //--------------------------------------------------------------------------------
@@ -111,10 +111,10 @@ class GroundfishTrawlFisheryData;
         ModelDatasets(ModelConfiguration* ptrMC);
         ~ModelDatasets();
         void read(cifstream & is);//read file in ADMB format
-        void write(ostream & os); //write object to file in ADMB format
-        void writeToR(ostream& os, char* nm, int indent=0);//write object to R file as list
+        void write(std::ostream & os); //write object to file in ADMB format
+        void writeToR(std::ostream& os, char* nm, int indent=0);//write object to R file as list
         friend cifstream& operator >>(cifstream & is, ModelDatasets & obj){obj.read(is); return is;}
-        friend ostream&   operator <<(ostream & os,   ModelDatasets & obj){obj.write(os); return os;}
+        friend std::ostream&   operator <<(std::ostream & os,   ModelDatasets & obj){obj.write(os); return os;}
     };
 #endif  /* MODELDATA_HPP */
 
