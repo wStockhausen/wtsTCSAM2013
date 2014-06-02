@@ -12,6 +12,7 @@
 //           Model is currently set w/ these ON. Modify lines near 919 to turn ON/OFF.
 //
 //--20140523: updated to use wtsADMB library.
+//--20140602: updated to use writeParameter and jitterParameter functions in wtsADMB library.
 //
 //********
 //to run mcmc 
@@ -1738,454 +1739,454 @@ PROCEDURE_SECTION                                          //wts: revised
 // ----------------------------------------------------------------------
 FUNCTION void writeParameters(ofstream& os,int toR, int willBeActive)                        //wts: new
     os<<"index, phase, idx.mn, idx.mx, min, max, value, name, type"<<endl;
-    writeParameter(os,af1,toR,willBeActive);      
-    writeParameter(os,bf1,toR,willBeActive);      
-    writeParameter(os,am1,toR,willBeActive);      
-    writeParameter(os,bm1,toR,willBeActive);      
+    wts::writeParameter(os,af1,toR,willBeActive);      
+    wts::writeParameter(os,bf1,toR,willBeActive);      
+    wts::writeParameter(os,am1,toR,willBeActive);      
+    wts::writeParameter(os,bm1,toR,willBeActive);      
     
-    writeParameter(os,growth_beta,toR,willBeActive);      
-    writeParameter(os,Mmult_imat,toR,willBeActive);      
-    writeParameter(os,Mmultm,toR,willBeActive);      
-    writeParameter(os,Mmultf,toR,willBeActive);      
-    writeParameter(os,mat_big,toR,willBeActive);      
-    writeParameter(os,alpha1_rec,toR,willBeActive);      
-    writeParameter(os,beta_rec,toR,willBeActive);      
+    wts::writeParameter(os,growth_beta,toR,willBeActive);      
+    wts::writeParameter(os,Mmult_imat,toR,willBeActive);      
+    wts::writeParameter(os,Mmultm,toR,willBeActive);      
+    wts::writeParameter(os,Mmultf,toR,willBeActive);      
+    wts::writeParameter(os,mat_big,toR,willBeActive);      
+    wts::writeParameter(os,alpha1_rec,toR,willBeActive);      
+    wts::writeParameter(os,beta_rec,toR,willBeActive);      
     
-    writeParameter(os,moltp_af,toR,willBeActive);      
-    writeParameter(os,moltp_bf,toR,willBeActive);      
-    writeParameter(os,moltp_am,toR,willBeActive);      
-    writeParameter(os,moltp_bm,toR,willBeActive);      
-    writeParameter(os,moltp_ammat,toR,willBeActive);      
-    writeParameter(os,moltp_bmmat,toR,willBeActive);      
+    wts::writeParameter(os,moltp_af,toR,willBeActive);      
+    wts::writeParameter(os,moltp_bf,toR,willBeActive);      
+    wts::writeParameter(os,moltp_am,toR,willBeActive);      
+    wts::writeParameter(os,moltp_bm,toR,willBeActive);      
+    wts::writeParameter(os,moltp_ammat,toR,willBeActive);      
+    wts::writeParameter(os,moltp_bmmat,toR,willBeActive);      
     
-    writeParameter(os,pMnLnRec,toR,willBeActive);      
-    writeParameter(os,pRecDevs,toR,willBeActive);      
-    writeParameter(os,pMnLnRecEarly,toR,willBeActive); 
-    writeParameter(os,pRecDevsEarly,toR,willBeActive); 
+    wts::writeParameter(os,pMnLnRec,toR,willBeActive);      
+    wts::writeParameter(os,pRecDevs,toR,willBeActive);      
+    wts::writeParameter(os,pMnLnRecEarly,toR,willBeActive); 
+    wts::writeParameter(os,pRecDevsEarly,toR,willBeActive); 
     
-    writeParameter(os,pAvgLnFmTCF,toR,willBeActive);   
-    writeParameter(os,pFmDevsTCF,toR,willBeActive);    
-    writeParameter(os,pAvgLnFmGTF,toR,willBeActive);   
-    writeParameter(os,pFmDevsGTF,toR,willBeActive);    
-    writeParameter(os,pAvgLnFmSCF,toR,willBeActive);   
-    writeParameter(os,pFmDevsSCF,toR,willBeActive);    
-    writeParameter(os,pAvgLnFmRKF,toR,willBeActive);   
-    writeParameter(os,pFmDevsRKF,toR,willBeActive);    
+    wts::writeParameter(os,pAvgLnFmTCF,toR,willBeActive);   
+    wts::writeParameter(os,pFmDevsTCF,toR,willBeActive);    
+    wts::writeParameter(os,pAvgLnFmGTF,toR,willBeActive);   
+    wts::writeParameter(os,pFmDevsGTF,toR,willBeActive);    
+    wts::writeParameter(os,pAvgLnFmSCF,toR,willBeActive);   
+    wts::writeParameter(os,pFmDevsSCF,toR,willBeActive);    
+    wts::writeParameter(os,pAvgLnFmRKF,toR,willBeActive);   
+    wts::writeParameter(os,pFmDevsRKF,toR,willBeActive);    
     
-    writeParameter(os,fish_slope_mn,toR,willBeActive);   
-    writeParameter(os,log_avg_sel50_mn,toR,willBeActive);    
-    writeParameter(os,log_sel50_dev_mn,toR,willBeActive);   
+    wts::writeParameter(os,fish_slope_mn,toR,willBeActive);   
+    wts::writeParameter(os,log_avg_sel50_mn,toR,willBeActive);    
+    wts::writeParameter(os,log_sel50_dev_mn,toR,willBeActive);   
     
-    writeParameter(os,fish_fit_slope_mn1,toR,willBeActive);   
-    writeParameter(os,fish_fit_sel50_mn1,toR,willBeActive);    
-    writeParameter(os,fish_fit_slope_mn2,toR,willBeActive);   
-    writeParameter(os,fish_fit_sel50_mn2,toR,willBeActive);    
+    wts::writeParameter(os,fish_fit_slope_mn1,toR,willBeActive);   
+    wts::writeParameter(os,fish_fit_sel50_mn1,toR,willBeActive);    
+    wts::writeParameter(os,fish_fit_slope_mn2,toR,willBeActive);   
+    wts::writeParameter(os,fish_fit_sel50_mn2,toR,willBeActive);    
     
-    writeParameter(os,fish_slope_1,toR,willBeActive);   
-    writeParameter(os,fish_sel50_1,toR,willBeActive);    
+    wts::writeParameter(os,fish_slope_1,toR,willBeActive);   
+    wts::writeParameter(os,fish_sel50_1,toR,willBeActive);    
     
-    writeParameter(os,fish_slope_yr_3,toR,willBeActive);   
-    writeParameter(os,log_avg_sel50_3,toR,willBeActive);    
-    writeParameter(os,log_sel50_dev_3,toR,willBeActive);    
+    wts::writeParameter(os,fish_slope_yr_3,toR,willBeActive);   
+    wts::writeParameter(os,log_avg_sel50_3,toR,willBeActive);    
+    wts::writeParameter(os,log_sel50_dev_3,toR,willBeActive);    
     
-    writeParameter(os,fish_slope_mn2,toR,willBeActive);   
-    writeParameter(os,fish_sel50_mn2,toR,willBeActive);    
+    wts::writeParameter(os,fish_slope_mn2,toR,willBeActive);   
+    wts::writeParameter(os,fish_sel50_mn2,toR,willBeActive);    
     
-    writeParameter(os,fish_disc_slope_f,toR,willBeActive);   
-    writeParameter(os,fish_disc_sel50_f,toR,willBeActive);    
+    wts::writeParameter(os,fish_disc_slope_f,toR,willBeActive);   
+    wts::writeParameter(os,fish_disc_sel50_f,toR,willBeActive);    
     
-    writeParameter(os,snowfish_disc_slope_f_1,toR,willBeActive);   
-    writeParameter(os,snowfish_disc_sel50_f_1,toR,willBeActive);    
+    wts::writeParameter(os,snowfish_disc_slope_f_1,toR,willBeActive);   
+    wts::writeParameter(os,snowfish_disc_sel50_f_1,toR,willBeActive);    
     
-    writeParameter(os,snowfish_disc_slope_f_2,toR,willBeActive);   
-    writeParameter(os,snowfish_disc_sel50_f_2,toR,willBeActive);    
+    wts::writeParameter(os,snowfish_disc_slope_f_2,toR,willBeActive);   
+    wts::writeParameter(os,snowfish_disc_sel50_f_2,toR,willBeActive);    
     
-    writeParameter(os,snowfish_disc_slope_f_3,toR,willBeActive);   
-    writeParameter(os,snowfish_disc_sel50_f_3,toR,willBeActive);    
+    wts::writeParameter(os,snowfish_disc_slope_f_3,toR,willBeActive);   
+    wts::writeParameter(os,snowfish_disc_sel50_f_3,toR,willBeActive);    
     
-    writeParameter(os,snowfish_disc_slope_m_1,toR,willBeActive);   
-    writeParameter(os,snowfish_disc_sel50_m_1,toR,willBeActive);    
-    writeParameter(os,snowfish_disc_slope_m2_1,toR,willBeActive);   
-    writeParameter(os,snowfish_disc_sel50_m2_1,toR,willBeActive);    
+    wts::writeParameter(os,snowfish_disc_slope_m_1,toR,willBeActive);   
+    wts::writeParameter(os,snowfish_disc_sel50_m_1,toR,willBeActive);    
+    wts::writeParameter(os,snowfish_disc_slope_m2_1,toR,willBeActive);   
+    wts::writeParameter(os,snowfish_disc_sel50_m2_1,toR,willBeActive);    
     
-    writeParameter(os,snowfish_disc_slope_m_2,toR,willBeActive);   
-    writeParameter(os,snowfish_disc_sel50_m_2,toR,willBeActive);    
-    writeParameter(os,snowfish_disc_slope_m2_2,toR,willBeActive);   
-    writeParameter(os,snowfish_disc_sel50_m2_2,toR,willBeActive);    
+    wts::writeParameter(os,snowfish_disc_slope_m_2,toR,willBeActive);   
+    wts::writeParameter(os,snowfish_disc_sel50_m_2,toR,willBeActive);    
+    wts::writeParameter(os,snowfish_disc_slope_m2_2,toR,willBeActive);   
+    wts::writeParameter(os,snowfish_disc_sel50_m2_2,toR,willBeActive);    
     
-    writeParameter(os,snowfish_disc_slope_m_3,toR,willBeActive);   
-    writeParameter(os,snowfish_disc_sel50_m_3,toR,willBeActive);    
-    writeParameter(os,snowfish_disc_slope_m2_3,toR,willBeActive);   
-    writeParameter(os,snowfish_disc_sel50_m2_3,toR,willBeActive);    
+    wts::writeParameter(os,snowfish_disc_slope_m_3,toR,willBeActive);   
+    wts::writeParameter(os,snowfish_disc_sel50_m_3,toR,willBeActive);    
+    wts::writeParameter(os,snowfish_disc_slope_m2_3,toR,willBeActive);   
+    wts::writeParameter(os,snowfish_disc_sel50_m2_3,toR,willBeActive);    
     
-    writeParameter(os,rkfish_disc_slope_f1,toR,willBeActive);   
-    writeParameter(os,rkfish_disc_sel50_f1,toR,willBeActive);    
-    writeParameter(os,rkfish_disc_slope_f2,toR,willBeActive);   
-    writeParameter(os,rkfish_disc_sel50_f2,toR,willBeActive);    
-    writeParameter(os,rkfish_disc_slope_f3,toR,willBeActive);   
-    writeParameter(os,rkfish_disc_sel50_f3,toR,willBeActive);    
+    wts::writeParameter(os,rkfish_disc_slope_f1,toR,willBeActive);   
+    wts::writeParameter(os,rkfish_disc_sel50_f1,toR,willBeActive);    
+    wts::writeParameter(os,rkfish_disc_slope_f2,toR,willBeActive);   
+    wts::writeParameter(os,rkfish_disc_sel50_f2,toR,willBeActive);    
+    wts::writeParameter(os,rkfish_disc_slope_f3,toR,willBeActive);   
+    wts::writeParameter(os,rkfish_disc_sel50_f3,toR,willBeActive);    
     
-    writeParameter(os,rkfish_disc_slope_m1,toR,willBeActive);   
-    writeParameter(os,rkfish_disc_sel50_m1,toR,willBeActive);    
-    writeParameter(os,rkfish_disc_slope_m2,toR,willBeActive);   
-    writeParameter(os,rkfish_disc_sel50_m2,toR,willBeActive);    
-    writeParameter(os,rkfish_disc_slope_m3,toR,willBeActive);   
-    writeParameter(os,rkfish_disc_sel50_m3,toR,willBeActive);    
+    wts::writeParameter(os,rkfish_disc_slope_m1,toR,willBeActive);   
+    wts::writeParameter(os,rkfish_disc_sel50_m1,toR,willBeActive);    
+    wts::writeParameter(os,rkfish_disc_slope_m2,toR,willBeActive);   
+    wts::writeParameter(os,rkfish_disc_sel50_m2,toR,willBeActive);    
+    wts::writeParameter(os,rkfish_disc_slope_m3,toR,willBeActive);   
+    wts::writeParameter(os,rkfish_disc_sel50_m3,toR,willBeActive);    
     
-    writeParameter(os,fish_disc_slope_tf1,toR,willBeActive);   
-    writeParameter(os,fish_disc_sel50_tf1,toR,willBeActive);   
-    writeParameter(os,fish_disc_slope_tf2,toR,willBeActive);   
-    writeParameter(os,fish_disc_sel50_tf2,toR,willBeActive);   
-    writeParameter(os,fish_disc_slope_tf3,toR,willBeActive);   
-    writeParameter(os,fish_disc_sel50_tf3,toR,willBeActive);   
+    wts::writeParameter(os,fish_disc_slope_tf1,toR,willBeActive);   
+    wts::writeParameter(os,fish_disc_sel50_tf1,toR,willBeActive);   
+    wts::writeParameter(os,fish_disc_slope_tf2,toR,willBeActive);   
+    wts::writeParameter(os,fish_disc_sel50_tf2,toR,willBeActive);   
+    wts::writeParameter(os,fish_disc_slope_tf3,toR,willBeActive);   
+    wts::writeParameter(os,fish_disc_sel50_tf3,toR,willBeActive);   
     
-    writeParameter(os,fish_disc_slope_tm1,toR,willBeActive);   
-    writeParameter(os,fish_disc_sel50_tm1,toR,willBeActive);   
-    writeParameter(os,fish_disc_slope_tm2,toR,willBeActive);   
-    writeParameter(os,fish_disc_sel50_tm2,toR,willBeActive);   
-    writeParameter(os,fish_disc_slope_tm3,toR,willBeActive);   
-    writeParameter(os,fish_disc_sel50_tm3,toR,willBeActive);   
+    wts::writeParameter(os,fish_disc_slope_tm1,toR,willBeActive);   
+    wts::writeParameter(os,fish_disc_sel50_tm1,toR,willBeActive);   
+    wts::writeParameter(os,fish_disc_slope_tm2,toR,willBeActive);   
+    wts::writeParameter(os,fish_disc_sel50_tm2,toR,willBeActive);   
+    wts::writeParameter(os,fish_disc_slope_tm3,toR,willBeActive);   
+    wts::writeParameter(os,fish_disc_sel50_tm3,toR,willBeActive);   
     
-    writeParameter(os,srv2_q,toR,willBeActive);       
-    writeParameter(os,srv2_seldiff,toR,willBeActive); 
-    writeParameter(os,srv2_sel50,toR,willBeActive);   
+    wts::writeParameter(os,srv2_q,toR,willBeActive);       
+    wts::writeParameter(os,srv2_seldiff,toR,willBeActive); 
+    wts::writeParameter(os,srv2_sel50,toR,willBeActive);   
 
-    writeParameter(os,srv2a_q,toR,willBeActive);       
-    writeParameter(os,srv2a_seldiff,toR,willBeActive); 
-    writeParameter(os,srv2a_sel50,toR,willBeActive);   
+    wts::writeParameter(os,srv2a_q,toR,willBeActive);       
+    wts::writeParameter(os,srv2a_seldiff,toR,willBeActive); 
+    wts::writeParameter(os,srv2a_sel50,toR,willBeActive);   
 
-    writeParameter(os,srv3_q,toR,willBeActive);       
-    writeParameter(os,srv3_seldiff,toR,willBeActive); 
-    writeParameter(os,srv3_sel50,toR,willBeActive);   
+    wts::writeParameter(os,srv3_q,toR,willBeActive);       
+    wts::writeParameter(os,srv3_seldiff,toR,willBeActive); 
+    wts::writeParameter(os,srv3_sel50,toR,willBeActive);   
 
-    writeParameter(os,matestf,toR,willBeActive); 
-    writeParameter(os,matestm,toR,willBeActive); 
+    wts::writeParameter(os,matestf,toR,willBeActive); 
+    wts::writeParameter(os,matestm,toR,willBeActive); 
     
-    writeParameter(os,srv2_femQ,toR,willBeActive);      
-    writeParameter(os,srv2_seldiff_f,toR,willBeActive); 
-    writeParameter(os,srv2_sel50_f,toR,willBeActive);   
+    wts::writeParameter(os,srv2_femQ,toR,willBeActive);      
+    wts::writeParameter(os,srv2_seldiff_f,toR,willBeActive); 
+    wts::writeParameter(os,srv2_sel50_f,toR,willBeActive);   
     
-    writeParameter(os,srv2a_femQ,toR,willBeActive);      
-    writeParameter(os,srv2a_seldiff_f,toR,willBeActive); 
-    writeParameter(os,srv2a_sel50_f,toR,willBeActive);   
+    wts::writeParameter(os,srv2a_femQ,toR,willBeActive);      
+    wts::writeParameter(os,srv2a_seldiff_f,toR,willBeActive); 
+    wts::writeParameter(os,srv2a_sel50_f,toR,willBeActive);   
     
-    writeParameter(os,srv3_femQ,toR,willBeActive);      
-    writeParameter(os,srv3_seldiff_f,toR,willBeActive); 
-    writeParameter(os,srv3_sel50_f,toR,willBeActive);
+    wts::writeParameter(os,srv3_femQ,toR,willBeActive);      
+    wts::writeParameter(os,srv3_seldiff_f,toR,willBeActive); 
+    wts::writeParameter(os,srv3_sel50_f,toR,willBeActive);
     
-    writeParameter(os,proprecn,toR,willBeActive);
+    wts::writeParameter(os,proprecn,toR,willBeActive);
     
-// ----------------------------------------------------------------------
-// ----------------------------------------------------------------------
-FUNCTION void writeParameter(ofstream& os, param_init_number& p, int toR, int willBeActive)                        //wts: new
-    if (!willBeActive||(willBeActive&&(p.phase_start>0))){
-        if (toR){
-            os<<p.name<<"=list("<<"type='param_init_number'"<<cc
-                                <<"phase="<<p.phase_start<<cc
-                                <<"value="<<value(p)
-                                <<"),";
-        } else {
-            os<<1<<cc<<p.phase_start<<cc<<1<<cc<<1<<cc<<"-Inf"<<cc<<"Inf"<<cc<<p<<cc<<p.name<<cc<<"'param_init_number'"<<endl;
-        }
-    }
-    
-// ----------------------------------------------------------------------
-// ----------------------------------------------------------------------
-FUNCTION void writeParameter(ofstream& os, param_init_bounded_number& p,int toR, int willBeActive)                        //wts: new
-    if (!willBeActive||(willBeActive&&(p.phase_start>0))){
-        if (toR){
-            os<<p.name<<"=list("<<"type='param_init_bounded_number'"<<cc
-                                <<"phase="<<p.phase_start<<cc
-                                <<"bounds=c("<<p.minb<<cc<<p.maxb<<")"<<cc
-                                <<"value="<<value(p)
-                                <<"),";
-        } else {
-            os<<1<<cc<<p.phase_start<<cc<<1<<cc<<1<<cc<<p.minb<<cc<<p.maxb<<cc<<p<<cc<<p.name<<cc<<"'param_init_bounded_number'"<<endl;
-        }
-    }
-    
-// ----------------------------------------------------------------------
-// ----------------------------------------------------------------------
-FUNCTION void writeParameter(ofstream& os, param_init_vector& p, int toR, int willBeActive)                        //wts: new
-    int mn = p.indexmin();
-    int mx = p.indexmax();
-    if (!willBeActive||(willBeActive&&(p.phase_start>0))){
-        if (toR){
-            os<<p.name<<"=list("<<"type='param_init_vector'"<<cc
-                                <<"dims=c("<<mn<<cc<<mx<<")"<<cc
-                                <<"phase="<<p.phase_start<<cc
-                                <<"value=c("; {for (int i=mn;i<mx;i++) os<<value(p(i))<<cc;} os<<value(p(mx))<<")";
-            os<<"),";
-        } else {        
-            for (int i=mn;i<=mx;i++) os<< i<<cc<<p.phase_start<<cc<<mn<<cc<<mx<<cc<<"-Inf"<<cc<<"Inf"<<cc<<p(i)<<cc<<p.name<<cc<<"'param_init_vector'"<<endl;
-        }
-    }
-        
-// ----------------------------------------------------------------------
-// ----------------------------------------------------------------------
-FUNCTION void writeParameter(ofstream& os, param_init_bounded_vector& p, int toR, int willBeActive)                        //wts: new
-    int mn = p.indexmin();
-    int mx = p.indexmax();
-    if (!willBeActive||(willBeActive&&(p.phase_start>0))){
-        if (toR){
-            os<<p.name<<"=list("<<"type='param_init_bounded_vector'"<<cc
-                                <<"dims=c("<<p.indexmin()<<cc<<p.indexmax()<<")"<<cc
-                                <<"phase="<<p.phase_start<<cc
-                                <<"bounds=c("<<p.minb<<cc<<p.maxb<<")"<<cc
-                                <<"value=c("; {for (int i=mn;i<mx;i++) os<<value(p(i))<<cc;} os<<value(p(mx))<<")";
-           os<<"),";
-        } else {
-            for (int i=mn;i<=mx;i++) os<< i<<cc<<p.phase_start<<cc<<mn<<cc<<mx<<cc<<p.minb<<cc<<p.maxb<<cc<<p(i)<<cc<<p.name<<cc<<"'param_init_bounded_vector'"<<endl;
-        }
-    }
-    
-// ----------------------------------------------------------------------
-// ----------------------------------------------------------------------
-FUNCTION void writeParameterBounds(ofstream& os, param_init_bounded_dev_vector& p, int toR, int willBeActive)                        //wts: new
-    int mn = p.indexmin();
-    int mx = p.indexmax();
-    if (!willBeActive||(willBeActive&&(p.phase_start>0))){
-        if (toR){
-            os<<p.name<<"=list("<<"type=param_init_bounded_dev_vector"<<cc
-                                <<"dims=c("<<p.indexmin()<<cc<<p.indexmax()<<")"<<cc
-                                <<"phase="<<p.phase_start<<cc
-                                <<"bounds=c("<<p.minb<<cc<<p.maxb<<")"<<cc
-                                <<"value=c("; {for (int i=mn;i<mx;i++) os<<value(p(i))<<cc;} os<<value(p(mx))<<")";
-           os<<"),";
-        } else {
-            for (int i=mn;i<=mx;i++) os<< i<<cc<<p.phase_start<<cc<<mn<<cc<<mx<<cc<<p.minb<<cc<<p.maxb<<cc<<p(i)<<cc<<p.name<<cc<<"'param_init_bounded_dev_vector'"<<endl;
-        }
-    }
-    
+//// ----------------------------------------------------------------------
+//// ----------------------------------------------------------------------
+//FUNCTION void writeParameter(ofstream& os, param_init_number& p, int toR, int willBeActive)                        //wts: new
+//    if (!willBeActive||(willBeActive&&(p.phase_start>0))){
+//        if (toR){
+//            os<<p.name<<"=list("<<"type='param_init_number'"<<cc
+//                                <<"phase="<<p.phase_start<<cc
+//                                <<"value="<<value(p)
+//                                <<"),";
+//        } else {
+//            os<<1<<cc<<p.phase_start<<cc<<1<<cc<<1<<cc<<"-Inf"<<cc<<"Inf"<<cc<<p<<cc<<p.name<<cc<<"'param_init_number'"<<endl;
+//        }
+//    }
+//    
+//// ----------------------------------------------------------------------
+//// ----------------------------------------------------------------------
+//FUNCTION void writeParameter(ofstream& os, param_init_bounded_number& p,int toR, int willBeActive)                        //wts: new
+//    if (!willBeActive||(willBeActive&&(p.phase_start>0))){
+//        if (toR){
+//            os<<p.name<<"=list("<<"type='param_init_bounded_number'"<<cc
+//                                <<"phase="<<p.phase_start<<cc
+//                                <<"bounds=c("<<p.minb<<cc<<p.maxb<<")"<<cc
+//                                <<"value="<<value(p)
+//                                <<"),";
+//        } else {
+//            os<<1<<cc<<p.phase_start<<cc<<1<<cc<<1<<cc<<p.minb<<cc<<p.maxb<<cc<<p<<cc<<p.name<<cc<<"'param_init_bounded_number'"<<endl;
+//        }
+//    }
+//    
+//// ----------------------------------------------------------------------
+//// ----------------------------------------------------------------------
+//FUNCTION void writeParameter(ofstream& os, param_init_vector& p, int toR, int willBeActive)                        //wts: new
+//    int mn = p.indexmin();
+//    int mx = p.indexmax();
+//    if (!willBeActive||(willBeActive&&(p.phase_start>0))){
+//        if (toR){
+//            os<<p.name<<"=list("<<"type='param_init_vector'"<<cc
+//                                <<"dims=c("<<mn<<cc<<mx<<")"<<cc
+//                                <<"phase="<<p.phase_start<<cc
+//                                <<"value=c("; {for (int i=mn;i<mx;i++) os<<value(p(i))<<cc;} os<<value(p(mx))<<")";
+//            os<<"),";
+//        } else {        
+//            for (int i=mn;i<=mx;i++) os<< i<<cc<<p.phase_start<<cc<<mn<<cc<<mx<<cc<<"-Inf"<<cc<<"Inf"<<cc<<p(i)<<cc<<p.name<<cc<<"'param_init_vector'"<<endl;
+//        }
+//    }
+//        
+//// ----------------------------------------------------------------------
+//// ----------------------------------------------------------------------
+//FUNCTION void writeParameter(ofstream& os, param_init_bounded_vector& p, int toR, int willBeActive)                        //wts: new
+//    int mn = p.indexmin();
+//    int mx = p.indexmax();
+//    if (!willBeActive||(willBeActive&&(p.phase_start>0))){
+//        if (toR){
+//            os<<p.name<<"=list("<<"type='param_init_bounded_vector'"<<cc
+//                                <<"dims=c("<<p.indexmin()<<cc<<p.indexmax()<<")"<<cc
+//                                <<"phase="<<p.phase_start<<cc
+//                                <<"bounds=c("<<p.minb<<cc<<p.maxb<<")"<<cc
+//                                <<"value=c("; {for (int i=mn;i<mx;i++) os<<value(p(i))<<cc;} os<<value(p(mx))<<")";
+//           os<<"),";
+//        } else {
+//            for (int i=mn;i<=mx;i++) os<< i<<cc<<p.phase_start<<cc<<mn<<cc<<mx<<cc<<p.minb<<cc<<p.maxb<<cc<<p(i)<<cc<<p.name<<cc<<"'param_init_bounded_vector'"<<endl;
+//        }
+//    }
+//    
+//// ----------------------------------------------------------------------
+//// ----------------------------------------------------------------------
+//FUNCTION void writeParameterBounds(ofstream& os, param_init_bounded_dev_vector& p, int toR, int willBeActive)                        //wts: new
+//    int mn = p.indexmin();
+//    int mx = p.indexmax();
+//    if (!willBeActive||(willBeActive&&(p.phase_start>0))){
+//        if (toR){
+//            os<<p.name<<"=list("<<"type=param_init_bounded_dev_vector"<<cc
+//                                <<"dims=c("<<p.indexmin()<<cc<<p.indexmax()<<")"<<cc
+//                                <<"phase="<<p.phase_start<<cc
+//                                <<"bounds=c("<<p.minb<<cc<<p.maxb<<")"<<cc
+//                                <<"value=c("; {for (int i=mn;i<mx;i++) os<<value(p(i))<<cc;} os<<value(p(mx))<<")";
+//           os<<"),";
+//        } else {
+//            for (int i=mn;i<=mx;i++) os<< i<<cc<<p.phase_start<<cc<<mn<<cc<<mx<<cc<<p.minb<<cc<<p.maxb<<cc<<p(i)<<cc<<p.name<<cc<<"'param_init_bounded_dev_vector'"<<endl;
+//        }
+//    }
+//    
 // ----------------------------------------------------------------------
 // ----------------------------------------------------------------------
 FUNCTION void jitterParameters(double fac)   //wts: new 2014-05-10
     cout<<"starting jitterParameters"<<endl;
     
-    jitterParameter(af1,fac);     // Female growth-increment
-    jitterParameter(bf1,fac);     // Female growth-increment
-    jitterParameter(am1,fac);     // Male growth-increment
-    jitterParameter(bm1,fac);     // Male growth-increment
+    wts::jitterParameter(af1,fac,rng);     // Female growth-increment
+    wts::jitterParameter(bf1,fac,rng);     // Female growth-increment
+    wts::jitterParameter(am1,fac,rng);     // Male growth-increment
+    wts::jitterParameter(bm1,fac,rng);     // Male growth-increment
     
-    jitterParameter(growth_beta,fac); // Growth beta                                //this is NOT estimated (why?)
-    jitterParameter(Mmult_imat,fac);  // natural mortality multiplier for females and males
-    jitterParameter(Mmultm,fac);      // natural mortality multiplier for mature new and old shell male
-    jitterParameter(Mmultf,fac);      // natural mortality multiplier for mature new and old shell female
-    jitterParameter(mat_big,fac);     // mult. on 1980 M_imm for mature males and females                     
-    jitterParameter(alpha1_rec,fac);  // Parameters related to fraction recruiting  //this is NOT estimated (why?)
-    jitterParameter(beta_rec,fac);    // Parameters related to fraction recruiting  //this is NOT estimated (why?)
+    wts::jitterParameter(growth_beta,fac,rng); // Growth beta                                //this is NOT estimated (why?)
+    wts::jitterParameter(Mmult_imat,fac,rng);  // natural mortality multiplier for females and males
+    wts::jitterParameter(Mmultm,fac,rng);      // natural mortality multiplier for mature new and old shell male
+    wts::jitterParameter(Mmultf,fac,rng);      // natural mortality multiplier for mature new and old shell female
+    wts::jitterParameter(mat_big,fac,rng);     // mult. on 1980 M_imm for mature males and females                     
+    wts::jitterParameter(alpha1_rec,fac,rng);  // Parameters related to fraction recruiting  //this is NOT estimated (why?)
+    wts::jitterParameter(beta_rec,fac,rng);    // Parameters related to fraction recruiting  //this is NOT estimated (why?)
     
-    jitterParameter(moltp_af,fac);       // paramters for logistic function molting   //this is NOT estimated (why?)
-    jitterParameter(moltp_bf,fac);       // female                                    //this is NOT estimated (why?)
-    jitterParameter(moltp_am,fac);       // paramters for logistic function molting   //this is NOT estimated (why?)
-    jitterParameter(moltp_bm,fac);       // immature males                            //this is NOT estimated (why?)
-    jitterParameter(moltp_ammat,fac);    // logistic molting prob for mature males
-    jitterParameter(moltp_bmmat,fac);    // logistic molting prob for mature males
+    wts::jitterParameter(moltp_af,fac,rng);       // paramters for logistic function molting   //this is NOT estimated (why?)
+    wts::jitterParameter(moltp_bf,fac,rng);       // female                                    //this is NOT estimated (why?)
+    wts::jitterParameter(moltp_am,fac,rng);       // paramters for logistic function molting   //this is NOT estimated (why?)
+    wts::jitterParameter(moltp_bm,fac,rng);       // immature males                            //this is NOT estimated (why?)
+    wts::jitterParameter(moltp_ammat,fac,rng);    // logistic molting prob for mature males
+    wts::jitterParameter(moltp_bmmat,fac,rng);    // logistic molting prob for mature males
     
-    jitterParameter(pMnLnRec,fac);// Mean log-scale recruitment 1974+ (males, females are equal)
-    jitterParameter(pRecDevs,fac);// Deviations about mean recruitment 1974+ (IMPORTANT CHANGE: used to be "endyr-1")
-    jitterParameter(pMnLnRecEarly,fac);// Mean log-scale recruitment in early phase (pre-1974)
-    jitterParameter(pRecDevsEarly,fac);// Deviations about logscale mean recruitment in early phase (pre-1974)
+    wts::jitterParameter(pMnLnRec,fac,rng);// Mean log-scale recruitment 1974+ (males, females are equal)
+    wts::jitterParameter(pRecDevs,fac,rng);// Deviations about mean recruitment 1974+ (IMPORTANT CHANGE: used to be "endyr-1")
+    wts::jitterParameter(pMnLnRecEarly,fac,rng);// Mean log-scale recruitment in early phase (pre-1974)
+    wts::jitterParameter(pRecDevsEarly,fac,rng);// Deviations about logscale mean recruitment in early phase (pre-1974)
     
-    jitterParameter(pAvgLnFmTCF,fac);           //log-scale mean directed fishing mortality
-    jitterParameter(pFmDevsTCF,fac);//log-scale directed fishing mortality devs IMPORTANT CHANGE: USED TO BE "1966,endyr-12"
-    jitterParameter(pAvgLnFmGTF,fac);           // fishing mortality (trawl)
-    jitterParameter(pFmDevsGTF,fac);// trawl fishery f-devs       (IMPORTANT CHANGE: used to be "endyr") 1973 seems OK
-    jitterParameter(pAvgLnFmSCF,fac);           // fishing mortality snow crab fishery discards
-    jitterParameter(pFmDevsSCF,fac);// snow crab fishery f-devs   (IMPORTANT CHANGE: used to be "endyr")  1992 is OK
-    jitterParameter(pAvgLnFmRKF,fac);       // fishing mortality red king crab fishery discards //this is NOT estimated (why?)
-    jitterParameter(pFmDevsRKF,fac);//this is NOT estimated (why?)  IMPORTANT CHANGEA: was nobs_discardc_rkc-1.  why -1 in "nobs_discardc_rkc-1"
+    wts::jitterParameter(pAvgLnFmTCF,fac,rng);           //log-scale mean directed fishing mortality
+    wts::jitterParameter(pFmDevsTCF,fac,rng);//log-scale directed fishing mortality devs IMPORTANT CHANGE: USED TO BE "1966,endyr-12"
+    wts::jitterParameter(pAvgLnFmGTF,fac,rng);           // fishing mortality (trawl)
+    wts::jitterParameter(pFmDevsGTF,fac,rng);// trawl fishery f-devs       (IMPORTANT CHANGE: used to be "endyr") 1973 seems OK
+    wts::jitterParameter(pAvgLnFmSCF,fac,rng);           // fishing mortality snow crab fishery discards
+    wts::jitterParameter(pFmDevsSCF,fac,rng);// snow crab fishery f-devs   (IMPORTANT CHANGE: used to be "endyr")  1992 is OK
+    wts::jitterParameter(pAvgLnFmRKF,fac,rng);       // fishing mortality red king crab fishery discards //this is NOT estimated (why?)
+    wts::jitterParameter(pFmDevsRKF,fac,rng);//this is NOT estimated (why?)  IMPORTANT CHANGEA: was nobs_discardc_rkc-1.  why -1 in "nobs_discardc_rkc-1"
     
     // Selectivity pattern for males (directed fishery)
-    jitterParameter(fish_slope_mn,fac);           //this is NOT estimated (why?)
-    jitterParameter(log_avg_sel50_mn,fac);        //this is NOT estimated (why?)
-    jitterParameter(log_sel50_dev_mn,fac);//this is NOT estimated (why?)
+    wts::jitterParameter(fish_slope_mn,fac,rng);           //this is NOT estimated (why?)
+    wts::jitterParameter(log_avg_sel50_mn,fac,rng);        //this is NOT estimated (why?)
+    wts::jitterParameter(log_sel50_dev_mn,fac,rng);//this is NOT estimated (why?)
     
     // Retention function
     // 1981 - 1992
-    jitterParameter(fish_fit_slope_mn1,fac);
-    jitterParameter(fish_fit_sel50_mn1,fac);
+    wts::jitterParameter(fish_fit_slope_mn1,fac,rng);
+    wts::jitterParameter(fish_fit_sel50_mn1,fac,rng);
     // 2005-endyr  
-    jitterParameter(fish_fit_slope_mn2,fac);
-    jitterParameter(fish_fit_sel50_mn2,fac);
+    wts::jitterParameter(fish_fit_slope_mn2,fac,rng);
+    wts::jitterParameter(fish_fit_sel50_mn2,fac,rng);
     
     // Directed fishery selectivity pattern for period-1: 1993-1996
-    jitterParameter(fish_slope_1,fac);      
-    jitterParameter(fish_sel50_1,fac);
+    wts::jitterParameter(fish_slope_1,fac,rng);      
+    wts::jitterParameter(fish_sel50_1,fac,rng);
     
     // Directed fishery selectivity pattern changing by year for period-3: 2005-P
-    jitterParameter(fish_slope_yr_3,fac);      
-    jitterParameter(log_avg_sel50_3,fac);
-    jitterParameter(log_sel50_dev_3,fac);
+    wts::jitterParameter(fish_slope_yr_3,fac,rng);      
+    wts::jitterParameter(log_avg_sel50_3,fac,rng);
+    wts::jitterParameter(log_sel50_dev_3,fac,rng);
     
     // for a dome-shaped selex pattern
-    jitterParameter(fish_slope_mn2,fac);
-    jitterParameter(fish_sel50_mn2,fac);
+    wts::jitterParameter(fish_slope_mn2,fac,rng);
+    wts::jitterParameter(fish_sel50_mn2,fac,rng);
     
     // Female discards
-    jitterParameter(fish_disc_slope_f,fac);
-    jitterParameter(fish_disc_sel50_f,fac);
+    wts::jitterParameter(fish_disc_slope_f,fac,rng);
+    wts::jitterParameter(fish_disc_sel50_f,fac,rng);
     
     // snow fishery female discards for period-1: 1989-1996
-    jitterParameter(snowfish_disc_slope_f_1,fac);
-    jitterParameter(snowfish_disc_sel50_f_1,fac);
+    wts::jitterParameter(snowfish_disc_slope_f_1,fac,rng);
+    wts::jitterParameter(snowfish_disc_sel50_f_1,fac,rng);
     
     // snow fishery female discards for period-2: 1997-2004
-    jitterParameter(snowfish_disc_slope_f_2,fac);
-    jitterParameter(snowfish_disc_sel50_f_2,fac);
+    wts::jitterParameter(snowfish_disc_slope_f_2,fac,rng);
+    wts::jitterParameter(snowfish_disc_sel50_f_2,fac,rng);
     
     // snow fishery female discards for period-3: 2005-P
-    jitterParameter(snowfish_disc_slope_f_3,fac);
-    jitterParameter(snowfish_disc_sel50_f_3,fac);
+    wts::jitterParameter(snowfish_disc_slope_f_3,fac,rng);
+    wts::jitterParameter(snowfish_disc_sel50_f_3,fac,rng);
     
     // snow fishery male discards for period-1: 1989-1996
-    jitterParameter(snowfish_disc_slope_m_1,fac);
-    jitterParameter(snowfish_disc_sel50_m_1,fac);
-    jitterParameter(snowfish_disc_slope_m2_1,fac);
-    jitterParameter(snowfish_disc_sel50_m2_1,fac);
+    wts::jitterParameter(snowfish_disc_slope_m_1,fac,rng);
+    wts::jitterParameter(snowfish_disc_sel50_m_1,fac,rng);
+    wts::jitterParameter(snowfish_disc_slope_m2_1,fac,rng);
+    wts::jitterParameter(snowfish_disc_sel50_m2_1,fac,rng);
     
     // snow fishery male discards for period-2: 1997-2004
-    jitterParameter(snowfish_disc_slope_m_2,fac);
-    jitterParameter(snowfish_disc_sel50_m_2,fac);
-    jitterParameter(snowfish_disc_slope_m2_2,fac);
-    jitterParameter(snowfish_disc_sel50_m2_2,fac);
+    wts::jitterParameter(snowfish_disc_slope_m_2,fac,rng);
+    wts::jitterParameter(snowfish_disc_sel50_m_2,fac,rng);
+    wts::jitterParameter(snowfish_disc_slope_m2_2,fac,rng);
+    wts::jitterParameter(snowfish_disc_sel50_m2_2,fac,rng);
     
     // snow fishery male discards for period-3: 2005-P
-    jitterParameter(snowfish_disc_slope_m_3,fac);
-    jitterParameter(snowfish_disc_sel50_m_3,fac);
-    jitterParameter(snowfish_disc_slope_m2_3,fac);
-    jitterParameter(snowfish_disc_sel50_m2_3,fac);
+    wts::jitterParameter(snowfish_disc_slope_m_3,fac,rng);
+    wts::jitterParameter(snowfish_disc_sel50_m_3,fac,rng);
+    wts::jitterParameter(snowfish_disc_slope_m2_3,fac,rng);
+    wts::jitterParameter(snowfish_disc_sel50_m2_3,fac,rng);
     
     // red king fishery female discards
 
-    jitterParameter(rkfish_disc_slope_f1,fac);
-    jitterParameter(rkfish_disc_sel50_f1,fac);
-    jitterParameter(rkfish_disc_slope_f2,fac);
-    jitterParameter(rkfish_disc_sel50_f2,fac);
-    jitterParameter(rkfish_disc_slope_f3,fac);
-    jitterParameter(rkfish_disc_sel50_f3,fac);
+    wts::jitterParameter(rkfish_disc_slope_f1,fac,rng);
+    wts::jitterParameter(rkfish_disc_sel50_f1,fac,rng);
+    wts::jitterParameter(rkfish_disc_slope_f2,fac,rng);
+    wts::jitterParameter(rkfish_disc_sel50_f2,fac,rng);
+    wts::jitterParameter(rkfish_disc_slope_f3,fac,rng);
+    wts::jitterParameter(rkfish_disc_sel50_f3,fac,rng);
     
     // red king fishery male discards
-    jitterParameter(rkfish_disc_slope_m1,fac);
-    jitterParameter(rkfish_disc_sel50_m1,fac);
-    jitterParameter(rkfish_disc_slope_m2,fac);
-    jitterParameter(rkfish_disc_sel50_m2,fac);
-    jitterParameter(rkfish_disc_slope_m3,fac);
-    jitterParameter(rkfish_disc_sel50_m3,fac);
+    wts::jitterParameter(rkfish_disc_slope_m1,fac,rng);
+    wts::jitterParameter(rkfish_disc_sel50_m1,fac,rng);
+    wts::jitterParameter(rkfish_disc_slope_m2,fac,rng);
+    wts::jitterParameter(rkfish_disc_sel50_m2,fac,rng);
+    wts::jitterParameter(rkfish_disc_slope_m3,fac,rng);
+    wts::jitterParameter(rkfish_disc_sel50_m3,fac,rng);
     
     // Trawl fishery selectivity female, 1973-1987
-    jitterParameter(fish_disc_slope_tf1,fac);
-    jitterParameter(fish_disc_sel50_tf1,fac);
+    wts::jitterParameter(fish_disc_slope_tf1,fac,rng);
+    wts::jitterParameter(fish_disc_sel50_tf1,fac,rng);
     // Trawl fishery selectivity female, 1988-1996
-    jitterParameter(fish_disc_slope_tf2,fac);
-    jitterParameter(fish_disc_sel50_tf2,fac);
+    wts::jitterParameter(fish_disc_slope_tf2,fac,rng);
+    wts::jitterParameter(fish_disc_sel50_tf2,fac,rng);
     // Trawl fishery selectivity female, 1997-P
-    jitterParameter(fish_disc_slope_tf3,fac);
-    jitterParameter(fish_disc_sel50_tf3,fac);
+    wts::jitterParameter(fish_disc_slope_tf3,fac,rng);
+    wts::jitterParameter(fish_disc_sel50_tf3,fac,rng);
     // Trawl fishery selectivity male, 1973-1987
-    jitterParameter(fish_disc_slope_tm1,fac);
-    jitterParameter(fish_disc_sel50_tm1,fac);
+    wts::jitterParameter(fish_disc_slope_tm1,fac,rng);
+    wts::jitterParameter(fish_disc_sel50_tm1,fac,rng);
     // Trawl fishery selectivity male, 1988-1996
-    jitterParameter(fish_disc_slope_tm2,fac);
-    jitterParameter(fish_disc_sel50_tm2,fac);
+    wts::jitterParameter(fish_disc_slope_tm2,fac,rng);
+    wts::jitterParameter(fish_disc_sel50_tm2,fac,rng);
     // Trawl fishery selectivity male, 1997-P
-    jitterParameter(fish_disc_slope_tm3,fac);
-    jitterParameter(fish_disc_sel50_tm3,fac);
+    wts::jitterParameter(fish_disc_slope_tm3,fac,rng);
+    wts::jitterParameter(fish_disc_sel50_tm3,fac,rng);
     //1974 to 1981 
-    jitterParameter(srv2_q,fac);
-    jitterParameter(srv2_seldiff,fac);
-    jitterParameter(srv2_sel50,fac);
+    wts::jitterParameter(srv2_q,fac,rng);
+    wts::jitterParameter(srv2_seldiff,fac,rng);
+    wts::jitterParameter(srv2_sel50,fac,rng);
     //1982-86 net change; 1982 first year of 83-112; burn-in period
-    jitterParameter(srv2a_q,fac);
-    jitterParameter(srv2a_seldiff,fac);
-    jitterParameter(srv2a_sel50,fac);
+    wts::jitterParameter(srv2a_q,fac,rng);
+    wts::jitterParameter(srv2a_seldiff,fac,rng);
+    wts::jitterParameter(srv2a_sel50,fac,rng);
     //1987-P
-    jitterParameter(srv3_q,fac);
-    jitterParameter(srv3_seldiff,fac);
-    jitterParameter(srv3_sel50,fac);
+    wts::jitterParameter(srv3_q,fac,rng);
+    wts::jitterParameter(srv3_seldiff,fac,rng);
+    wts::jitterParameter(srv3_sel50,fac,rng);
     
-    jitterParameter(matestf,fac);
-    jitterParameter(matestm,fac);
+    wts::jitterParameter(matestf,fac,rng);
+    wts::jitterParameter(matestm,fac,rng);
     
-    jitterParameter(srv2_femQ,fac);
-    jitterParameter(srv2_seldiff_f,fac);
+    wts::jitterParameter(srv2_femQ,fac,rng);
+    wts::jitterParameter(srv2_seldiff_f,fac,rng);
     
-    jitterParameter(srv2_sel50_f,fac);
+    wts::jitterParameter(srv2_sel50_f,fac,rng);
     
-    jitterParameter(srv2a_femQ,fac);
-    jitterParameter(srv2a_seldiff_f,fac);
-    jitterParameter(srv2a_sel50_f,fac);
+    wts::jitterParameter(srv2a_femQ,fac,rng);
+    wts::jitterParameter(srv2a_seldiff_f,fac,rng);
+    wts::jitterParameter(srv2a_sel50_f,fac,rng);
     
-    jitterParameter(srv3_femQ,fac);
-    jitterParameter(srv3_seldiff_f,fac);
-    jitterParameter(srv3_sel50_f,fac);
+    wts::jitterParameter(srv3_femQ,fac,rng);
+    wts::jitterParameter(srv3_seldiff_f,fac,rng);
+    wts::jitterParameter(srv3_sel50_f,fac,rng);
     
     
-    jitterParameter(proprecn,fac);
+    wts::jitterParameter(proprecn,fac,rng);
     cout<<"finished jittering"<<endl;
 //    cout<<"enter 1 to continue >> ";
 //    int dummy = 0;
 //    cin>>dummy;
     
-// ----------------------------------------------------------------------
-// ----------------------------------------------------------------------
-FUNCTION void jitterParameter(param_init_number& p, double fac)   //wts: new
-    if (p.phase_start>0){//arithmetic jitter
-//        cout<<"number:"<<endl;
-        double v = value(p);
-        double r = rng.better_rand();
-        double vp = v+wts::min(1.0,fac)*2.0*(r-0.5);
-        p = vp;
-//        cout<<"r = "<<r<<cc<<"fac = "<<fac<<cc<<"minf = "<<wts::min(1.0,fac)<<cc<<"vp = "<<vp<<endl;
-//        cout<<"orig = "<<v<<cc<<"new  = "<<p<<endl;
-    }
-    
-// ----------------------------------------------------------------------
-// ----------------------------------------------------------------------
-FUNCTION void jitterParameter(param_init_bounded_number& p, double fac)   //wts: new
-    if (p.phase_start>0){//arithmetic jitter
-//        cout<<"bounded number:"<<endl;
-        double v = value(p);
-        double d = p.maxb-p.minb;
-        double r = rng.better_rand();
-        double vp = p.minb+0.5*d+wts::min(1.0,fac)*(r-0.5)*d;
-        p = vp;
-//        cout<<"r = "<<r<<cc<<"fac = "<<fac<<cc<<"minf = "<<wts::min(1.0,fac)<<cc<<"vp = "<<vp<<endl;
-//        cout<<"orig = "<<v<<cc<<"new  = "<<p<<cc<<"lims="<<p.minb<<cc<<p.maxb<<endl;
-    }
-    
-// ----------------------------------------------------------------------
-// ----------------------------------------------------------------------
-FUNCTION void jitterParameter(param_init_bounded_vector& p, double fac)   //wts: new
-    if (p.phase_start>0){//arithmetic jitter
-//        cout<<"vector:"<<endl;
-        dvector v = value(p);
-        double d = p.maxb-p.minb;
-        for (int i=p.indexmin();i<=p.indexmax();i++){
-            double r = rng.better_rand();
-            double vp = p.minb+0.5*d+wts::min(1.0,fac)*(r-0.5)*d;
-            p(i) = vp;
-//            cout<<"r = "<<r<<cc<<"fac = "<<fac<<cc<<"minf = "<<wts::min(1.0,fac)<<cc<<"vp = "<<vp<<endl;
-//            cout<<"orig = "<<v[i]<<cc<<"new  = "<<p[i]<<cc<<"lims="<<p.minb<<cc<<p.maxb<<endl;
-        }
-    }
-    
-// ----------------------------------------------------------------------
-// ----------------------------------------------------------------------
-FUNCTION void jitterParameter(param_init_bounded_dev_vector& p, double fac)   //wts: new
-    if (p.phase_start>0){//arithmetic jitter
-//        cout<<"devs vector:"<<endl;
-        dvector v = value(p);
-        double d = p.maxb-p.minb;
-        for (int i=p.indexmin();i<=p.indexmax();i++){
-            double r = rng.better_rand();
-            double vp = p.minb+0.5*d+wts::min(1.0,fac)*(r-0.5)*d;
-            p(i) = vp;
-//            cout<<"r = "<<r<<cc<<"fac = "<<fac<<cc<<"minf = "<<wts::min(1.0,fac)<<cc<<"vp = "<<vp<<endl;
-//            cout<<"orig = "<<v[i]<<cc<<"new  = "<<p[i]<<cc<<"lims="<<p.minb<<cc<<p.maxb<<endl;
-        }
-    }
-    
+//// ----------------------------------------------------------------------
+//// ----------------------------------------------------------------------
+//FUNCTION void jitterParameter(param_init_number& p, double fac)   //wts: new
+//    if (p.phase_start>0){//arithmetic jitter
+////        cout<<"number:"<<endl;
+//        double v = value(p);
+//        double r = rng.better_rand();
+//        double vp = v+wts::min(1.0,fac)*2.0*(r-0.5);
+//        p = vp;
+////        cout<<"r = "<<r<<cc<<"fac = "<<fac<<cc<<"minf = "<<wts::min(1.0,fac)<<cc<<"vp = "<<vp<<endl;
+////        cout<<"orig = "<<v<<cc<<"new  = "<<p<<endl;
+//    }
+//    
+//// ----------------------------------------------------------------------
+//// ----------------------------------------------------------------------
+//FUNCTION void jitterParameter(param_init_bounded_number& p, double fac)   //wts: new
+//    if (p.phase_start>0){//arithmetic jitter
+////        cout<<"bounded number:"<<endl;
+//        double v = value(p);
+//        double d = p.maxb-p.minb;
+//        double r = rng.better_rand();
+//        double vp = p.minb+0.5*d+wts::min(1.0,fac)*(r-0.5)*d;
+//        p = vp;
+////        cout<<"r = "<<r<<cc<<"fac = "<<fac<<cc<<"minf = "<<wts::min(1.0,fac)<<cc<<"vp = "<<vp<<endl;
+////        cout<<"orig = "<<v<<cc<<"new  = "<<p<<cc<<"lims="<<p.minb<<cc<<p.maxb<<endl;
+//    }
+//    
+//// ----------------------------------------------------------------------
+//// ----------------------------------------------------------------------
+//FUNCTION void jitterParameter(param_init_bounded_vector& p, double fac)   //wts: new
+//    if (p.phase_start>0){//arithmetic jitter
+////        cout<<"vector:"<<endl;
+//        dvector v = value(p);
+//        double d = p.maxb-p.minb;
+//        for (int i=p.indexmin();i<=p.indexmax();i++){
+//            double r = rng.better_rand();
+//            double vp = p.minb+0.5*d+wts::min(1.0,fac)*(r-0.5)*d;
+//            p(i) = vp;
+////            cout<<"r = "<<r<<cc<<"fac = "<<fac<<cc<<"minf = "<<wts::min(1.0,fac)<<cc<<"vp = "<<vp<<endl;
+////            cout<<"orig = "<<v[i]<<cc<<"new  = "<<p[i]<<cc<<"lims="<<p.minb<<cc<<p.maxb<<endl;
+//        }
+//    }
+//    
+//// ----------------------------------------------------------------------
+//// ----------------------------------------------------------------------
+//FUNCTION void jitterParameter(param_init_bounded_dev_vector& p, double fac)   //wts: new
+//    if (p.phase_start>0){//arithmetic jitter
+////        cout<<"devs vector:"<<endl;
+//        dvector v = value(p);
+//        double d = p.maxb-p.minb;
+//        for (int i=p.indexmin();i<=p.indexmax();i++){
+//            double r = rng.better_rand();
+//            double vp = p.minb+0.5*d+wts::min(1.0,fac)*(r-0.5)*d;
+//            p(i) = vp;
+////            cout<<"r = "<<r<<cc<<"fac = "<<fac<<cc<<"minf = "<<wts::min(1.0,fac)<<cc<<"vp = "<<vp<<endl;
+////            cout<<"orig = "<<v[i]<<cc<<"new  = "<<p[i]<<cc<<"lims="<<p.minb<<cc<<p.maxb<<endl;
+//        }
+//    }
+//    
 // ----------------------------------------------------------------------
 // ----------------------------------------------------------------------
 FUNCTION openMCMCFile                                     //wts: new
