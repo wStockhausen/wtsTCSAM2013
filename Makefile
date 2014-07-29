@@ -54,7 +54,7 @@ MKDIR=mkdir
 CP=cp
 CCADMIN=CCadmin
 
-.PRECIOUIS: %.cpp %.htp
+.PRECIOUS: %.cpp %.htp
 	
 %.cpp: %.tpl
 	"${ADMB_HOME}/bin/tpl2cpp" $*
