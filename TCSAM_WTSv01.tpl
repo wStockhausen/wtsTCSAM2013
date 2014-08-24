@@ -7,12 +7,18 @@
 //--20140419: changed to read model control file name from model configuration, rather than hard-wired name
 //--20140425: changed output of selTCFR to retFcn in a number of places
 //--20140506: added parameter jitter functionality
-//
-//IMPORTANT: CPT assessment model has RKC params for 1992+ discard mortality TURNED OFF. 
-//           Model is currently set w/ these ON. Modify lines near 919 to turn ON/OFF.
-//
 //--20140523: updated to use wtsADMB library.
 //--20140602: updated to use writeParameter and jitterParameter functions in wtsADMB library.
+//--20140805: decreased lower bound on log_sel50_dev_3 (directed fishery log-scale selectivity devs) from -0.5 to -1.0
+//--20140814: changed bounds on log_sel50_dev_3 (directed fishery log-scale selectivity devs) from [-1.0,0.5] to [-5,5]
+//--20140821: put prior on log_sel50_dev3, implemented decrease with in nll weighting on fishing-related devs 
+//--20140821: added flag (doPenRed) to control file to reduce penalties on fishing-related devs with phase. 
+//--20140823: added FmRKF phase and log_sel50_dev_3 bounds to control file as inputs, 
+//            changed jitter factor on devs to 0.1*fac
+//
+//IMPORTANT: 2013-09 assessment model had RKC params for 1992+ discard mortality TURNED OFF. 
+//           THE ESTIMATION PHASE FOR RKC DISCARD MORTALITY IS NOW SET IN THE CONTROLLER FILE!
+//
 //
 //********
 //to run mcmc 
@@ -20,9 +26,6 @@
 // then have to run  scmysr2003bayes -mceval to get output
 //whatever is in sd report file will have a distribution and output will go to eval.csv
 //for whatever have written to post later in program in the mcmc function part
-//
-// Right now, RKF params for fishing mortality 1992+ are turned ON!!
-// Modify lines near 888 to turn OFF (as in 2013 assessment))
 //
 // ===============================================================================
 // ===============================================================================
@@ -81,7 +84,7 @@ GLOBALS_SECTION
     adstring strZBins;
     
     int NUM_LEN_LIKE = 12; //number of likelihood components from size compositions
-    int NUM_FOUT     = 37; //total number of likelihood components
+    int NUM_FOUT     = 38; //total number of likelihood components
     
     adstring_array strFOUT(1,NUM_FOUT);//names for objfOut components
     
@@ -143,6 +146,8 @@ DATA_SECTION
     strFOUT(kf++) = "likelihood for snow crab fishery: total catch biomass";
     strFOUT(kf++) = "likelihood for BBRKC fishery: total catch biomass";
     strFOUT(kf++) = "likelihood for groundfish fishery: total catch biomass";
+
+    strFOUT(kf++) = "penalty on sel50 devs for TCF";
  END_CALCS
  
  LOCAL_CALCS  
@@ -773,6 +778,16 @@ DATA_SECTION
     !!CheckFile<<"mort_switch2   = "<<mort_switch2<<endl;
     !!CheckFile<<"lyr_mort       = "<<lyr_mort<<endl;
     !!CheckFile<<"uyr_mort       ="<<uyr_mort<<endl;
+    
+    init_int doPenRed           //flag (0/1) to reduce penalties on fishing-related devs by phase
+    init_int phsFmRKF           //phase to turn on RKF fishing estimation (originally -4 or 5)
+    init_number llw_sel50_dev_3 //llw for penalty on log_sel50_dev_3 (originally 0))
+    init_number bnd_sel50_dev_3 //upper/lower bounds on log_sel50_dev_3 deviations (originally 5.0)
+    !!CheckFile<<"doPenRed = "<<doPenRed<<endl;    
+    !!CheckFile<<"phsFmRKF = "<<phsFmRKF<<endl;    
+    !!CheckFile<<"llw_sel50_dev_3 = "<<llw_sel50_dev_3<<endl;    
+    !!CheckFile<<"bnd_sel50_dev_3 = "<<bnd_sel50_dev_3<<endl;  
+    
     !!CheckFile<<"Finished reading control file."<<endl;
     
     // the rest are working variables 
@@ -811,10 +826,10 @@ DATA_SECTION
     matrix obs_srv1_bioms(1,nXs,styr,endyr)         // Survey biomass by sex
     vector obs_srv1_biom(styr,endyr)                // Total survey biomass
     
-    vector obs_catcht_biom(styr,endyr-1)              // Total catch                        (IMPORTANT CHANGE: used to be "endyr")
-    vector obs_catchdm_biom(styr,endyr-1)             // Male discards                      (IMPORTANT CHANGE: used to be "endyr")
-    vector obs_catchdf_biom(styr,endyr-1)             // Female discards                    (IMPORTANT CHANGE: used to be "endyr")
-    vector obs_catchtot_biom(styr,endyr-1)            // Total catch (discard and retained) (IMPORTANT CHANGE: used to be "endyr")
+    vector obs_catcht_biom(styr,endyr-1)              // Trawl catch                        (IMPORTANT CHANGE: used to be "endyr")
+    vector obs_catchdm_biom(styr,endyr-1)             // Male discards   (TCF)              (IMPORTANT CHANGE: used to be "endyr")
+    vector obs_catchdf_biom(styr,endyr-1)             // Female discards (TCF)              (IMPORTANT CHANGE: used to be "endyr")
+    vector obs_catchtot_biom(styr,endyr-1)            // Total catch mortality (discard and retained; TCF) (IMPORTANT CHANGE: used to be "endyr")
     
     number avgwt2
     number avgwtall
@@ -917,12 +932,15 @@ PARAMETER_SECTION
     init_bounded_dev_vector pFmDevsGTF(1973,endyr-1,-15,15,3)         // trawl fishery f-devs       (IMPORTANT CHANGE: used to be "endyr") 1973 seems OK
     init_number pAvgLnFmSCF(3)                                        // fishing mortality snow crab fishery discards
     init_bounded_dev_vector pFmDevsSCF(1992,endyr-1,-15,15,4)         // snow crab fishery f-devs   (IMPORTANT CHANGE: used to be "endyr")  1992 is OK
-//    //wts:following lines were used in 2013 assessment (i.e., RKF Fm NOT estimated)
+    //wts:following lines were used in 2013 assessment (i.e., RKF Fm NOT estimated)
 //    init_bounded_number pAvgLnFmRKF(-5.25,-5.25,-4)                   // fishing mortality red king crab fishery discards //this is NOT estimated (why?)
 //    init_bounded_dev_vector pFmDevsRKF(1,nobs_discardc_rkc,-15,15,-5) //this is NOT estimated (why?)  IMPORTANT CHANGEA: was nobs_discardc_rkc-1.  why -1 in "nobs_discardc_rkc-1"
-    //wts:following lines turn ON Fm for RKF
-    init_bounded_number pAvgLnFmRKF(-10,5,5)                   // fishing mortality red king crab fishery discards //IMPORTANT CHANGE: now estimated
-    init_bounded_dev_vector pFmDevsRKF(1,nobs_discardc_rkc,-15,15,6) //this is NOT estimated (why?)  IMPORTANT CHANGE: now estimated!
+//    //wts:following lines turn ON Fm for RKF
+//    init_bounded_number pAvgLnFmRKF(-10,5,5)                   // fishing mortality red king crab fishery discards //IMPORTANT CHANGE: now estimated
+//    init_bounded_dev_vector pFmDevsRKF(1,nobs_discardc_rkc,-15,15,6) //this is NOT estimated (why?)  IMPORTANT CHANGE: now estimated!
+    //wts:implemented 20140823 (estimation phase now set in control file)
+    init_bounded_number pAvgLnFmRKF(-10,5,phsFmRKF)                           // fishing mortality red king crab fishery discards
+    init_bounded_dev_vector pFmDevsRKF(1,nobs_discardc_rkc,-15,15,phsFmRKF+1) // 
     
     // Selectivity pattern for males (directed fishery)
     // Set -phase so not estimated if using @3 selectivity periods
@@ -948,7 +966,7 @@ PARAMETER_SECTION
     // Directed fishery selectivity pattern changing by year for period-3: 2005-P
     init_bounded_number fish_slope_yr_3(0.1,0.4,phase_logistic_sel)      
     init_bounded_number log_avg_sel50_3(4.0,5.0,phase_logistic_sel)
-    init_bounded_dev_vector log_sel50_dev_3(1,nlog_sel50_dev_3,-0.5,0.5,phase_logistic_sel) //Fixed index (why 2000?) (IMPORTANT CHANGE: used to be "endyr-2000")
+    init_bounded_dev_vector log_sel50_dev_3(1,nlog_sel50_dev_3,-bnd_sel50_dev_3,bnd_sel50_dev_3,phase_logistic_sel) //Fixed index (why 2000?) (IMPORTANT CHANGE: used to be "endyr-2000")
     
     // for a dome-shaped selex pattern
     init_bounded_number fish_slope_mn2(000.01,002.0,phase_fishsel)
@@ -1210,8 +1228,8 @@ PARAMETER_SECTION
     number brRKF
                               
     //changed endyr to endyr-1                                  
-    3darray fTCFM_syz(1,nSCs,styr,endyr-1,1,nlenm)     // Directed fTCFM_syz on males                             
     3darray fTCFR_syz(1,nSCs,styr,endyr-1,1,nlenm)     // Retained fTCFM_syz 
+    3darray fTCFM_syz(1,nSCs,styr,endyr-1,1,nlenm)     // Directed fTCFM_syz on males                             
     matrix  fTCFF_yz(styr,endyr-1,1,nlenm)             // Female target discards
     3darray fGTF_xyz(1,nXs,styr,endyr-1,1,nlenm)       // bycatch in trawl fishery
     3darray fSCF_xyz(1,nXs,styr,endyr-1,1,nlenm)       // bycatch in snow crab fishery
@@ -1983,19 +2001,19 @@ FUNCTION void jitterParameters(double fac)   //wts: new 2014-05-10
     wts::jitterParameter(moltp_ammat,fac,rng);    // logistic molting prob for mature males
     wts::jitterParameter(moltp_bmmat,fac,rng);    // logistic molting prob for mature males
     
-    wts::jitterParameter(pMnLnRec,fac,rng);// Mean log-scale recruitment 1974+ (males, females are equal)
-    wts::jitterParameter(pRecDevs,fac,rng);// Deviations about mean recruitment 1974+ (IMPORTANT CHANGE: used to be "endyr-1")
-    wts::jitterParameter(pMnLnRecEarly,fac,rng);// Mean log-scale recruitment in early phase (pre-1974)
-    wts::jitterParameter(pRecDevsEarly,fac,rng);// Deviations about logscale mean recruitment in early phase (pre-1974)
+    wts::jitterParameter(pMnLnRec,fac,rng);         // Mean log-scale recruitment 1974+ (males, females are equal)
+    wts::jitterParameter(pRecDevs,0.1*fac,rng);     // Deviations about mean recruitment 1974+ (IMPORTANT CHANGE: used to be "endyr-1")
+    wts::jitterParameter(pMnLnRecEarly,fac,rng);    // Mean log-scale recruitment in early phase (pre-1974)
+    wts::jitterParameter(pRecDevsEarly,0.1*fac,rng);// Deviations about logscale mean recruitment in early phase (pre-1974)
     
     wts::jitterParameter(pAvgLnFmTCF,fac,rng);           //log-scale mean directed fishing mortality
-    wts::jitterParameter(pFmDevsTCF,fac,rng);//log-scale directed fishing mortality devs IMPORTANT CHANGE: USED TO BE "1966,endyr-12"
-    wts::jitterParameter(pAvgLnFmGTF,fac,rng);           // fishing mortality (trawl)
-    wts::jitterParameter(pFmDevsGTF,fac,rng);// trawl fishery f-devs       (IMPORTANT CHANGE: used to be "endyr") 1973 seems OK
-    wts::jitterParameter(pAvgLnFmSCF,fac,rng);           // fishing mortality snow crab fishery discards
-    wts::jitterParameter(pFmDevsSCF,fac,rng);// snow crab fishery f-devs   (IMPORTANT CHANGE: used to be "endyr")  1992 is OK
-    wts::jitterParameter(pAvgLnFmRKF,fac,rng);       // fishing mortality red king crab fishery discards //this is NOT estimated (why?)
-    wts::jitterParameter(pFmDevsRKF,fac,rng);//this is NOT estimated (why?)  IMPORTANT CHANGEA: was nobs_discardc_rkc-1.  why -1 in "nobs_discardc_rkc-1"
+    wts::jitterParameter(pFmDevsTCF,0.1*fac,rng);//log-scale directed fishing mortality devs IMPORTANT CHANGE: USED TO BE "1966,endyr-12"
+    wts::jitterParameter(pAvgLnFmGTF,fac,rng);   // fishing mortality (trawl)
+    wts::jitterParameter(pFmDevsGTF,0.1*fac,rng);// trawl fishery f-devs       (IMPORTANT CHANGE: used to be "endyr") 1973 seems OK
+    wts::jitterParameter(pAvgLnFmSCF,fac,rng);   // fishing mortality snow crab fishery discards
+    wts::jitterParameter(pFmDevsSCF,0.1*fac,rng);// snow crab fishery f-devs   (IMPORTANT CHANGE: used to be "endyr")  1992 is OK
+    wts::jitterParameter(pAvgLnFmRKF,fac,rng);   // fishing mortality red king crab fishery discards //this is NOT estimated (why?)
+    wts::jitterParameter(pFmDevsRKF,0.1*fac,rng);//this is NOT estimated (why?)  IMPORTANT CHANGEA: was nobs_discardc_rkc-1.  why -1 in "nobs_discardc_rkc-1"
     
     // Selectivity pattern for males (directed fishery)
     wts::jitterParameter(fish_slope_mn,fac,rng);           //this is NOT estimated (why?)
@@ -2017,7 +2035,7 @@ FUNCTION void jitterParameters(double fac)   //wts: new 2014-05-10
     // Directed fishery selectivity pattern changing by year for period-3: 2005-P
     wts::jitterParameter(fish_slope_yr_3,fac,rng);      
     wts::jitterParameter(log_avg_sel50_3,fac,rng);
-    wts::jitterParameter(log_sel50_dev_3,fac,rng);
+    wts::jitterParameter(log_sel50_dev_3,0.1*fac,rng);
     
     // for a dome-shaped selex pattern
     wts::jitterParameter(fish_slope_mn2,fac,rng);
@@ -3080,24 +3098,46 @@ FUNCTION evaluate_the_objective_function    //wts: revising
     
     // various penalties
     // =================
+    double llw = 0.0;
+    double red = 0.01;
+    int max_number_phases = 8;
     fpen.initialize();
-    if (active(pFmDevsTCF)) {      
+    if (active(log_sel50_dev_3)) { 
+        int phs = log_sel50_dev_3.get_phase_start();
+        llw = llw_sel50_dev_3; 
+        if (doPenRed) llw = pow(red,(current_phase()-phs)/max(1.0,1.0*(max_number_phases-phs)))*llw;
+        nextf = norm2(log_sel50_dev_3);
+        fpen += llw*nextf; objfOut(38) = nextf; likeOut(38) = nextf; wgtsOut(38) = llw;   //wts: need to turn this off in last phase?        
+    }
+    if (active(pFmDevsTCF)) { 
+        int phs = pFmDevsTCF.get_phase_start();
+        llw = 1.0; 
+        if (doPenRed) llw = pow(red,(current_phase()-phs)/max(1.0,1.0*(max_number_phases-phs)))*llw;
         nextf = norm2(pFmDevsTCF);
-        fpen += nextf; objfOut(15) = nextf; likeOut(15) = nextf; wgtsOut(15) = 1;   //wts: need to turn this off in last phase?        
+        fpen += llw*nextf; objfOut(15) = nextf; likeOut(15) = nextf; wgtsOut(15) = llw;   //wts: need to turn this off in last phase?        
     }
     if(active(pFmDevsSCF)) {
+        int phs = pFmDevsSCF.get_phase_start();
+        llw = 0.5; 
+        if (doPenRed) llw = pow(red,(current_phase()-phs)/max(1.0,1.0*(max_number_phases-phs)))*llw;
         nextf = norm2(pFmDevsSCF);
-        fpen += 0.5*nextf; objfOut(16) = 0.5*nextf; likeOut(16) = nextf; wgtsOut(16) = 0.5; //wts: need to turn this off in last phase? note that relative weights are hard-wired
+        fpen += llw*nextf; objfOut(16) = llw*nextf; likeOut(16) = nextf; wgtsOut(16) = llw; //wts: need to turn this off in last phase? note that relative weights are hard-wired
         
     }
     if(active(pFmDevsRKF)) {
+        int phs = pFmDevsRKF.get_phase_start();
+        llw = 3.0; 
+        if (doPenRed) llw = pow(red,(current_phase()-phs)/max(1.0,1.0*(max_number_phases-phs)))*llw;
         nextf = norm2(pFmDevsRKF);
-        fpen += 3.0*nextf; objfOut(17) = 3.0*nextf; likeOut(17) = nextf; wgtsOut(17) = 3.0; //wts: need to turn this off in last phase?
+        fpen += llw*nextf; objfOut(17) = llw*nextf; likeOut(17) = nextf; wgtsOut(17) = llw; //wts: need to turn this off in last phase?
         
     }
     if(active(pFmDevsGTF)) {
+        int phs = pFmDevsGTF.get_phase_start();
+        llw = 0.5; 
+        if (doPenRed) llw = pow(red,(current_phase()-phs)/max(1.0,1.0*(last_phase()-phs)))*llw;
         nextf = norm2(pFmDevsGTF);
-        fpen += 0.5*nextf; objfOut(18) = 0.5*nextf; likeOut(18) = nextf; wgtsOut(18) = 0.5; //wts: need to turn this off in last phase?        
+        fpen += llw*nextf; objfOut(18) = llw*nextf; likeOut(18) = nextf; wgtsOut(18) = llw; //wts: need to turn this off in last phase?        
     }
     
     f += fpen;
@@ -3141,10 +3181,10 @@ FUNCTION evaluate_the_objective_function    //wts: revising
         len_like(4) -= nsamples_snowfish_discm(NEW_SHELL,i)*(obs_p_snow(MALE,i)*log(pred_p_snow(MALE,yr)+p_const));
     }
 //    cout<<" snow m length "<<endl;
-    CheckFile<<"+++++++++++++++++"<<endl;
-    CheckFile<<"snf males LL = "<<len_like(4)<<endl;
-    CheckFile<<pred_p_snow(MALE)<<endl;
-    CheckFile<<"+++++++++++++++++"<<endl;
+//    CheckFile<<"+++++++++++++++++"<<endl;
+//    CheckFile<<"snf males LL = "<<len_like(4)<<endl;
+//    CheckFile<<pred_p_snow(MALE)<<endl;
+//    CheckFile<<"+++++++++++++++++"<<endl;
     
     // fishery length likelihood snow crab fishery discards
     for (int i=1; i <= nobs_snowfish_discf; i++) {
@@ -3160,10 +3200,10 @@ FUNCTION evaluate_the_objective_function    //wts: revising
         len_like(7) -= nsamples_rkfish_discf(i)*(obs_p_rk(FEMALE,i)*log(pred_p_rk(FEMALE,yr)+p_const));
     }
 //    cout<<" red f length "<<endl;
-    CheckFile<<"+++++++++++++++++"<<endl;
-    CheckFile<<"rkf males LL = "<<len_like(6)<<endl;
-    CheckFile<<pred_p_rk(MALE)<<endl;
-    CheckFile<<"+++++++++++++++++"<<endl;
+//    CheckFile<<"+++++++++++++++++"<<endl;
+//    CheckFile<<"rkf males LL = "<<len_like(6)<<endl;
+//    CheckFile<<pred_p_rk(MALE)<<endl;
+//    CheckFile<<"+++++++++++++++++"<<endl;
     
     // trawl fishery length likelihood 
     for (int i=1; i <= nobs_trawl; i++) {
@@ -5102,7 +5142,7 @@ FUNCTION void writeToR(ofstream& R_out)
         R_out << "$estimated.annual.red.king.fishing.mortality" << endl;
         R_out << fmRKF_y(styr,endyr-1) << endl;
         R_out << "$estimated.annual.total.fishing.mortality" << endl;
-        for (int i=styr;i<=(endyr-1);i++) R_out << fTCFM_syz(1,i)(nlenm)+ fGTF_xyz(2,i)(nlenm)+fSCF_xyz(MALE,i)(nlenm)+fRKF_xyz(2,i)(nlenm) <<" "; R_out<< endl;
+        for (int i=styr;i<=(endyr-1);i++) R_out << fTCFM_syz(1,i)(nlenm)+ fGTF_xyz(MALE,i)(nlenm)+fSCF_xyz(MALE,i)(nlenm)+fRKF_xyz(MALE,i)(nlenm) <<" "; R_out<< endl;
         R_out <<"$retained.fTCFM_syz" << endl;
         for (int i=styr;i<=(endyr-1);i++) R_out <<fTCFR_syz(1,i)(nlenm)<<" "; R_out<<endl;
         R_out <<"$ghl" << endl;
@@ -5413,6 +5453,17 @@ FUNCTION void writeLikelihoodComponents(ostream& os, int toR)
 REPORT_SECTION
     cout<<"starting REPORT_SECTION"<<endl;
     
+    if (active(log_sel50_dev_3)) { 
+        double llw = 0.0;
+        double red = 0.01;
+        int max_number_phases = 8;
+        int phs = log_sel50_dev_3.get_phase_start();
+        llw = 1.0; llw = pow(red,(current_phase()-phs)/max(1.0,1.0*(max_number_phases-phs)))*llw;
+        cout<<"llw for log_sel50_dev_3"<<endl;
+        cout<<current_phase()<<tb<<phs<<tb<<max_number_phases<<endl;
+        cout<<(current_phase()-phs)<<tb<<max(1.0,1.0*(max_number_phases-phs))<<endl;
+        cout<<pow(red,(current_phase()-phs)/max(1.0,1.0*(max_number_phases-phs)))<<endl;
+     }
     if (last_phase()) {
         ofstream os("TCSAM_WTS."+str(current_phase())+".R", ios::trunc);    
         myWriteToR(os);
