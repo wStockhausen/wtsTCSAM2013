@@ -60,11 +60,11 @@ LDLIBSOPTIONS=-L/Users/WilliamStockhausen/Programs/admb/build/dist/lib -L/Users/
 
 # Build Targets
 .build-conf: ${BUILD_SUBPROJECTS}
-	"${MAKE}"  -f nbproject/Makefile-${CND_CONF}.mk ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/tcsam2013
+	"${MAKE}"  -f nbproject/Makefile-${CND_CONF}.mk ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/tcsam2013alta
 
-${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/tcsam2013: ${OBJECTFILES}
+${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/tcsam2013alta: ${OBJECTFILES}
 	${MKDIR} -p ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}
-	${LINK.cc} -o ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/tcsam2013 ${OBJECTFILES} ${LDLIBSOPTIONS}
+	${LINK.cc} -o ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/tcsam2013alta ${OBJECTFILES} ${LDLIBSOPTIONS}
 
 ${OBJECTDIR}/FisheryData.o: FisheryData.cpp 
 	${MKDIR} -p ${OBJECTDIR}
@@ -97,7 +97,7 @@ ${OBJECTDIR}/TCSAM_WTSv01.o: TCSAM_WTSv01.cpp
 # Clean Targets
 .clean-conf: ${CLEAN_SUBPROJECTS}
 	${RM} -r ${CND_BUILDDIR}/${CND_CONF}
-	${RM} ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/tcsam2013
+	${RM} ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/tcsam2013alta
 
 # Subprojects
 .clean-subprojects:

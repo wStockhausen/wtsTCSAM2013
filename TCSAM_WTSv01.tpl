@@ -15,6 +15,11 @@
 //--20140821: added flag (doPenRed) to control file to reduce penalties on fishing-related devs with phase. 
 //--20140823: added FmRKF phase and log_sel50_dev_3 bounds to control file as inputs, 
 //            changed jitter factor on devs to 0.1*fac
+//--20140830: corrected penalty reduction for pFmDevsGTF, corrected objfOut for log_sel50_dev_3 and pFmTCF
+//            by multiplying nll by llw (was applied correctly in objfun calc)
+//--20140915: converted descending limb z50 selectivity parameter for males in the snow crab fishery
+//            from arithmetic (with no constraint to be > ascending limb z50) to ln-scale offset from 
+//            ascending limb selectivity parameter
 //
 //IMPORTANT: 2013-09 assessment model had RKC params for 1992+ discard mortality TURNED OFF. 
 //           THE ESTIMATION PHASE FOR RKC DISCARD MORTALITY IS NOW SET IN THE CONTROLLER FILE!
@@ -399,7 +404,7 @@ DATA_SECTION
     
     //snow crab bycatch weight
     int nobs_discardc_snow                          // number of years of male and female bycatch weight data
-    !!nobs_discardc_snow = ptrMDS->pRKF->nyCatch;
+    !!nobs_discardc_snow = ptrMDS->pSCF->nyCatch;
     ivector yrs_discardc_snow(1,nobs_discardc_snow) // years which have male and female bycatch weight data
  LOCAL_CALCS
     CheckFile<<"nobs_discardc_snow     = "<<nobs_discardc_snow<<endl;
@@ -782,7 +787,7 @@ DATA_SECTION
     init_int doPenRed           //flag (0/1) to reduce penalties on fishing-related devs by phase
     init_int phsFmRKF           //phase to turn on RKF fishing estimation (originally -4 or 5)
     init_number llw_sel50_dev_3 //llw for penalty on log_sel50_dev_3 (originally 0))
-    init_number bnd_sel50_dev_3 //upper/lower bounds on log_sel50_dev_3 deviations (originally 5.0)
+    init_number bnd_sel50_dev_3 //upper/lower bounds on log_sel50_dev_3 deviations (originally 0.5)
     !!CheckFile<<"doPenRed = "<<doPenRed<<endl;    
     !!CheckFile<<"phsFmRKF = "<<phsFmRKF<<endl;    
     !!CheckFile<<"llw_sel50_dev_3 = "<<llw_sel50_dev_3<<endl;    
@@ -858,7 +863,7 @@ INITIALIZATION_SECTION
     //  log_avg_fmortdf -1.0
     pAvgLnFmGTF  -4.0
     pAvgLnFmSCF -3.0
-    //  pAvgLnFmRKF -5.5
+    pAvgLnFmRKF -5.25       //to initialize same as TCSAM_WTS for 2013-09
     log_avg_sel50_mn  4.87  //this is 130.3 mm
     pFmDevsTCF 0.00001                           //wts: dev.s should be mean 0!
     matestf -1.0
@@ -894,6 +899,13 @@ INITIALIZATION_SECTION
     //  srv3_sel50  60
     //  fish_fit_sel50_mn 95.1
     //  log_sel50_dev_mn  0.0000
+
+    selSCF_Z50_ma_1 80.0
+    selSCF_Z50_ma_2 80.0
+    selSCF_Z50_ma_3 80.0
+    selSCF_lnZ50_md_1 4.0
+    selSCF_lnZ50_md_2 4.0
+    selSCF_lnZ50_md_3 4.0
 
  
 // =======================================================================
@@ -990,27 +1002,27 @@ PARAMETER_SECTION
     
     // snow fishery male discards
     //  init_bounded_number snowfish_disc_slope_m(.1,.5,phase_logistic_sel+1)          //1 to phase
-    //  init_bounded_number snowfish_disc_sel50_m(60.0,150.0,phase_logistic_sel+1)
+    //  init_bounded_number selSCF_Z50_ma(60.0,150.0,phase_logistic_sel+1)
     //  init_bounded_number snowfish_disc_slope_m2(.1,.5,phase_logistic_sel+1)
-    //  init_bounded_number snowfish_disc_sel50_m2(40.0,200.0,phase_logistic_sel+1)
+    //  init_bounded_number selSCF_lnZ50_md(40.0,200.0,phase_logistic_sel+1)
     
     // snow fishery male discards for period-1: 1989-1996
     init_bounded_number snowfish_disc_slope_m_1(00.1,000.5,phase_logistic_sel+1)  //add 1 to phase
-    init_bounded_number snowfish_disc_sel50_m_1(60.0,150.0,phase_logistic_sel+1)
+    init_bounded_number selSCF_Z50_ma_1(40.0,140.0,phase_logistic_sel+1)
     init_bounded_number snowfish_disc_slope_m2_1(00.1,000.5,phase_logistic_sel+1)
-    init_bounded_number snowfish_disc_sel50_m2_1(40.0,200.0,phase_logistic_sel+1)
+    init_bounded_number selSCF_lnZ50_md_1(2,4.5,phase_logistic_sel+1)
     
     // snow fishery male discards for period-2: 1997-2004
     init_bounded_number snowfish_disc_slope_m_2(00.1,000.5,phase_logistic_sel+1)  //add 1 to phase
-    init_bounded_number snowfish_disc_sel50_m_2(60.0,150.0,phase_logistic_sel+1)
+    init_bounded_number selSCF_Z50_ma_2(40.0,140.0,phase_logistic_sel+1)
     init_bounded_number snowfish_disc_slope_m2_2(00.1,000.5,phase_logistic_sel+1)
-    init_bounded_number snowfish_disc_sel50_m2_2(40.0,200.0,phase_logistic_sel+1)
+    init_bounded_number selSCF_lnZ50_md_2(2,4.5,phase_logistic_sel+1)
     
     // snow fishery male discards for period-3: 2005-P
     init_bounded_number snowfish_disc_slope_m_3(00.1,000.5,phase_logistic_sel+1)  //add 1 to phase
-    init_bounded_number snowfish_disc_sel50_m_3(60.0,150.0,phase_logistic_sel+1)
+    init_bounded_number selSCF_Z50_ma_3(40.0,140.0,phase_logistic_sel+1)
     init_bounded_number snowfish_disc_slope_m2_3(00.1,000.5,phase_logistic_sel+1)
-    init_bounded_number snowfish_disc_sel50_m2_3(40.0,200.0,phase_logistic_sel+1)
+    init_bounded_number selSCF_lnZ50_md_3(2,4.5,phase_logistic_sel+1)  //was selSCF_Z50_ma2_1
     
     // red king fishery female discards
     //  init_bounded_number rkfish_disc_slope_f(.05,.5,-phase_logistic_sel)     //add 2 to phase
@@ -1823,19 +1835,19 @@ FUNCTION void writeParameters(ofstream& os,int toR, int willBeActive)           
     wts::writeParameter(os,snowfish_disc_sel50_f_3,toR,willBeActive);    
     
     wts::writeParameter(os,snowfish_disc_slope_m_1,toR,willBeActive);   
-    wts::writeParameter(os,snowfish_disc_sel50_m_1,toR,willBeActive);    
+    wts::writeParameter(os,selSCF_Z50_ma_1,toR,willBeActive);    
     wts::writeParameter(os,snowfish_disc_slope_m2_1,toR,willBeActive);   
-    wts::writeParameter(os,snowfish_disc_sel50_m2_1,toR,willBeActive);    
+    wts::writeParameter(os,selSCF_lnZ50_md_1,toR,willBeActive);    
     
     wts::writeParameter(os,snowfish_disc_slope_m_2,toR,willBeActive);   
-    wts::writeParameter(os,snowfish_disc_sel50_m_2,toR,willBeActive);    
+    wts::writeParameter(os,selSCF_Z50_ma_2,toR,willBeActive);    
     wts::writeParameter(os,snowfish_disc_slope_m2_2,toR,willBeActive);   
-    wts::writeParameter(os,snowfish_disc_sel50_m2_2,toR,willBeActive);    
+    wts::writeParameter(os,selSCF_lnZ50_md_2,toR,willBeActive);    
     
     wts::writeParameter(os,snowfish_disc_slope_m_3,toR,willBeActive);   
-    wts::writeParameter(os,snowfish_disc_sel50_m_3,toR,willBeActive);    
+    wts::writeParameter(os,selSCF_Z50_ma_3,toR,willBeActive);    
     wts::writeParameter(os,snowfish_disc_slope_m2_3,toR,willBeActive);   
-    wts::writeParameter(os,snowfish_disc_sel50_m2_3,toR,willBeActive);    
+    wts::writeParameter(os,selSCF_lnZ50_md_3,toR,willBeActive);    
     
     wts::writeParameter(os,rkfish_disc_slope_f1,toR,willBeActive);   
     wts::writeParameter(os,rkfish_disc_sel50_f1,toR,willBeActive);    
@@ -2059,21 +2071,21 @@ FUNCTION void jitterParameters(double fac)   //wts: new 2014-05-10
     
     // snow fishery male discards for period-1: 1989-1996
     wts::jitterParameter(snowfish_disc_slope_m_1,fac,rng);
-    wts::jitterParameter(snowfish_disc_sel50_m_1,fac,rng);
+    wts::jitterParameter(selSCF_Z50_ma_1,fac,rng);
     wts::jitterParameter(snowfish_disc_slope_m2_1,fac,rng);
-    wts::jitterParameter(snowfish_disc_sel50_m2_1,fac,rng);
+    wts::jitterParameter(selSCF_lnZ50_md_1,fac,rng);
     
     // snow fishery male discards for period-2: 1997-2004
     wts::jitterParameter(snowfish_disc_slope_m_2,fac,rng);
-    wts::jitterParameter(snowfish_disc_sel50_m_2,fac,rng);
+    wts::jitterParameter(selSCF_Z50_ma_2,fac,rng);
     wts::jitterParameter(snowfish_disc_slope_m2_2,fac,rng);
-    wts::jitterParameter(snowfish_disc_sel50_m2_2,fac,rng);
+    wts::jitterParameter(selSCF_lnZ50_md_2,fac,rng);
     
     // snow fishery male discards for period-3: 2005-P
     wts::jitterParameter(snowfish_disc_slope_m_3,fac,rng);
-    wts::jitterParameter(snowfish_disc_sel50_m_3,fac,rng);
+    wts::jitterParameter(selSCF_Z50_ma_3,fac,rng);
     wts::jitterParameter(snowfish_disc_slope_m2_3,fac,rng);
-    wts::jitterParameter(snowfish_disc_sel50_m2_3,fac,rng);
+    wts::jitterParameter(selSCF_lnZ50_md_3,fac,rng);
     
     // red king fishery female discards
 
@@ -2409,12 +2421,12 @@ FUNCTION get_selectivity                  //wts: revised
 //    cout<<"get_sel: 2a"<<endl;
         
     //  snow fishery selectivity for 3 time periods, #1 (1989-1996), #2 (1997-2004) and #3 (2005-P)      
-    selSCF(1,MALE)=elem_prod(1./(1.+mfexp(-1.*snowfish_disc_slope_m_1*(length_bins-snowfish_disc_sel50_m_1))),
-                                 1./(1.+mfexp(snowfish_disc_slope_m2_1*(length_bins-snowfish_disc_sel50_m2_1))));
-    selSCF(2,MALE)=elem_prod(1./(1.+mfexp(-1.*snowfish_disc_slope_m_2*(length_bins-snowfish_disc_sel50_m_2))),
-                                 1./(1.+mfexp(snowfish_disc_slope_m2_2*(length_bins-snowfish_disc_sel50_m2_2))));
-    selSCF(3,MALE)=elem_prod(1./(1.+mfexp(-1.*snowfish_disc_slope_m_3*(length_bins-snowfish_disc_sel50_m_3))),
-                                 1./(1.+mfexp(snowfish_disc_slope_m2_3*(length_bins-snowfish_disc_sel50_m2_3))));
+    selSCF(1,MALE)=elem_prod(1./(1.+mfexp(-1.*snowfish_disc_slope_m_1*(length_bins-selSCF_Z50_ma_1))),
+                                 1./(1.+mfexp(snowfish_disc_slope_m2_1*(length_bins-(selSCF_Z50_ma_1+mfexp(selSCF_lnZ50_md_1))))));
+    selSCF(2,MALE)=elem_prod(1./(1.+mfexp(-1.*snowfish_disc_slope_m_2*(length_bins-selSCF_Z50_ma_2))),
+                                 1./(1.+mfexp(snowfish_disc_slope_m2_2*(length_bins-(selSCF_Z50_ma_2+mfexp(selSCF_lnZ50_md_2))))));
+    selSCF(3,MALE)=elem_prod(1./(1.+mfexp(-1.*snowfish_disc_slope_m_3*(length_bins-selSCF_Z50_ma_3))),
+                                 1./(1.+mfexp(snowfish_disc_slope_m2_3*(length_bins-(selSCF_Z50_ma_3+mfexp(selSCF_lnZ50_md_3))))));
 //    cout<<"get_sel: 2b"<<endl;
     
     //  red fishery selectivity for 3 time periods, #1 (1989-1996), #2 (1997-2004) and #3 (2005-P)      
@@ -3105,16 +3117,16 @@ FUNCTION evaluate_the_objective_function    //wts: revising
     if (active(log_sel50_dev_3)) { 
         int phs = log_sel50_dev_3.get_phase_start();
         llw = llw_sel50_dev_3; 
-        if (doPenRed) llw = pow(red,(current_phase()-phs)/max(1.0,1.0*(max_number_phases-phs)))*llw;
+//        if (doPenRed) llw = pow(red,(current_phase()-phs)/max(1.0,1.0*(max_number_phases-phs)))*llw;
         nextf = norm2(log_sel50_dev_3);
-        fpen += llw*nextf; objfOut(38) = nextf; likeOut(38) = nextf; wgtsOut(38) = llw;   //wts: need to turn this off in last phase?        
+        fpen += llw*nextf; objfOut(38) = llw*nextf; likeOut(38) = nextf; wgtsOut(38) = llw;   //wts: need to turn this off in last phase?        
     }
     if (active(pFmDevsTCF)) { 
         int phs = pFmDevsTCF.get_phase_start();
         llw = 1.0; 
         if (doPenRed) llw = pow(red,(current_phase()-phs)/max(1.0,1.0*(max_number_phases-phs)))*llw;
         nextf = norm2(pFmDevsTCF);
-        fpen += llw*nextf; objfOut(15) = nextf; likeOut(15) = nextf; wgtsOut(15) = llw;   //wts: need to turn this off in last phase?        
+        fpen += llw*nextf; objfOut(15) = llw*nextf; likeOut(15) = nextf; wgtsOut(15) = llw;   //wts: need to turn this off in last phase?        
     }
     if(active(pFmDevsSCF)) {
         int phs = pFmDevsSCF.get_phase_start();
@@ -3135,7 +3147,7 @@ FUNCTION evaluate_the_objective_function    //wts: revising
     if(active(pFmDevsGTF)) {
         int phs = pFmDevsGTF.get_phase_start();
         llw = 0.5; 
-        if (doPenRed) llw = pow(red,(current_phase()-phs)/max(1.0,1.0*(last_phase()-phs)))*llw;
+        if (doPenRed) llw = pow(red,(current_phase()-phs)/max(1.0,1.0*(max_number_phases-phs)))*llw;
         nextf = norm2(pFmDevsGTF);
         fpen += llw*nextf; objfOut(18) = llw*nextf; likeOut(18) = nextf; wgtsOut(18) = llw; //wts: need to turn this off in last phase?        
     }
@@ -4675,6 +4687,17 @@ FUNCTION void writeToR(ofstream& R_out)
         
         Misc_output();
         
+        R_out<<"$years.obs.retained.catch.directed.fishery"<<endl;
+        R_out<<ptrMDS->pTCFR->yrsCatch<<endl;
+        R_out<<"$years.obs.total.catch.directed.fishery"<<endl;
+        R_out<<ptrMDS->pTCFD->yrsCatch<<endl;
+        R_out<<"$years.obs.bycatch.snow.fishery"<<endl;
+        R_out<<ptrMDS->pSCF->yrsCatch<<endl;
+        R_out<<"$years.obs.bycatch.redk.fishery"<<endl;
+        R_out<<ptrMDS->pRKF->yrsCatch<<endl;
+        R_out<<"$years.obs.bycatch.trawl.fishery"<<endl;
+        R_out<<ptrMDS->pGTF->yrsCatch<<endl;
+        
         R_out << "$Estimated.numbers.of.immature.new.shell.female.crab.by.length"<< endl;
         for (int i=styr;i<=endyr;i++) R_out <<  i<<" "<<natlength_inew(1,i) << endl;
         R_out << "$Estimated.numbers.of.immature.old.shell.female.crab.by.length"<< endl;
@@ -5135,20 +5158,23 @@ FUNCTION void writeToR(ofstream& R_out)
         //  R_out << "$estimated total catch biomass div. by survey estimate male mature biomass at fishtime" << endl;
         //  R_out <<elem_div(pred_catch(styr,endyr-1),((obs_srv1_spbiom(2))(styr,endyr-1))*mfexp(-M_matn(2)*(7/12))) << endl;
         
-        R_out << "$estimated.annual.total.directed.fishing.mortality" << endl;
+        R_out << "$estimated.annual.male.total.directed.fishing.mortality" << endl;
         R_out << fmTCF_y(styr,endyr-1) << endl;
+        R_out <<"$estimated.annual.female.total.directed.fishing.mortality" << endl;
+        for (int i=styr;i<=(endyr-1);i++) R_out << max(fTCFF_yz(i)) <<" "; R_out<<endl;
         R_out << "$estimated.annual.snow.fishing.mortality" << endl;
         R_out << fmSCF_y(styr,endyr-1) << endl;
         R_out << "$estimated.annual.red.king.fishing.mortality" << endl;
         R_out << fmRKF_y(styr,endyr-1) << endl;
-        R_out << "$estimated.annual.total.fishing.mortality" << endl;
-        for (int i=styr;i<=(endyr-1);i++) R_out << fTCFM_syz(1,i)(nlenm)+ fGTF_xyz(MALE,i)(nlenm)+fSCF_xyz(MALE,i)(nlenm)+fRKF_xyz(MALE,i)(nlenm) <<" "; R_out<< endl;
-        R_out <<"$retained.fTCFM_syz" << endl;
-        for (int i=styr;i<=(endyr-1);i++) R_out <<fTCFR_syz(1,i)(nlenm)<<" "; R_out<<endl;
-        R_out <<"$ghl" << endl;
-        for (int i=styr;i<=(endyr-1);i++) R_out << fTCFF_yz(i)(nlenm) <<" "; R_out<<endl;
         R_out << "$estimated.annual.fishing.mortality.trawl.bycatch" << endl;
         R_out << fmGTF_y(styr,endyr-1) <<endl;
+        R_out << "$estimated.annual.max.male.total.fishing.mortality" << endl;
+        for (int i=styr;i<=(endyr-1);i++) R_out << max(fTCFM_syz(1,i)+ fGTF_xyz(  MALE,i)+fSCF_xyz(  MALE,i)+fRKF_xyz(  MALE,i)) <<" "; R_out<< endl;
+        R_out << "$estimated.annual.max.female.total.fishing.mortality" << endl;
+        for (int i=styr;i<=(endyr-1);i++) R_out << max(fTCFF_yz(   i)+ fGTF_xyz(FEMALE,i)+fSCF_xyz(FEMALE,i)+fRKF_xyz(FEMALE,i)) <<" "; R_out<< endl;
+        R_out <<"$retained.fTCFM_syz" << endl;
+        for (int i=styr;i<=(endyr-1);i++) R_out <<fTCFR_syz(1,i)(nlenm)<<" "; R_out<<endl;
+        
         R_out << "$estimated.number.of.recruitments.female" << endl;
         R_out << rec_y <<endl;          //was endyr-1
         R_out<< "$estimated.number.of.recruitments.male" << endl;
@@ -5241,6 +5267,24 @@ FUNCTION void writeToR(ofstream& R_out)
         R_out << nsamples_fish_discm(OLD_SHELL) << endl;  
         R_out << "$Observed.Prop.fishery.discard.all.females.sampsize"<< endl;
         R_out << nsamples_fish_discf << endl;  
+        R_out <<"$effectiveN.survey.immature.newshell.female "<<endl;
+        R_out <<effn_srv1(IMMATURE,NEW_SHELL,FEMALE)<<endl;
+        R_out <<"$effectiveN survey.mature.newshell.female "<<endl;
+        R_out <<effn_srv1(MATURE,NEW_SHELL,FEMALE)<<endl;
+        R_out <<"$effectiveN.SURVEY.mature.oldshell.female "<<endl;
+        R_out <<effn_srv1(MATURE,OLD_SHELL,FEMALE)<<endl;
+        R_out <<"$effectiveN.survey.immature.newshell.male "<<endl;
+        R_out <<effn_srv1(IMMATURE,NEW_SHELL,MALE)<<endl;
+        R_out <<"$effectiveN.survey.immature.oldshell.male "<<endl;
+        R_out <<effn_srv1(IMMATURE,OLD_SHELL,MALE)<<endl;
+        R_out <<"$effectiveN.survey.mature.newshell.male "<<endl;
+        R_out <<effn_srv1(MATURE,NEW_SHELL,MALE)<<endl;
+        R_out <<"$effectiveN.survey.mature.old.shell.male "<<endl;
+        R_out <<effn_srv1(MATURE,OLD_SHELL,MALE)<<endl;
+        R_out <<"$effectiveN.retained.retained.byshell"<<endl;
+        R_out <<effn_fish_ret<<endl;
+        R_out <<"$effectiveN.total.TCF.byshell.male"<<endl;
+        R_out <<effn_fish_tot<<endl;
 
 //    cout<<"done writeToR"<<endl;
 
@@ -5323,10 +5367,10 @@ FUNCTION void myWriteParamsToR(ostream& os)
                 slp(1) = snowfish_disc_slope_f_1; slp(2) = snowfish_disc_slope_f_2; slp(3) = snowfish_disc_slope_f_3;
                 os<<"female=list(z50="; wts::writeToR(os,value(sel)); os<<", slope="; wts::writeToR(os,value(slp)); os<<"),";
                 os<<"male=list(";
-                    sel(1) = snowfish_disc_sel50_m_1; sel(2) = snowfish_disc_sel50_m_2; sel(3) = snowfish_disc_sel50_m_3;
+                    sel(1) = selSCF_Z50_ma_1; sel(2) = selSCF_Z50_ma_2; sel(3) = selSCF_Z50_ma_3;
                     slp(1) = snowfish_disc_slope_m_1; slp(2) = snowfish_disc_slope_m_2; slp(3) = snowfish_disc_slope_m_3;
                     os<<"ascending.limb=list(z50="; wts::writeToR(os,value(sel)); os<<", slope="; wts::writeToR(os,value(slp)); os<<"),";
-                    sel(1) = snowfish_disc_sel50_m2_1; sel(2) = snowfish_disc_sel50_m2_2; sel(3) = snowfish_disc_sel50_m2_3;
+                    sel(1) = selSCF_lnZ50_md_1; sel(2) = selSCF_lnZ50_md_2; sel(3) = selSCF_lnZ50_md_3;
                     slp(1) = snowfish_disc_slope_m2_1; slp(2) = snowfish_disc_slope_m2_2; slp(3) = snowfish_disc_slope_m2_3;
                     os<<"descending.limb=list(z50="; wts::writeToR(os,value(sel)); os<<", slope="; wts::writeToR(os,value(slp)); os<<")";
                 os<<")";
