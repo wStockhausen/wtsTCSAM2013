@@ -246,6 +246,9 @@ void BioData::write(ostream & os){
 *   Function to write object to R list.                        *
 ***************************************************************/
 void BioData::writeToR(ostream& os, char* nm, int indent) {
+    adstring x = "x=c("+qt+STR_FEMALE+qt+cc+qt+STR_MALE+qt+")";
+    adstring s = "s=c("+qt+STR_IMMATURE+qt+cc+qt+STR_MATURE+qt+")";
+    adstring z = "z=c("+wts::to_qcsv(zBins)+")";
     for (int n=0;n<indent;n++) os<<tb;
         os<<nm<<"=list("<<endl;
     indent++;
@@ -259,10 +262,7 @@ void BioData::writeToR(ostream& os, char* nm, int indent) {
         indent++;
             for (int n=0;n<indent;n++) os<<tb;
             os<<"data="<<endl;
-            adstring x = qt+STR_FEMALE+qt    +cc+ qt+STR_MALE+qt;
-            adstring s = qt+STR_IMMATURE+qt  +cc+ qt+STR_MATURE+qt;
-            adstring c = wts::to_qcsv(zBins);
-            wts::writeToR(os,wAtZ_xmz,x,s,c); os<<endl;
+            wts::writeToR(os,wAtZ_xmz,x,s,z); os<<endl;
         indent--;}
         for (int n=0;n<indent;n++) os<<tb; os<<"),"<<endl;
         
@@ -271,8 +271,6 @@ void BioData::writeToR(ostream& os, char* nm, int indent) {
         os<<"prMat="<<endl; 
         indent++;
             for (int n=0;n<indent;n++) os<<tb;
-            adstring x = qt+STR_FEMALE+qt    +cc+ qt+STR_MALE+qt;
-            adstring z = wts::to_qcsv(zBins);
             wts::writeToR(os,prMature_xz,x,z); os<<","<<endl;
         indent--;}
         
@@ -281,9 +279,6 @@ void BioData::writeToR(ostream& os, char* nm, int indent) {
         os<<"frMat="<<endl; 
         indent++;
             for (int n=0;n<indent;n++) os<<tb;
-            adstring x = qt+STR_FEMALE+qt     +cc+ qt+STR_MALE+qt;
-            adstring s = qt+STR_NEW_SHELL+qt  +cc+ qt+STR_OLD_SHELL+qt;
-            adstring z = wts::to_qcsv(zBins);
             wts::writeToR(os,frMature_xsz,x,s,z); os<<","<<endl;
         indent--;}
         
@@ -292,8 +287,7 @@ void BioData::writeToR(ostream& os, char* nm, int indent) {
         os<<"cvZs="<<endl; 
         indent++;
             for (int n=0;n<indent;n++) os<<tb;
-            adstring x = qt+STR_FEMALE+qt    +cc+ qt+STR_MALE+qt;
-            adstring c = "'minZ','maxZ'";
+            adstring c = "cols=c('minZ','maxZ')";
             wts::writeToR(os,cvMnMxZ_xc,x,c); os<<","<<endl;
         indent--;}
         
@@ -302,8 +296,8 @@ void BioData::writeToR(ostream& os, char* nm, int indent) {
         os<<"mdptFshSeasons="<<endl; 
         indent++;
             for (int n=0;n<indent;n++) os<<tb;
-            adstring cols = "'year','midpt'";
-            ivector yrs = wts::to_ivector(column(mdptFshSeasons_yc,1));
+            adstring cols = "cols=c('year','midpt')";
+            adstring yrs  = "y=c("+wts::to_qcsv(wts::to_ivector(column(mdptFshSeasons_yc,1)))+")";
             wts::writeToR(os,mdptFshSeasons_yc,yrs,cols); os<<endl;
         indent--;}
     indent--;
@@ -453,13 +447,16 @@ void TrawlSurveyData::write(ostream & os){
 ***************************************************************/
 void TrawlSurveyData::writeToR(ostream& os, char* nm, int indent) {
     if (debug) cout<<"TrawlSurveyData::writing to R"<<endl;
+    adstring x = "x=c("+qt+STR_FEMALE+qt+cc+qt+STR_MALE+qt+")";
+    adstring m = "m=c("+qt+STR_IMMATURE+qt +cc+ qt+STR_MATURE+qt+")";
+    adstring s = "s=c("+qt+STR_IMMATURE+qt+cc+qt+STR_MATURE+qt+")";
+    adstring z = "z=c("+wts::to_qcsv(zBins)+")";
     for (int n=0;n<indent;n++) os<<tb;
         os<<nm<<"=list(name="<<qt<<"trawl survey"<<qt<<cc<<endl;
         //abundance
         indent++;
         {   for (int n=0;n<indent;n++) os<<tb;
-            adstring x = qt+STR_FEMALE+qt +cc+ qt+STR_MALE+qt;
-            adstring y  = wts::to_qcsv(yrsAbund);
+            adstring y = "yrs=c("+wts::to_qcsv(yrsAbund)+")";
             os<<"abundance=list(units="<<qt<<unitsAbund<<qt<<cc<<endl;
             indent++; 
                 for (int n=0;n<indent;n++) os<<tb;
@@ -472,14 +469,10 @@ void TrawlSurveyData::writeToR(ostream& os, char* nm, int indent) {
         for (int n=0;n<indent;n++) os<<tb; os<<"),"<<endl;
         indent--;}
         
-        //discarded catch nAtZ
+        //catch nAtZ
         {indent++;   
             for (int n=0;n<indent;n++) os<<tb;
-            adstring x = qt+STR_FEMALE+qt +cc+ qt+STR_MALE+qt;
-            adstring s = qt+STR_NEW_SHELL+qt +cc+ qt+STR_OLD_SHELL+qt;
-            adstring m = qt+STR_IMMATURE+qt +cc+ qt+STR_MATURE+qt;
-            adstring y = wts::to_qcsv(yrsNatZ);
-            adstring z = wts::to_qcsv(zBins);        
+            adstring y = "y=c("+wts::to_qcsv(yrsNatZ)+")";
             os<<"nAtZ=list(units="<<qt<<unitsNatZ<<qt<<cc<<endl; 
             for (int n=0;n<indent;n++) os<<tb;
             os<<"years="; wts::writeToR(os,yrsNatZ); os<<cc<<endl;

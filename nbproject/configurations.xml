@@ -53,29 +53,20 @@
             <pElem>/Users/WilliamStockhausen/Programs/admb/build/dist/contrib/include</pElem>
             <pElem>/Users/WilliamStockhausen/StockAssessments-Crab/AssessmentModelDevelopment/wtsADMB/include</pElem>
           </incDir>
-          <commandLine>-O3 -DSAFE_ALL -Wno-deprecated</commandLine>
-          <preprocessorList>
-            <Elem>USE_LAPLACE</Elem>
-            <Elem>__GNUDOS__</Elem>
-            <Elem>linux</Elem>
-          </preprocessorList>
+          <commandLine>-O3</commandLine>
         </ccTool>
         <asmTool>
           <commandLine>-static</commandLine>
         </asmTool>
         <linkerTool>
           <linkerAddLib>
-            <pElem>/Users/WilliamStockhausen/Programs/admb/build/dist/lib</pElem>
-            <pElem>/Users/WilliamStockhausen/Programs/admb/build/dist/contrib/lib</pElem>
             <pElem>/Users/WilliamStockhausen/StockAssessments-Crab/AssessmentModelDevelopment/wtsADMB/dist/Debug-MacOSX/CLang-MacOSX</pElem>
           </linkerAddLib>
           <linkerLibItems>
             <linkerLibLibItem>wtsadmb</linkerLibLibItem>
-            <linkerLibLibItem>admb</linkerLibLibItem>
-            <linkerLibLibItem>contrib</linkerLibLibItem>
+            <linkerLibFileItem>/Users/WilliamStockhausen/Programs/admb/build/dist/lib/libadmb-contrib.a</linkerLibFileItem>
             <linkerLibLibItem>wtsadmb</linkerLibLibItem>
-            <linkerLibLibItem>admb</linkerLibLibItem>
-            <linkerLibLibItem>contrib</linkerLibLibItem>
+            <linkerLibFileItem>/Users/WilliamStockhausen/Programs/admb/build/dist/lib/libadmb-contrib.a</linkerLibFileItem>
           </linkerLibItems>
         </linkerTool>
       </compileType>
