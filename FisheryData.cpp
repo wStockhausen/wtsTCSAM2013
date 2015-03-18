@@ -386,7 +386,7 @@ void DiscardFisheryData::writeToR(std::ostream& os, char* nm, int indent) {
         //effort
         indent++;
         {   for (int n=0;n<indent;n++) os<<tb;
-            adstring y  = "y=c("+wts::to_qcsv(yrsCatch)+")";
+            adstring y  = "y=c("+wts::to_qcsv(yrsEffort)+")";
             os<<"effort=list("<<endl;
             indent++; 
                 for (int n=0;n<indent;n++) os<<tb;
