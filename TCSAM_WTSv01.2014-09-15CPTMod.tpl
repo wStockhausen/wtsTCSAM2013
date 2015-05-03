@@ -21,9 +21,6 @@
 //            from arithmetic (with no constraint to be > ascending limb z50) to ln-scale offset from 
 //            ascending limb selectivity parameter
 //--20150317: updated ModeData.cpp, FisheryData.cpp, this file to use newest version of wtsADMB rFunctions.
-//--20150318: added option to assume lognormal error distributions for fishery catch data
-//--20150319: added variables 'smlValFsh' and smlValSrv to centralize setting small constants used in lognormal NLL calcs
-//--20150319: added some additional output to Jack's .R output file to improve plotting in R
 //
 //IMPORTANT: 2013-09 assessment model had RKC params for 1992+ discard mortality TURNED OFF. 
 //           THE ESTIMATION PHASE FOR RKC DISCARD MORTALITY IS NOW SET IN THE CONTROLLER FILE!
@@ -286,11 +283,7 @@ DATA_SECTION
     }
  END_CALCS
     
-    number smlValSrv       //small value for survey-based bulk lognormal NLL calc.s (2014: was 0.000001)
-    !!smlValSrv = 0.000001;
-    number smlValFsh       //small value for fishery-based bulk lognormal NLL calc.s (new 2015)
-    !!smlValFsh = 0.0001;
- 
+        
     number p_const
     !!p_const=0.001;
     int call_no;
@@ -800,21 +793,6 @@ DATA_SECTION
     !!CheckFile<<"phsFmRKF = "<<phsFmRKF<<endl;    
     !!CheckFile<<"llw_sel50_dev_3 = "<<llw_sel50_dev_3<<endl;    
     !!CheckFile<<"bnd_sel50_dev_3 = "<<bnd_sel50_dev_3<<endl;  
-    
-    //new 2015.03.18
-    init_int optFshNLLs  //flag indicating error model for fishery catch data (0=norm2, 1=lognormal)
-    !!CheckFile<<"optFshNLLs = "<<optFshNLLs<<endl;    
-    //the following obsErr are sd for normal error, cv for lognormal error
-    init_number obsErrTCFR  //assumed observation error level for retained catch data
-    init_number obsErrTCFD  //assumed observation error level for discard catch data in TCF
-    init_number obsErrSCF   //assumed observation error level for discard catch data in SCF
-    init_number obsErrRKF   //assumed observation error level for discard catch data in RKF
-    init_number obsErrGTF   //assumed observation error level for discard catch data in GTF
-    !!CheckFile<<"obsErrTCFR = "<<obsErrTCFR<<endl;   
-    !!CheckFile<<"obsErrTCFD = "<<obsErrTCFD<<endl;   
-    !!CheckFile<<"obsErrSCF  = "<<obsErrSCF<<endl;   
-    !!CheckFile<<"obsErrRKF  = "<<obsErrRKF<<endl;   
-    !!CheckFile<<"obsErrGTF  = "<<obsErrGTF<<endl;   
     
     !!CheckFile<<"Finished reading control file."<<endl;
     
@@ -2387,13 +2365,13 @@ FUNCTION get_selectivity                  //wts: revised
             selTCFM(OLD_SHELL,iy) = selTCFM(NEW_SHELL,iy);
             retFcn(OLD_SHELL,iy)= retFcn(NEW_SHELL,iy);
         }//year loop
-    } //<-if(active(log_sel50_dev_mn))
+    }
 //    cout<<"get_sel: 1"<<endl;
     
     dvariable tmpSel50 = mean(exp(log_avg_sel50_3+log_sel50_dev_3(1,6)));
     for(int iy=styr;iy<=1990;iy++){ 
-        selTCFM(NEW_SHELL,iy) = 1./(1.+mfexp(-1.*fish_slope_1*(length_bins-tmpSel50)));    
-        retFcn(NEW_SHELL, iy) = 1./(1.+mfexp(-1.*fish_fit_slope_mn1*(length_bins-fish_fit_sel50_mn1)));
+        selTCFM(NEW_SHELL,iy)  = 1./(1.+mfexp(-1.*fish_slope_1*(length_bins-tmpSel50)));    
+        retFcn(NEW_SHELL,iy) = 1./(1.+mfexp(-1.*fish_fit_slope_mn1*(length_bins-fish_fit_sel50_mn1)));
     }
 //    cout<<"get_sel: 1a"<<endl;
     int ctr = 1;
@@ -3039,6 +3017,8 @@ FUNCTION evaluate_the_objective_function    //wts: revising
     dvar_matrix cv_srv1(1,nXs,styr,endyr);
     dvariable multi;
     
+    p_const = 0.001;
+    
     like_initn.initialize();
     
     f.initialize();
@@ -3182,7 +3162,7 @@ FUNCTION evaluate_the_objective_function    //wts: revising
     
     len_like.initialize();
     
-    // retained (male) catch in TCF length likelihood (old and new shell together)
+    // fishery length likelihood (old and new shell together)
     for (int i=1; i <= nobs_fish; i++) {
         yr = yrs_fish(i);
         len_like(1) -= nsamples_fish(NEW_SHELL,i)*((obs_p_fish_ret(NEW_SHELL,i)+obs_p_fish_ret(OLD_SHELL,i))*log(pred_p_fish_fit(NEW_SHELL,yr)+pred_p_fish_fit(OLD_SHELL,yr)+p_const));
@@ -3193,7 +3173,7 @@ FUNCTION evaluate_the_objective_function    //wts: revising
 //    cout<<"2"<<endl;    
     
     //  cout<<" ret length "<<endl;
-    // total male catch in TCF length likelihood (old and new shell together) AEP???
+    // fishery length likelihood (old and new shell together) AEP???
     for (int i=1; i <= nobs_fish_discm; i++) {
         yr = yrs_fish_discm(i);
         len_like(2) -= nsamples_fish_discm(NEW_SHELL,i)*((obs_p_fish_tot(NEW_SHELL,i)+obs_p_fish_tot(OLD_SHELL,i))*log(pred_p_fish(NEW_SHELL,yr)+pred_p_fish(OLD_SHELL,yr)+p_const));
@@ -3201,7 +3181,7 @@ FUNCTION evaluate_the_objective_function    //wts: revising
     //  cout<<" discm length "<<endl;
 //    cout<<"3"<<endl;    
     
-    // total female catch (discards) in TCF fishery length likelihood
+    // fishery length likelihood (female discards)
     for (int i=1; i <= nobs_fish_discf; i++) {
         yr=yrs_fish_discf(i);
         len_like(3) -= nsamples_fish_discf(i)*(obs_p_fish_discf(i)*log(pred_p_fish_discf(yr)+p_const));
@@ -3209,7 +3189,6 @@ FUNCTION evaluate_the_objective_function    //wts: revising
     //      cout<<" disc f length "<<endl;
 //    cout<<"4"<<endl;    
     
-    // total male catch (discards) in SCF fishery length likelihood
     for (int i=1; i <= nobs_snowfish_discm; i++) {
         yr=yrs_snowfish_discm(i);
         len_like(4) -= nsamples_snowfish_discm(NEW_SHELL,i)*(obs_p_snow(MALE,i)*log(pred_p_snow(MALE,yr)+p_const));
@@ -3220,14 +3199,14 @@ FUNCTION evaluate_the_objective_function    //wts: revising
 //    CheckFile<<pred_p_snow(MALE)<<endl;
 //    CheckFile<<"+++++++++++++++++"<<endl;
     
-    // total female catch (discards) in SCF fishery length likelihood
+    // fishery length likelihood snow crab fishery discards
     for (int i=1; i <= nobs_snowfish_discf; i++) {
         yr=yrs_snowfish_discf(i);
         len_like(5) -= nsamples_snowfish_discf(i)*(obs_p_snow(FEMALE,i)*log(pred_p_snow(FEMALE,yr)+p_const));
     }
 //    cout<<"1"<<endl;    
     
-    // total male/female catch (discards) in RKF fishery length likelihood
+    // fishery length likelihood red king crab discards
     for (int i=1; i <= nobs_rkfish_discf; i++) {
         yr=yrs_rkfish_discf(i);
         len_like(6) -= nsamples_rkfish_discm(NEW_SHELL,i)*(obs_p_rk(MALE,i)*log(pred_p_rk(MALE,yr)+p_const));
@@ -3239,7 +3218,7 @@ FUNCTION evaluate_the_objective_function    //wts: revising
 //    CheckFile<<pred_p_rk(MALE)<<endl;
 //    CheckFile<<"+++++++++++++++++"<<endl;
     
-    // total male/female catch (discards) in SCF fishery length likelihood
+    // trawl fishery length likelihood 
     for (int i=1; i <= nobs_trawl; i++) {
         yr=yrs_trawl(i);
         for(int sex=1;sex<=nXs;sex++){
@@ -3283,6 +3262,14 @@ FUNCTION evaluate_the_objective_function    //wts: revising
     
     //add the offset to the likelihood   
     for (int i=1;i<=NUM_LEN_LIKE;i++) len_like(i) -= offset(i);
+//     len_like(1) -= offset(1);
+//     len_like(2) -= offset(2);
+//     len_like(3) -= offset(3);
+//     len_like(4) -= offset(4);
+//     len_like(5) -= offset(5);
+//     len_like(6) -= offset(6);
+//     len_like(7) -= offset(7);
+//     len_like(8) -= offset(8);
     
     // extra weight for start year length comp.
     if (current_phase() > 6) multi = 1.0; else multi = 1.0;//wts: does nothing! 
@@ -3315,7 +3302,7 @@ FUNCTION evaluate_the_objective_function    //wts: revising
     // this fits mature biomass separate male and female
     //female biomass only for 1974 to endyr, male biomass from 1969 to endyr
     surv_like.initialize();
-    surv_like  = norm2(elem_div( log(obs_srv1_spbiom(FEMALE)(yrs_srv1)+smlValSrv)-log(fspbio_srv1(yrs_srv1)+smlValSrv),
+    surv_like  = norm2(elem_div( log(obs_srv1_spbiom(FEMALE)(yrs_srv1)+.000001)-log(fspbio_srv1(yrs_srv1)+.000001),
                                  sqrt(2)*sqrt(log(elem_prod(cv_srv1(FEMALE)(yrs_srv1),cv_srv1(FEMALE)(yrs_srv1))+1.0))
                                 ));
 //     cout<<"1"<<endl;    
@@ -3323,52 +3310,25 @@ FUNCTION evaluate_the_objective_function    //wts: revising
     //likelihood for female initial biomass fitting to 1974 biomass for anchoring 
     //       surv_like  += pow((log(obs_srv1_spbiom(1)(1974)+0.000001)-log(biom_tmp(1)(1969)+.000001))/(sqrt(2)*0.05),2.0);
     
-    surv_like += norm2(elem_div( log(obs_srv1_spbiom(MALE)(yrs_srv1)+smlValSrv)-log(mspbio_srv1(yrs_srv1)+smlValSrv),
+    surv_like += norm2(elem_div( log(obs_srv1_spbiom(MALE)(yrs_srv1)+.000001)-log(mspbio_srv1(yrs_srv1)+.000001),
                                  sqrt(2)*sqrt(log(elem_prod(cv_srv1(MALE)(yrs_srv1),cv_srv1(MALE)(yrs_srv1))+1.0))
                                 ));
 //    cout<<"2"<<endl;    
     
     f += surv_like; objfOut(31) = surv_like; likeOut(31) = surv_like; wgtsOut(31) = 1;
     
-    //Likelihoods for bulk fishery catch data
-    // Male retained catch in TCF
+    // Male retained catch
     catch_like1.initialize();
-    if (optFshNLLs==0){
-        //normal error assumption, sd=sqrt(2) [fixed]
-        catch_like1 = norm2((catch_ret(1965,endyr-1))-(pred_catch_ret(1965,endyr-1)));
-        nextf = like_wght_CatchBio*catch_like1; objfOut(32) = nextf; f += nextf; likeOut(32) = catch_like1; wgtsOut(32) = like_wght_CatchBio;
-    } else {
-        //lognormal error assumption
-        double var = log(1.0+square(obsErrTCFR));
-        catch_like1 = (1.0/(2*var))*norm2(log(catch_ret(1965,endyr-1)+smlValFsh)-log(pred_catch_ret(1965,endyr-1)+smlValFsh));
-        nextf = catch_like1; objfOut(32) = nextf; f += nextf; likeOut(32) = catch_like1; wgtsOut(32) = 1.0;
-    }
-    
-    // Male tot catch in TCF (tot?!!)
+    catch_like1 = norm2((catch_ret(1965,endyr-1))-(pred_catch_ret(1965,endyr-1)));
+    nextf = like_wght_CatchBio*catch_like1; objfOut(32) = nextf; f += nextf; likeOut(32) = catch_like1; wgtsOut(32) = like_wght_CatchBio;
+    // Male tot catch
     catch_like2.initialize();
-    if (optFshNLLs==0){
-        //normal error assumption, sd=sqrt(2) [fixed]
-        catch_like2 = norm2(obs_catchtot_biom(yrs_fish_catchf)-pred_catch(yrs_fish_catchf));
-        nextf = like_wght_CatchBio*catch_like2; objfOut(33) = nextf; f += nextf; likeOut(33) = catch_like2; wgtsOut(33) = like_wght_CatchBio;
-    } else {
-        //lognormal error assumption
-        double var = log(1.0+square(obsErrTCFD));
-        catch_like2 = (1.0/(2*var))*norm2(log(obs_catchtot_biom(yrs_fish_catchf)+smlValFsh)-log(pred_catch(yrs_fish_catchf)+smlValFsh));
-        nextf = catch_like2; objfOut(33) = nextf; f += nextf; likeOut(33) = catch_like2; wgtsOut(33) = 1.0;
-    }
-    
+    catch_like2 = norm2(obs_catchtot_biom(yrs_fish_catchf)-pred_catch(yrs_fish_catchf));
+    nextf = like_wght_CatchBio*catch_like2; objfOut(33) = nextf; f += nextf; likeOut(33) = catch_like2; wgtsOut(33) = like_wght_CatchBio;
     //  female catch in directed fishery
     catch_likef.initialize();
-    if (optFshNLLs==0){
-        //normal error assumption, sd=sqrt(2) [fixed]
-        catch_likef = norm2((obs_catchdf_biom(yrs_fish_catchf))-(pred_catch_disc(1)(yrs_fish_catchf)));
-        nextf = like_wght_CatchBio*catch_likef; objfOut(34) = nextf; f+= nextf; likeOut(34) = catch_likef; wgtsOut(34) = like_wght_CatchBio;
-    } else {
-        //lognormal error assumption
-        double var = log(1.0+square(obsErrTCFD));
-        catch_likef = (1.0/(2*var))*norm2(log(obs_catchdf_biom(yrs_fish_catchf)+smlValFsh)-log(pred_catch_disc(1)(yrs_fish_catchf)+smlValFsh));
-        nextf = catch_likef; objfOut(34) = nextf; f+= nextf; likeOut(34) = catch_likef; wgtsOut(34) = 1.0;
-    }
+    catch_likef = norm2((obs_catchdf_biom(yrs_fish_catchf))-(pred_catch_disc(1)(yrs_fish_catchf)));
+    nextf = like_wght_CatchBio*catch_likef; objfOut(34) = nextf; f+= nextf; likeOut(34) = catch_likef; wgtsOut(34) = like_wght_CatchBio;
     
     //snow crab fishery
     for(int i=1;i<=nobs_discardc_snow;i++){
@@ -3376,18 +3336,9 @@ FUNCTION evaluate_the_objective_function    //wts: revising
         pred_tmp_snow(  MALE,i)=pred_catch_snowd(yrs_discardc_snow(i));        //males
     }
     catch_likes.initialize();
-    if (optFshNLLs==0){
-        //normal error assumption, sd=sqrt(2) [fixed]
-        catch_likes  = norm2((catch_snowodisc(FEMALE))-(pred_tmp_snow(1)));
-        catch_likes += norm2((catch_snowodisc(  MALE))-(pred_tmp_snow(2)));
-        nextf = like_wght_CatchBio*catch_likes; objfOut(35) = nextf; f += nextf; likeOut(35) = catch_likes; wgtsOut(35) = like_wght_CatchBio;
-    } else {
-        //lognormal error assumption
-        double var = log(1.0+square(obsErrSCF));
-        catch_likes  = (1.0/(2*var))*norm2(log(catch_snowodisc(FEMALE)+smlValFsh)-log(pred_tmp_snow(FEMALE)+smlValFsh));
-        catch_likes += (1.0/(2*var))*norm2(log(catch_snowodisc(  MALE)+smlValFsh)-log(pred_tmp_snow(  MALE)+smlValFsh));
-        nextf = catch_likes; objfOut(35) = nextf; f += nextf; likeOut(35) = catch_likes; wgtsOut(35) = 1.0;
-    }
+    catch_likes  = norm2((catch_snowodisc(FEMALE))-(pred_tmp_snow(1)));
+    catch_likes += norm2((catch_snowodisc(  MALE))-(pred_tmp_snow(2)));
+    nextf = like_wght_CatchBio*catch_likes; objfOut(35) = nextf; f += nextf; likeOut(35) = catch_likes; wgtsOut(35) = like_wght_CatchBio;
     
     //BBRKC fishery
     for(int i=1;i<=nobs_discardc_rkc;i++){
@@ -3395,31 +3346,14 @@ FUNCTION evaluate_the_objective_function    //wts: revising
         pred_tmp_rkc(  MALE,i)=pred_catch_rkd(yrs_discardc_rkc(i));          //males
     }
     catch_liker.initialize();
-    if (optFshNLLs==0){
-        //normal error assumption, sd=sqrt(2) [fixed]
-        catch_liker  = norm2((catch_rkodisc(FEMALE))-(pred_tmp_rkc(FEMALE)));
-        catch_liker += norm2((catch_rkodisc(  MALE))-(pred_tmp_rkc(  MALE)));
-        nextf = like_wght_CatchBio*catch_liker; objfOut(36) = nextf; f += nextf; likeOut(36) = catch_liker; wgtsOut(36) = like_wght_CatchBio;
-    } else {
-        //lognormal error assumption
-        double var = log(1.0+square(obsErrRKF));
-        catch_liker  = (1.0/(2*var))*norm2(log(catch_rkodisc(FEMALE)+smlValFsh)-log(pred_tmp_rkc(FEMALE)+smlValFsh));
-        catch_liker += (1.0/(2*var))*norm2(log(catch_rkodisc(  MALE)+smlValFsh)-log(pred_tmp_rkc(  MALE)+smlValFsh));
-        nextf = catch_liker; objfOut(36) = nextf; f += nextf; likeOut(36) = catch_liker; wgtsOut(36) = 1.0;
-    }
+    catch_liker  = norm2((catch_rkodisc(FEMALE))-(pred_tmp_rkc(FEMALE)));
+    catch_liker += norm2((catch_rkodisc(  MALE))-(pred_tmp_rkc(  MALE)));
+    nextf = like_wght_CatchBio*catch_liker; objfOut(36) = nextf; f += nextf; likeOut(36) = catch_liker; wgtsOut(36) = like_wght_CatchBio;
     
     //trawl fishery
     catch_liket.initialize();
-    if (optFshNLLs==0){
-        //normal error assumption, sd=sqrt(2) [fixed]
-        catch_liket = norm2((obs_catcht_biom(yrs_trawl_c))-(pred_catch_trawl(yrs_trawl_c)));
-        nextf = like_wght_CatchBio*catch_liket;  objfOut(37) = nextf; f += nextf; likeOut(37) = catch_liket; wgtsOut(37) = like_wght_CatchBio;
-    } else {
-        //lognormal error assumption
-        double var = log(1.0+square(obsErrGTF));
-        catch_liket = (1.0/(2*var))*norm2(log(obs_catcht_biom(yrs_trawl_c)+smlValFsh)-(pred_catch_trawl(yrs_trawl_c)+smlValFsh));
-        nextf = catch_liket;  objfOut(37) = nextf; f += nextf; likeOut(37) = catch_liket; wgtsOut(37) = 1.0;
-    }
+    catch_liket = norm2((obs_catcht_biom(yrs_trawl_c))-(pred_catch_trawl(yrs_trawl_c)));
+    nextf = like_wght_CatchBio*catch_liket;  objfOut(37) = nextf; f += nextf; likeOut(37) = catch_liket; wgtsOut(37) = like_wght_CatchBio;
     // ------------------------------------------
     
     call_no += 1;
@@ -4754,19 +4688,6 @@ FUNCTION void writeToR(ofstream& R_out)
         
         Misc_output();
         
-        R_out<<"$styr"<<endl;
-        R_out<<styr<<endl;
-        R_out<<"$endyr"<<endl;
-        R_out<<endyr<<endl;
-        R_out<<"$obsyr"<<endl;
-        R_out<<ptrMDS->pTSD->yrsAbund[1]<<endl;
-        R_out<<"$pltyr"<<endl;
-        R_out<<1969<<endl;
-        R_out<<"$length.bins"<<endl;
-        R_out<<length_bins<<endl;
-        
-        R_out<<"$years.survey.abundance"<<endl;
-        R_out<<ptrMDS->pTSD->yrsAbund<<endl;
         R_out<<"$years.obs.retained.catch.directed.fishery"<<endl;
         R_out<<ptrMDS->pTCFR->yrsCatch<<endl;
         R_out<<"$years.obs.total.catch.directed.fishery"<<endl;
