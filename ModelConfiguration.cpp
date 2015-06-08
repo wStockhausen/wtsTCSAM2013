@@ -60,19 +60,19 @@ void ModelConfiguration::read(cifstream & is) {
     is>>mnYr; //min model year
     is>>mxYr; //max model year
     is>>jitFrac; //jitter fraction
-    is>>nZBins;
+    is>>nZBs;
     if (debug){
         std::cout<<asmtYr<<tb<<"#assessment year"<<std::endl;
         std::cout<<mnYr <<tb<<"#model min year"<<std::endl;
         std::cout<<mxYr <<tb<<"#model max year"<<std::endl;
         std::cout<<jitFrac<<tb<<"#jitter fraction"<<std::endl;
-        std::cout<<nZBins<<tb<<"#number of size bins"<<std::endl;
+        std::cout<<nZBs<<tb<<"#number of size bins"<<std::endl;
     }
-    zBins.allocate(1,nZBins); 
-    zBinCutPts.allocate(1,nZBins+1); 
-    onesZBins.allocate(1,nZBins); onesZBins = 1.0;
+    zBins.allocate(1,nZBs); 
+    zBinCutPts.allocate(1,nZBs+1); 
+    onesZBins.allocate(1,nZBs); onesZBins = 1.0;
     is>>zBinCutPts;
-    for (int z=1;z<=nZBins;z++) zBins(z) = 0.5*(zBinCutPts(z)+zBinCutPts(z+1));
+    for (int z=1;z<=nZBs;z++) zBins(z) = 0.5*(zBinCutPts(z)+zBinCutPts(z+1));
     if (debug){
         std::cout<<"#size bins (mm CW)"<<std::endl;
         std::cout<<zBins<<std::endl;
@@ -124,7 +124,7 @@ void ModelConfiguration::write(std::ostream & os) {
     os<<asmtYr<<tb<<"#Assessment year"<<std::endl;
     os<<mnYr<<tb<<mxYr<<tb<<"#Min, max model years"<<std::endl;
     os<<jitFrac<<tb<<"#jitter fraction"<<std::endl;
-    os<<nZBins<<tb<<"#Number of model size classes"<<std::endl;
+    os<<nZBs<<tb<<"#Number of model size classes"<<std::endl;
     os<<"#size bin cut points"<<std::endl;
     os<<zBinCutPts <<std::endl;
     
@@ -152,7 +152,7 @@ void ModelConfiguration::writeToR(std::ostream& os, char* nm, int indent) {
     indent++;
     for (int n=0;n<indent;n++) os<<tb;
         os<<"configName='"<<cfgName<<"', mnYr="<<mnYr<<", mxYr="<<mxYr<<", assYr="<<asmtYr<<cc<<"jitFrac="<<jitFrac<<cc<<std::endl;
-        os<<"nZBins="<<nZBins<<cc;
+        os<<"nZBins="<<nZBs<<cc;
         os<<"zBins=";      wts::writeToR(os,zBins);     os<<cc<<std::endl;
         os<<"zBinCutPts="; wts::writeToR(os,zBinCutPts);os<<cc<<std::endl;
 //        writeVector(os,zBinCutPts,"zBinCutpts"); os<<cc<<std::endl;

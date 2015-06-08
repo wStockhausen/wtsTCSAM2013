@@ -19,7 +19,7 @@
         int asmtYr; //assessment year
         int mnYr;  //min model year
         int mxYr;  //max model year
-        int nZBins;//number of size bins 
+        int nZBs;//number of size bins 
         
         double jitFrac;//jitter fraction
 
