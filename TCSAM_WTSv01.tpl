@@ -710,8 +710,8 @@ DATA_SECTION
         
     //---------------------------------------------------------------------------------------
     // Open control file....
-    !! ad_comm::change_datafile_name(ptrMC->fnMPC);
-    !!CheckFile<<"Reading control file ''"<<ptrMC->fnMPC<<"'"<<endl;
+    !! ad_comm::change_datafile_name(ptrMC->fnCtl);
+    !!CheckFile<<"Reading control file ''"<<ptrMC->fnCtl<<"'"<<endl;
     
     init_number q1                    // Q  mult by pop biomass to get survey biomass
     init_vector M_in(1,nSXs)           // natural mortality females then males

@@ -522,6 +522,10 @@ void ModelDatasets::read(cifstream & is){
         cout<<"#datasets file name is "<<is.get_file_name()<<endl;
         cout<<"#------------------------------------------"<<endl;
     }
+    adstring parent = wts::getParentFolder(is);
+    cout<<"Model datasets file is '"<<is.get_file_name()<<"'"<<endl;
+    cout<<"Parent folder is '"<<parent<<endl;
+    
     is>>fnBioData;
     is>>fnSurveyData_Trawl;
     is>>fnFisheryData_TCFR;
@@ -529,8 +533,16 @@ void ModelDatasets::read(cifstream & is){
     is>>fnFisheryData_SnCF;
     is>>fnFisheryData_RKCF;
     is>>fnFisheryData_GrTF;
+
+    fnBioData = wts::concatenateFilePaths(parent,fnBioData);
+    fnSurveyData_Trawl = wts::concatenateFilePaths(parent,fnSurveyData_Trawl);
+    fnFisheryData_TCFR = wts::concatenateFilePaths(parent,fnFisheryData_TCFR);
+    fnFisheryData_TCFD = wts::concatenateFilePaths(parent,fnFisheryData_TCFD);
+    fnFisheryData_SnCF = wts::concatenateFilePaths(parent,fnFisheryData_SnCF);
+    fnFisheryData_RKCF = wts::concatenateFilePaths(parent,fnFisheryData_RKCF);
+    fnFisheryData_GrTF = wts::concatenateFilePaths(parent,fnFisheryData_GrTF);
     
-    if (debug){
+ //   if (debug){
         cout<<fnBioData         <<tb<<"#tanner crab biological data file"<<endl;
         cout<<fnSurveyData_Trawl<<tb<<"#trawl survey data file"<<endl;
         cout<<fnFisheryData_TCFR<<tb<<"#directed tanner crab fishery data (retained) file"<<endl;
@@ -538,7 +550,7 @@ void ModelDatasets::read(cifstream & is){
         cout<<fnFisheryData_SnCF<<tb<<"#snow crab fishery data file"<<endl;
         cout<<fnFisheryData_RKCF<<tb<<"#BB red king crab fishery data file"<<endl;
         cout<<fnFisheryData_GrTF<<tb<<"#groundfish trawl fishery data file"<<endl;
-    }
+//    }
     
     //          Bio data
     {pBio = new BioData();
