@@ -27,6 +27,7 @@
 //--20150531: Adding gmacs fishing mortality model as option (optFM). 
 //            Revising so fc's are fishery capture rates, fm's are fishery mortality rates.
 //            Fits are STILL to retained + discard MORTALITY (same as TCSAM2013), not catches
+//--20150615: Corrected use of wts::jitterParameter() functions for change in wtsADMB library.
 //
 //IMPORTANT: 2013-09 assessment model had RKC params for 1992+ discard mortality TURNED OFF. 
 //           THE ESTIMATION PHASE FOR RKC DISCARD MORTALITY IS NOW SET IN THE CONTROLLER FILE!
@@ -2048,166 +2049,165 @@ FUNCTION void writeParameters(ofstream& os,int toR, int willBeActive)           
 FUNCTION void jitterParameters(double fac)   //wts: new 2014-05-10
     cout<<"starting jitterParameters"<<endl;
     
-    wts::jitterParameter(af1,fac,rng);     // Female growth-increment
-    wts::jitterParameter(bf1,fac,rng);     // Female growth-increment
-    wts::jitterParameter(am1,fac,rng);     // Male growth-increment
-    wts::jitterParameter(bm1,fac,rng);     // Male growth-increment
+    af1 = wts::jitterParameter(af1,fac,rng);     // Female growth-increment
+    bf1 = wts::jitterParameter(bf1,fac,rng);     // Female growth-increment
+    am1 = wts::jitterParameter(am1,fac,rng);     // Male growth-increment
+    bm1 = wts::jitterParameter(bm1,fac,rng);     // Male growth-increment
     
-    wts::jitterParameter(growth_beta,fac,rng); // Growth beta                                //this is NOT estimated (why?)
-    wts::jitterParameter(Mmult_imat,fac,rng);  // natural mortality multiplier for females and males
-    wts::jitterParameter(Mmultm,fac,rng);      // natural mortality multiplier for mature new and old shell male
-    wts::jitterParameter(Mmultf,fac,rng);      // natural mortality multiplier for mature new and old shell female
-    wts::jitterParameter(mat_big,fac,rng);     // mult. on 1980 M_imm for mature males and females                     
-    wts::jitterParameter(alpha1_rec,fac,rng);  // Parameters related to fraction recruiting  //this is NOT estimated (why?)
-    wts::jitterParameter(beta_rec,fac,rng);    // Parameters related to fraction recruiting  //this is NOT estimated (why?)
+    growth_beta = wts::jitterParameter(growth_beta,fac,rng); // Growth beta                                //this is NOT estimated (why?)
+    Mmult_imat  = wts::jitterParameter(Mmult_imat,fac,rng);  // natural mortality multiplier for females and males
+    Mmultm      = wts::jitterParameter(Mmultm,fac,rng);      // natural mortality multiplier for mature new and old shell male
+    Mmultf      = wts::jitterParameter(Mmultf,fac,rng);      // natural mortality multiplier for mature new and old shell female
+    mat_big     = wts::jitterParameter(mat_big,fac,rng);     // mult. on 1980 M_imm for mature males and females                     
+    alpha1_rec  = wts::jitterParameter(alpha1_rec,fac,rng);  // Parameters related to fraction recruiting  //this is NOT estimated (why?)
+    beta_rec    = wts::jitterParameter(beta_rec,fac,rng);    // Parameters related to fraction recruiting  //this is NOT estimated (why?)
     
-    wts::jitterParameter(moltp_af,fac,rng);       // paramters for logistic function molting   //this is NOT estimated (why?)
-    wts::jitterParameter(moltp_bf,fac,rng);       // female                                    //this is NOT estimated (why?)
-    wts::jitterParameter(moltp_am,fac,rng);       // paramters for logistic function molting   //this is NOT estimated (why?)
-    wts::jitterParameter(moltp_bm,fac,rng);       // immature males                            //this is NOT estimated (why?)
-    wts::jitterParameter(moltp_ammat,fac,rng);    // logistic molting prob for mature males
-    wts::jitterParameter(moltp_bmmat,fac,rng);    // logistic molting prob for mature males
+    moltp_af = wts::jitterParameter(moltp_af,fac,rng);       // paramters for logistic function molting   //this is NOT estimated (why?)
+    moltp_bf = wts::jitterParameter(moltp_bf,fac,rng);       // female                                    //this is NOT estimated (why?)
+    moltp_am = wts::jitterParameter(moltp_am,fac,rng);       // paramters for logistic function molting   //this is NOT estimated (why?)
+    moltp_bm = wts::jitterParameter(moltp_bm,fac,rng);       // immature males                            //this is NOT estimated (why?)
+    moltp_ammat = wts::jitterParameter(moltp_ammat,fac,rng);    // logistic molting prob for mature males
+    moltp_ammat = wts::jitterParameter(moltp_bmmat,fac,rng);    // logistic molting prob for mature males
     
-    wts::jitterParameter(pMnLnRec,fac,rng);         // Mean log-scale recruitment 1974+ (males, females are equal)
-    wts::jitterParameter(pRecDevs,0.1*fac,rng);     // Deviations about mean recruitment 1974+ (IMPORTANT CHANGE: used to be "endyr-1")
-    wts::jitterParameter(pMnLnRecEarly,fac,rng);    // Mean log-scale recruitment in early phase (pre-1974)
-    wts::jitterParameter(pRecDevsEarly,0.1*fac,rng);// Deviations about logscale mean recruitment in early phase (pre-1974)
+    pMnLnRec = wts::jitterParameter(pMnLnRec,fac,rng);         // Mean log-scale recruitment 1974+ (males, females are equal)
+    pRecDevs = wts::jitterParameter(pRecDevs,0.1*fac,rng);     // Deviations about mean recruitment 1974+ (IMPORTANT CHANGE: used to be "endyr-1")
+    pMnLnRecEarly = wts::jitterParameter(pMnLnRecEarly,fac,rng);    // Mean log-scale recruitment in early phase (pre-1974)
+    pRecDevsEarly = wts::jitterParameter(pRecDevsEarly,0.1*fac,rng);// Deviations about logscale mean recruitment in early phase (pre-1974)
     
-    wts::jitterParameter(pAvgLnF_TCF,fac,rng);           //log-scale mean directed fishing mortality
-    wts::jitterParameter(pF_DevsTCF,0.1*fac,rng);//log-scale directed fishing mortality devs IMPORTANT CHANGE: USED TO BE "1966,endyr-12"
-    wts::jitterParameter(pAvgLnF_GTF,fac,rng);   // fishing mortality (trawl)
-    wts::jitterParameter(pF_DevsGTF,0.1*fac,rng);// trawl fishery f-devs       (IMPORTANT CHANGE: used to be "endyr") 1973 seems OK
-    wts::jitterParameter(pAvgLnF_SCF,fac,rng);   // fishing mortality snow crab fishery discards
-    wts::jitterParameter(pF_DevsSCF,0.1*fac,rng);// snow crab fishery f-devs   (IMPORTANT CHANGE: used to be "endyr")  1992 is OK
-    wts::jitterParameter(pAvgLnF_RKF,fac,rng);   // fishing mortality red king crab fishery discards //this is NOT estimated (why?)
-    wts::jitterParameter(pF_DevsRKF,0.1*fac,rng);//this is NOT estimated (why?)  IMPORTANT CHANGEA: was nObsDscRKF-1.  why -1 in "nObsDscRKF-1"
+    pAvgLnF_TCF = wts::jitterParameter(pAvgLnF_TCF,fac,rng);           //log-scale mean directed fishing mortality
+    pF_DevsTCF  = wts::jitterParameter(pF_DevsTCF,0.1*fac,rng);//log-scale directed fishing mortality devs IMPORTANT CHANGE: USED TO BE "1966,endyr-12"
+    pAvgLnF_GTF = wts::jitterParameter(pAvgLnF_GTF,fac,rng);   // fishing mortality (trawl)
+    pF_DevsGTF  = wts::jitterParameter(pF_DevsGTF,0.1*fac,rng);// trawl fishery f-devs       (IMPORTANT CHANGE: used to be "endyr") 1973 seems OK
+    pAvgLnF_SCF = wts::jitterParameter(pAvgLnF_SCF,fac,rng);   // fishing mortality snow crab fishery discards
+    pF_DevsSCF  = wts::jitterParameter(pF_DevsSCF,0.1*fac,rng);// snow crab fishery f-devs   (IMPORTANT CHANGE: used to be "endyr")  1992 is OK
+    pAvgLnF_RKF = wts::jitterParameter(pAvgLnF_RKF,fac,rng);   // fishing mortality red king crab fishery discards //this is NOT estimated (why?)
+    pF_DevsRKF  = wts::jitterParameter(pF_DevsRKF,0.1*fac,rng);//this is NOT estimated (why?)  IMPORTANT CHANGEA: was nObsDscRKF-1.  why -1 in "nObsDscRKF-1"
     
     // Selectivity pattern for males (directed fishery)
-    wts::jitterParameter(fish_slope_mn,fac,rng);           //this is NOT estimated (why?)
-    wts::jitterParameter(log_avg_sel50_mn,fac,rng);        //this is NOT estimated (why?)
-    wts::jitterParameter(log_sel50_dev_mn,fac,rng);//this is NOT estimated (why?)
+    fish_slope_mn = wts::jitterParameter(fish_slope_mn,fac,rng);           //this is NOT estimated (why?)
+    log_avg_sel50_mn = wts::jitterParameter(log_avg_sel50_mn,fac,rng);        //this is NOT estimated (why?)
+    log_sel50_dev_mn = wts::jitterParameter(log_sel50_dev_mn,fac,rng);//this is NOT estimated (why?)
     
     // Retention function
     // 1981 - 1992
-    wts::jitterParameter(fish_fit_slope_mn1,fac,rng);
-    wts::jitterParameter(fish_fit_sel50_mn1,fac,rng);
+    fish_fit_slope_mn1 = wts::jitterParameter(fish_fit_slope_mn1,fac,rng);
+    fish_fit_sel50_mn1 = wts::jitterParameter(fish_fit_sel50_mn1,fac,rng);
     // 2005-endyr  
-    wts::jitterParameter(fish_fit_slope_mn2,fac,rng);
-    wts::jitterParameter(fish_fit_sel50_mn2,fac,rng);
+    fish_fit_slope_mn2 = wts::jitterParameter(fish_fit_slope_mn2,fac,rng);
+    fish_fit_sel50_mn2 = wts::jitterParameter(fish_fit_sel50_mn2,fac,rng);
     
     // Directed fishery selectivity pattern for period-1: 1993-1996
-    wts::jitterParameter(fish_slope_1,fac,rng);      
-    wts::jitterParameter(fish_sel50_1,fac,rng);
+    fish_slope_1 = wts::jitterParameter(fish_slope_1,fac,rng);      
+    fish_sel50_1 = wts::jitterParameter(fish_sel50_1,fac,rng);
     
     // Directed fishery selectivity pattern changing by year for period-3: 2005-P
-    wts::jitterParameter(fish_slope_yr_3,fac,rng);      
-    wts::jitterParameter(log_avg_sel50_3,fac,rng);
-    wts::jitterParameter(log_sel50_dev_3,0.1*fac,rng);
+    fish_slope_yr_3 = wts::jitterParameter(fish_slope_yr_3,fac,rng);      
+    log_avg_sel50_3 = wts::jitterParameter(log_avg_sel50_3,fac,rng);
+    log_sel50_dev_3 = wts::jitterParameter(log_sel50_dev_3,0.1*fac,rng);
     
     // for a dome-shaped selex pattern
-    wts::jitterParameter(fish_slope_mn2,fac,rng);
-    wts::jitterParameter(fish_sel50_mn2,fac,rng);
+    fish_slope_mn2 = wts::jitterParameter(fish_slope_mn2,fac,rng);
+    fish_sel50_mn2 = wts::jitterParameter(fish_sel50_mn2,fac,rng);
     
     // Female discards
-    wts::jitterParameter(fish_disc_slope_f,fac,rng);
-    wts::jitterParameter(fish_disc_sel50_f,fac,rng);
+    fish_disc_slope_f = wts::jitterParameter(fish_disc_slope_f,fac,rng);
+    fish_disc_sel50_f = wts::jitterParameter(fish_disc_sel50_f,fac,rng);
     
     // snow fishery female discards for period-1: 1989-1996
-    wts::jitterParameter(snowfish_disc_slope_f_1,fac,rng);
-    wts::jitterParameter(snowfish_disc_sel50_f_1,fac,rng);
+    snowfish_disc_slope_f_1 = wts::jitterParameter(snowfish_disc_slope_f_1,fac,rng);
+    snowfish_disc_sel50_f_1 = wts::jitterParameter(snowfish_disc_sel50_f_1,fac,rng);
     
     // snow fishery female discards for period-2: 1997-2004
-    wts::jitterParameter(snowfish_disc_slope_f_2,fac,rng);
-    wts::jitterParameter(snowfish_disc_sel50_f_2,fac,rng);
+    snowfish_disc_slope_f_2 = wts::jitterParameter(snowfish_disc_slope_f_2,fac,rng);
+    snowfish_disc_sel50_f_2 = wts::jitterParameter(snowfish_disc_sel50_f_2,fac,rng);
     
     // snow fishery female discards for period-3: 2005-P
-    wts::jitterParameter(snowfish_disc_slope_f_3,fac,rng);
-    wts::jitterParameter(snowfish_disc_sel50_f_3,fac,rng);
+    snowfish_disc_slope_f_3 = wts::jitterParameter(snowfish_disc_slope_f_3,fac,rng);
+    snowfish_disc_sel50_f_3 = wts::jitterParameter(snowfish_disc_sel50_f_3,fac,rng);
     
     // snow fishery male discards for period-1: 1989-1996
-    wts::jitterParameter(snowfish_disc_slope_m_1,fac,rng);
-    wts::jitterParameter(selSCF_Z50_ma_1,fac,rng);
-    wts::jitterParameter(snowfish_disc_slope_m2_1,fac,rng);
-    wts::jitterParameter(selSCF_lnZ50_md_1,fac,rng);
+    snowfish_disc_slope_m_1  = wts::jitterParameter(snowfish_disc_slope_m_1,fac,rng);
+    selSCF_Z50_ma_1          = wts::jitterParameter(selSCF_Z50_ma_1,fac,rng);
+    snowfish_disc_slope_m2_1 = wts::jitterParameter(snowfish_disc_slope_m2_1,fac,rng);
+    selSCF_lnZ50_md_1        = wts::jitterParameter(selSCF_lnZ50_md_1,fac,rng);
     
     // snow fishery male discards for period-2: 1997-2004
-    wts::jitterParameter(snowfish_disc_slope_m_2,fac,rng);
-    wts::jitterParameter(selSCF_Z50_ma_2,fac,rng);
-    wts::jitterParameter(snowfish_disc_slope_m2_2,fac,rng);
-    wts::jitterParameter(selSCF_lnZ50_md_2,fac,rng);
+    snowfish_disc_slope_m_2  = wts::jitterParameter(snowfish_disc_slope_m_2,fac,rng);
+    selSCF_Z50_ma_2          = wts::jitterParameter(selSCF_Z50_ma_2,fac,rng);
+    snowfish_disc_slope_m2_2 = wts::jitterParameter(snowfish_disc_slope_m2_2,fac,rng);
+    selSCF_lnZ50_md_2        = wts::jitterParameter(selSCF_lnZ50_md_2,fac,rng);
     
     // snow fishery male discards for period-3: 2005-P
-    wts::jitterParameter(snowfish_disc_slope_m_3,fac,rng);
-    wts::jitterParameter(selSCF_Z50_ma_3,fac,rng);
-    wts::jitterParameter(snowfish_disc_slope_m2_3,fac,rng);
-    wts::jitterParameter(selSCF_lnZ50_md_3,fac,rng);
+    snowfish_disc_slope_m_3  = wts::jitterParameter(snowfish_disc_slope_m_3,fac,rng);
+    selSCF_Z50_ma_3          = wts::jitterParameter(selSCF_Z50_ma_3,fac,rng);
+    snowfish_disc_slope_m2_3 = wts::jitterParameter(snowfish_disc_slope_m2_3,fac,rng);
+    selSCF_lnZ50_md_3        = wts::jitterParameter(selSCF_lnZ50_md_3,fac,rng);
     
     // red king fishery female discards
 
-    wts::jitterParameter(rkfish_disc_slope_f1,fac,rng);
-    wts::jitterParameter(rkfish_disc_sel50_f1,fac,rng);
-    wts::jitterParameter(rkfish_disc_slope_f2,fac,rng);
-    wts::jitterParameter(rkfish_disc_sel50_f2,fac,rng);
-    wts::jitterParameter(rkfish_disc_slope_f3,fac,rng);
-    wts::jitterParameter(rkfish_disc_sel50_f3,fac,rng);
+    rkfish_disc_slope_f1 = wts::jitterParameter(rkfish_disc_slope_f1,fac,rng);
+    rkfish_disc_sel50_f1 = wts::jitterParameter(rkfish_disc_sel50_f1,fac,rng);
+    rkfish_disc_slope_f2 = wts::jitterParameter(rkfish_disc_slope_f2,fac,rng);
+    rkfish_disc_sel50_f2 = wts::jitterParameter(rkfish_disc_sel50_f2,fac,rng);
+    rkfish_disc_slope_f3 = wts::jitterParameter(rkfish_disc_slope_f3,fac,rng);
+    rkfish_disc_sel50_f3 = wts::jitterParameter(rkfish_disc_sel50_f3,fac,rng);
     
     // red king fishery male discards
-    wts::jitterParameter(rkfish_disc_slope_m1,fac,rng);
-    wts::jitterParameter(rkfish_disc_sel50_m1,fac,rng);
-    wts::jitterParameter(rkfish_disc_slope_m2,fac,rng);
-    wts::jitterParameter(rkfish_disc_sel50_m2,fac,rng);
-    wts::jitterParameter(rkfish_disc_slope_m3,fac,rng);
-    wts::jitterParameter(rkfish_disc_sel50_m3,fac,rng);
+    rkfish_disc_slope_m1 = wts::jitterParameter(rkfish_disc_slope_m1,fac,rng);
+    rkfish_disc_sel50_m1 = wts::jitterParameter(rkfish_disc_sel50_m1,fac,rng);
+    rkfish_disc_slope_m2 = wts::jitterParameter(rkfish_disc_slope_m2,fac,rng);
+    rkfish_disc_sel50_m2 = wts::jitterParameter(rkfish_disc_sel50_m2,fac,rng);
+    rkfish_disc_slope_m3 = wts::jitterParameter(rkfish_disc_slope_m3,fac,rng);
+    rkfish_disc_sel50_m3 = wts::jitterParameter(rkfish_disc_sel50_m3,fac,rng);
     
     // Trawl fishery selectivity female, 1973-1987
-    wts::jitterParameter(fish_disc_slope_tf1,fac,rng);
-    wts::jitterParameter(fish_disc_sel50_tf1,fac,rng);
+    fish_disc_slope_tf1 = wts::jitterParameter(fish_disc_slope_tf1,fac,rng);
+    fish_disc_sel50_tf1 = wts::jitterParameter(fish_disc_sel50_tf1,fac,rng);
     // Trawl fishery selectivity female, 1988-1996
-    wts::jitterParameter(fish_disc_slope_tf2,fac,rng);
-    wts::jitterParameter(fish_disc_sel50_tf2,fac,rng);
+    fish_disc_slope_tf2 = wts::jitterParameter(fish_disc_slope_tf2,fac,rng);
+    fish_disc_sel50_tf2 = wts::jitterParameter(fish_disc_sel50_tf2,fac,rng);
     // Trawl fishery selectivity female, 1997-P
-    wts::jitterParameter(fish_disc_slope_tf3,fac,rng);
-    wts::jitterParameter(fish_disc_sel50_tf3,fac,rng);
+    fish_disc_slope_tf3 = wts::jitterParameter(fish_disc_slope_tf3,fac,rng);
+    fish_disc_sel50_tf3 = wts::jitterParameter(fish_disc_sel50_tf3,fac,rng);
     // Trawl fishery selectivity male, 1973-1987
-    wts::jitterParameter(fish_disc_slope_tm1,fac,rng);
-    wts::jitterParameter(fish_disc_sel50_tm1,fac,rng);
+    fish_disc_slope_tm1 = wts::jitterParameter(fish_disc_slope_tm1,fac,rng);
+    fish_disc_sel50_tm1 = wts::jitterParameter(fish_disc_sel50_tm1,fac,rng);
     // Trawl fishery selectivity male, 1988-1996
-    wts::jitterParameter(fish_disc_slope_tm2,fac,rng);
-    wts::jitterParameter(fish_disc_sel50_tm2,fac,rng);
+    fish_disc_slope_tm2 = wts::jitterParameter(fish_disc_slope_tm2,fac,rng);
+    fish_disc_sel50_tm2 = wts::jitterParameter(fish_disc_sel50_tm2,fac,rng);
     // Trawl fishery selectivity male, 1997-P
-    wts::jitterParameter(fish_disc_slope_tm3,fac,rng);
-    wts::jitterParameter(fish_disc_sel50_tm3,fac,rng);
+    fish_disc_slope_tm3 = wts::jitterParameter(fish_disc_slope_tm3,fac,rng);
+    fish_disc_sel50_tm3 = wts::jitterParameter(fish_disc_sel50_tm3,fac,rng);
     //1974 to 1981 
-    wts::jitterParameter(srv2_q,fac,rng);
-    wts::jitterParameter(srv2_seldiff,fac,rng);
-    wts::jitterParameter(srv2_sel50,fac,rng);
+    srv2_q       = wts::jitterParameter(srv2_q,fac,rng);
+    srv2_seldiff = wts::jitterParameter(srv2_seldiff,fac,rng);
+    srv2_sel50   = wts::jitterParameter(srv2_sel50,fac,rng);
     //1982-86 net change; 1982 first year of 83-112; burn-in period
-    wts::jitterParameter(srv2a_q,fac,rng);
-    wts::jitterParameter(srv2a_seldiff,fac,rng);
-    wts::jitterParameter(srv2a_sel50,fac,rng);
+    srv2a_q       = wts::jitterParameter(srv2a_q,fac,rng);
+    srv2a_seldiff = wts::jitterParameter(srv2a_seldiff,fac,rng);
+    srv2a_sel50   = wts::jitterParameter(srv2a_sel50,fac,rng);
     //1987-P
-    wts::jitterParameter(srv3_q,fac,rng);
-    wts::jitterParameter(srv3_seldiff,fac,rng);
-    wts::jitterParameter(srv3_sel50,fac,rng);
+    srv3_q       = wts::jitterParameter(srv3_q,fac,rng);
+    srv3_seldiff = wts::jitterParameter(srv3_seldiff,fac,rng);
+    srv3_sel50   = wts::jitterParameter(srv3_sel50,fac,rng);
     
-    wts::jitterParameter(matestf,fac,rng);
-    wts::jitterParameter(matestm,fac,rng);
+    matestf = wts::jitterParameter(matestf,fac,rng);
+    matestm = wts::jitterParameter(matestm,fac,rng);
     
-    wts::jitterParameter(srv2_femQ,fac,rng);
-    wts::jitterParameter(srv2_seldiff_f,fac,rng);
+    srv2_femQ      = wts::jitterParameter(srv2_femQ,fac,rng);
+    srv2_seldiff_f = wts::jitterParameter(srv2_seldiff_f,fac,rng);    
+    srv2_sel50_f = wts::jitterParameter(srv2_sel50_f,fac,rng);
     
-    wts::jitterParameter(srv2_sel50_f,fac,rng);
+    srv2a_femQ      = wts::jitterParameter(srv2a_femQ,fac,rng);
+    srv2a_seldiff_f = wts::jitterParameter(srv2a_seldiff_f,fac,rng);
+    srv2a_sel50_f   = wts::jitterParameter(srv2a_sel50_f,fac,rng);
     
-    wts::jitterParameter(srv2a_femQ,fac,rng);
-    wts::jitterParameter(srv2a_seldiff_f,fac,rng);
-    wts::jitterParameter(srv2a_sel50_f,fac,rng);
-    
-    wts::jitterParameter(srv3_femQ,fac,rng);
-    wts::jitterParameter(srv3_seldiff_f,fac,rng);
-    wts::jitterParameter(srv3_sel50_f,fac,rng);
+    srv3_femQ      = wts::jitterParameter(srv3_femQ,fac,rng);
+    srv3_seldiff_f = wts::jitterParameter(srv3_seldiff_f,fac,rng);
+    srv3_sel50_f   = wts::jitterParameter(srv3_sel50_f,fac,rng);
     
     
-    wts::jitterParameter(proprecn,fac,rng);
+    proprecn = wts::jitterParameter(proprecn,fac,rng);
     cout<<"finished jittering"<<endl;
 //    cout<<"enter 1 to continue >> ";
 //    int dummy = 0;
