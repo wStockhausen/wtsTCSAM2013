@@ -28,6 +28,14 @@
 //            Revising so fc's are fishery capture rates, fm's are fishery mortality rates.
 //            Fits are STILL to retained + discard MORTALITY (same as TCSAM2013), not catches
 //--20150615: Corrected use of wts::jitterParameter() functions for change in wtsADMB library.
+//--20150817: 1. Replaced hard-wired prior mean, variance (0.88, 0.05) used for srv3_q and srv3_qFem priors
+//               with srv3_qPriorMean, Var and srv3_qFemPriorMean, Var, with values read in from the
+//               control file.
+//            2. Changed q_prior_switch to srv3_qPriorWgt and srv3_qFemPriorWgt to have separate
+//               switches for male, female q's. In addition, these also function as likelihood multipliers (weights).
+//            3. Changed ...femQ... to ...qFem...
+//            4. Now reading phsM from control file to control estimation phase for natural mortality components
+//            5. Now reading initial values for Mmult_imat, Mmultm, Mmultf, mat_big from control file
 //
 //IMPORTANT: 2013-09 assessment model had RKC params for 1992+ discard mortality TURNED OFF. 
 //           THE ESTIMATION PHASE FOR RKC DISCARD MORTALITY IS NOW SET IN THE CONTROLLER FILE!
@@ -62,6 +70,9 @@ GLOBALS_SECTION
     ofstream CheckFile;
     ofstream post("eval.csv");
     ofstream echo;                 //stream to echo model inputs
+    
+    //misc. flags
+    int usePin = 0;//flag that a pin file is being used
     
     //jitter stuff
     int jitter = 0; //jitter is off
@@ -171,9 +182,20 @@ DATA_SECTION
  
  LOCAL_CALCS  
     //process command line options
-    //recruitment lag
     int on = 0;
     int flg = 0;
+    //pin file use
+    if ((on=option_match(ad_comm::argc,ad_comm::argv,"-pin"))>-1) {
+        usePin=1;
+        echo<<"#pin file used"<<endl;
+        flg = 1;
+    }
+    if ((on=option_match(ad_comm::argc,ad_comm::argv,"-bpin"))>-1) {
+        usePin=1;
+        echo<<"#pin file used"<<endl;
+        flg = 1;
+    }
+    //recruitment lag
     if ((on=option_match(ad_comm::argc,ad_comm::argv,"-lag"))>-1) {
         reclag=atoi(ad_comm::argv[on+1]);
         CheckFile<<"#assumed lag for recruitment changed to: "<<reclag<<endl;
@@ -715,9 +737,14 @@ DATA_SECTION
     !!CheckFile<<"Reading control file ''"<<ptrMC->fnCtl<<"'"<<endl;
     
     init_number q1                    // Q  mult by pop biomass to get survey biomass
-    init_vector M_in(1,nSXs)           // natural mortality females then males
-    init_vector M_matn_in(1,nSXs)      // natural mortality mature new shell female/male
-    init_vector M_mato_in(1,nSXs)      // natural mortality mature old shell female/male
+    init_int phsM                     // phase to turn on ordinary M component estimation
+    init_vector M_in(1,nSXs)          // initial base value for natural mortality by sex
+    init_vector M_matn_in(1,nSXs)     // initial base value for natural mortality mature new shell by sex
+    init_vector M_mato_in(1,nSXs)     // initial base value for natural mortality mature old shell by sex
+    init_number Mmult_imat_in         // initial value for natural mortality multiplier
+    init_number Mmultm_in             // initial value for natural mortality multiplier
+    init_number Mmultf_in             // initial value for natural mortality multiplier
+    init_vector mat_big_in(1,nSXs)    // natural mortality multiplier by sex during "kill 'em" period
     init_int phase_moltingp           // phase to estimate molting prob for mature males
     init_int phase_fishsel            // phase to estimate dome shape parameters for fishery selectivities
     init_int survsel_phase            // switch for which survey selectivty to use for 1989 to present - positive estimated negative fixed at somerton and otto
@@ -725,9 +752,14 @@ DATA_SECTION
     init_int phase_logistic_sel       // phase to estimate selectivities using logistic function
     init_vector sel_som(1,5)          // parameters for somerton-otto selectivity curve
     !!CheckFile<<"q1                 = "<<q1<<endl;
+    !!CheckFile<<"phsM               = "<<phsM<<endl;
     !!CheckFile<<"M_in               = "<<M_in<<endl;
     !!CheckFile<<"M_matn_in          = "<<M_matn_in<<endl;
     !!CheckFile<<"M_mato_in          = "<<M_mato_in<<endl;
+    !!CheckFile<<"Mmult_imat_in      = "<<Mmult_imat_in<<endl;
+    !!CheckFile<<"Mmultm_in          = "<<Mmultm_in<<endl;
+    !!CheckFile<<"Mmultf_in          = "<<Mmultf_in<<endl;
+    !!CheckFile<<"mat_big_in         = "<<mat_big_in<<endl;
     !!CheckFile<<"phase_moltingp     = "<<phase_moltingp<<endl;
     !!CheckFile<<"phase_fishsel      = "<<phase_fishsel<<endl;
     !!CheckFile<<"survsel_phase      = "<<survsel_phase<<endl;
@@ -774,12 +806,22 @@ DATA_SECTION
     !!CheckFile<<"wght_female_potcatch = "<<wght_female_potcatch<<endl;
     !!CheckFile<<"wt_lmlike            = "<<wt_lmlike<<endl;
     
-    init_int q_prior_switch                                         //survey q prior on 1, off 0
+    init_number srv3_qPriorWgt        //likelihood multiplier for survey q prior (off=0)
+    init_number srv3_qPriorMean       //prior mean
+    init_number srv3_qPriorStD        //prior variance
+    init_number srv3_qFemPriorWgt     //likelihood multiplier for survey female q prior (off=0)
+    init_number srv3_qFemPriorMean    //prior mean
+    init_number srv3_qFemPriorStD     //prior variance
     init_int mort_switch                                            // extra mort on 1, off 0
     init_int mort_switch2                                           // apply mort_switch correctly (1), or as in 2012 (0)
     init_int lyr_mort                                               // start yr extra mort
     init_int uyr_mort                                               //end yr extra mort
-    !!CheckFile<<"q_prior_switch = "<<q_prior_switch<<endl;
+    !!CheckFile<<"srv3_qPriorWgt  = "<<srv3_qPriorWgt<<endl;
+    !!CheckFile<<"srv3_qPriorMean = "<<srv3_qPriorMean<<endl;
+    !!CheckFile<<"srv3_qPriorStD  = "<<srv3_qPriorStD<<endl;
+    !!CheckFile<<"srv3_qFemPriorWgt  = "<<srv3_qFemPriorWgt<<endl;
+    !!CheckFile<<"srv3_qFemPriorMean = "<<srv3_qFemPriorMean<<endl;
+    !!CheckFile<<"srv3_qFemPriorStD  = "<<srv3_qFemPriorStD<<endl;
     !!CheckFile<<"mort_switch    = "<<mort_switch<<endl;
     !!CheckFile<<"mort_switch2   = "<<mort_switch2<<endl;
     !!CheckFile<<"lyr_mort       = "<<lyr_mort<<endl;
@@ -877,7 +919,7 @@ DATA_SECTION
     
     3darray obs_srv1_num(1,nSXs,styr,endyr,1,nZBs)  // Survey numbers by sex
     vector obs_srv1t(styr,endyr)                    // ???
-    matrix obs_srv1_bioms(1,nSXs,styr,endyr)         // Survey biomass by sex
+    matrix obs_srv1_bioms(1,nSXs,styr,endyr)        // Survey biomass by sex
     vector obs_srv1_biom(styr,endyr)                // Total survey biomass
     
     number avgwt2
@@ -885,7 +927,7 @@ DATA_SECTION
     vector avgwt(styr,endyr)
     
     int phs_mat_big;
-    !!if (mort_switch==1) phs_mat_big = 8; else phs_mat_big = -8;
+    !!if (mort_switch==1) phs_mat_big = phsM+1; else phs_mat_big = -8;
     
  LOCAL_CALCS
     dmX   = "x=c("+qt+STR_FEMALE+qt    +cc+ qt+STR_MALE+qt+")";
@@ -961,11 +1003,11 @@ PARAMETER_SECTION
     init_bounded_number am1(0.3,0.6,8)                       // Male growth-increment
     init_bounded_number bm1(0.7,1.2,8)                       // Male growth-increment
     
-    init_bounded_vector growth_beta(1,nSXs,0.75000,0.75001,-2) // Growth beta                                //this is NOT estimated (why?)
-    init_bounded_number Mmult_imat(0.2,2.0,7)                   // natural mortality multiplier for females and males
-    init_bounded_number Mmultm(0.1,1.9,7)                       // natural mortality multiplier for mature new and old shell male
-    init_bounded_number Mmultf(0.1,1.9,7)                       // natural mortality multiplier for mature new and old shell female
-    init_bounded_vector mat_big(1,nSXs,0.1,10.0,phs_mat_big)     // mult. on 1980 M_imm for mature males and females                     
+    init_bounded_vector growth_beta(1,nSXs,0.75000,0.75001,-2)  // Growth beta                                //this is NOT estimated (why?)
+    init_bounded_number Mmult_imat(0.2,2.0,phsM)                   // natural mortality multiplier for females and males
+    init_bounded_number Mmultm(0.1,1.9,phsM)                       // natural mortality multiplier for mature new and old shell male
+    init_bounded_number Mmultf(0.1,1.9,phsM)                       // natural mortality multiplier for mature new and old shell female
+    init_bounded_vector mat_big(1,nSXs,0.1,10.0,phs_mat_big)    // mult. on 1980 M_imm for mature males and females                     
     init_bounded_number alpha1_rec(11.49,11.51,-8)              // Parameters related to fraction recruiting  //this is NOT estimated (why?)
     init_bounded_number beta_rec(3.99,4.01,-8)                  // Parameters related to fraction recruiting  //this is NOT estimated (why?)
     
@@ -1135,16 +1177,16 @@ PARAMETER_SECTION
     init_bounded_vector matestf(1,16,-15.0,0.0,5)
     init_bounded_vector matestm(1,nZBs,-15.0,0.0,5)
     
-    init_bounded_number srv2_femQ(0.5,1.001,survsel1_phase)
+    init_bounded_number srv2_qFem(0.5,1.001,survsel1_phase)
     init_bounded_number srv2_seldiff_f(0.0,100.0,survsel1_phase)
     
     init_bounded_number srv2_sel50_f(-200.0,100.01,survsel1_phase)
     
-    init_bounded_number srv2a_femQ(0.25,1.001,-survsel1_phase)
+    init_bounded_number srv2a_qFem(0.25,1.001,-survsel1_phase)
     init_bounded_number srv2a_seldiff_f(0.0,100.0,-survsel1_phase)
     init_bounded_number srv2a_sel50_f(-200.0,100.01,-survsel1_phase)
     
-    init_bounded_number srv3_femQ(0.2,1.0,survsel1_phase)
+    init_bounded_number srv3_qFem(0.2,1.0,survsel1_phase)
     //   init_bounded_number srv3_sel95_f(75.0,75.01,-survsel1_phase)
     init_bounded_number srv3_seldiff_f(0.0,100.0,survsel1_phase)
     //  init_bounded_number srv3_sel50_f(30.9,30.901,-survsel1_phase)
@@ -1437,6 +1479,13 @@ PARAMETER_SECTION
 //========================================================================
 PRELIMINARY_CALCS_SECTION
 
+    if (!usePin){
+        //set initial values from control file inputs 
+        Mmult_imat = Mmult_imat_in;
+        Mmultm = Mmultm_in;
+        Mmultf = Mmultf_in;
+        mat_big = mat_big_in;
+    }
     if (jitter) jitterParameters(ptrMC->jitFrac);
  
     // use logistic maturity curve for new shell males instead of fractions by year if switch>0
@@ -1948,15 +1997,15 @@ FUNCTION void writeParameters(ofstream& os,int toR, int willBeActive)           
     wts::writeParameter(os,matestf,toR,willBeActive); 
     wts::writeParameter(os,matestm,toR,willBeActive); 
     
-    wts::writeParameter(os,srv2_femQ,toR,willBeActive);      
+    wts::writeParameter(os,srv2_qFem,toR,willBeActive);      
     wts::writeParameter(os,srv2_seldiff_f,toR,willBeActive); 
     wts::writeParameter(os,srv2_sel50_f,toR,willBeActive);   
     
-    wts::writeParameter(os,srv2a_femQ,toR,willBeActive);      
+    wts::writeParameter(os,srv2a_qFem,toR,willBeActive);      
     wts::writeParameter(os,srv2a_seldiff_f,toR,willBeActive); 
     wts::writeParameter(os,srv2a_sel50_f,toR,willBeActive);   
     
-    wts::writeParameter(os,srv3_femQ,toR,willBeActive);      
+    wts::writeParameter(os,srv3_qFem,toR,willBeActive);      
     wts::writeParameter(os,srv3_seldiff_f,toR,willBeActive); 
     wts::writeParameter(os,srv3_sel50_f,toR,willBeActive);
     
@@ -2194,15 +2243,15 @@ FUNCTION void jitterParameters(double fac)   //wts: new 2014-05-10
     matestf = wts::jitterParameter(matestf,fac,rng);
     matestm = wts::jitterParameter(matestm,fac,rng);
     
-    srv2_femQ      = wts::jitterParameter(srv2_femQ,fac,rng);
+    srv2_qFem      = wts::jitterParameter(srv2_qFem,fac,rng);
     srv2_seldiff_f = wts::jitterParameter(srv2_seldiff_f,fac,rng);    
     srv2_sel50_f = wts::jitterParameter(srv2_sel50_f,fac,rng);
     
-    srv2a_femQ      = wts::jitterParameter(srv2a_femQ,fac,rng);
+    srv2a_qFem      = wts::jitterParameter(srv2a_qFem,fac,rng);
     srv2a_seldiff_f = wts::jitterParameter(srv2a_seldiff_f,fac,rng);
     srv2a_sel50_f   = wts::jitterParameter(srv2a_sel50_f,fac,rng);
     
-    srv3_femQ      = wts::jitterParameter(srv3_femQ,fac,rng);
+    srv3_qFem      = wts::jitterParameter(srv3_qFem,fac,rng);
     srv3_seldiff_f = wts::jitterParameter(srv3_seldiff_f,fac,rng);
     srv3_sel50_f   = wts::jitterParameter(srv3_sel50_f,fac,rng);
     
@@ -2521,10 +2570,10 @@ FUNCTION get_selectivity                  //wts: revised
         selSrv2a(MALE) = srv3_q*1./(1.+mfexp(-1.*log(19.)*(length_bins-srv3_sel50)/(srv3_seldiff)));
     }
         
-    //set male and female equal unless estimating femQ
-    selSrv2(FEMALE)  = srv2_femQ*1./(1.+mfexp(-1.*log(19.)*(length_bins-srv2_sel50_f)/(srv2_seldiff_f)));
-    selSrv2a(FEMALE) = srv3_femQ*1./(1.+mfexp(-1.*log(19.)*(length_bins-srv3_sel50_f)/(srv3_seldiff_f)));
-    selSrv3(FEMALE)  = srv3_femQ*1./(1.+mfexp(-1.*log(19.)*(length_bins-srv3_sel50_f)/(srv3_seldiff_f)));
+    //set male and female equal unless estimating qFem
+    selSrv2(FEMALE)  = srv2_qFem*1./(1.+mfexp(-1.*log(19.)*(length_bins-srv2_sel50_f)/(srv2_seldiff_f)));
+    selSrv2a(FEMALE) = srv3_qFem*1./(1.+mfexp(-1.*log(19.)*(length_bins-srv3_sel50_f)/(srv3_seldiff_f)));
+    selSrv3(FEMALE)  = srv3_qFem*1./(1.+mfexp(-1.*log(19.)*(length_bins-srv3_sel50_f)/(srv3_seldiff_f)));
 //    cout<<"get_sel: 3"<<endl;
     
     dvariable maxsel;
@@ -3234,17 +3283,27 @@ FUNCTION evaluate_the_objective_function    //wts: revising
     }
     
     //penalty on survey Q
-    if(active(srv3_q) && q_prior_switch>0) {  
+//    if(active(srv3_q) && srv3_qPriorWgt>0) {  
+//        //max of underbag at 182.5 mm is 0.873   
+//        srv3q_penalty = 0.5 * square((srv3_q - 0.88) / 0.05);                  //hard-wired
+//        //    srv3q_penalty = 0.0 * square((srv3_q - 0.88) / 0.05);
+//        f += srv3q_penalty; objfOut(6) = srv3q_penalty; likeOut(6) = srv3q_penalty; wgtsOut(6) = 1;
+//    }
+//    if(active(srv3_qFem) && srv3_qPriorWgt>0) {  
+//        //peak of females is at about 80mm underbag is 0.75 at this size - less uncertainty  
+//        srv3q_penalty = 0.5 * square((srv3_qFem - 0.88) / 0.05);                //hard-wired
+//        //    srv3q_penalty = 0.0 * square((srv3_qFem - 0.88) / 0.05);
+//        f += srv3q_penalty; objfOut(7) = srv3q_penalty; likeOut(7) = srv3q_penalty; wgtsOut(7) = 1;
+//    }
+    if(active(srv3_q) && srv3_qPriorWgt>=0) {  
         //max of underbag at 182.5 mm is 0.873   
-        srv3q_penalty = 0.5 * square((srv3_q - 0.88) / 0.05);                  //hard-wired
-        //    srv3q_penalty = 0.0 * square((srv3_q - 0.88) / 0.05);
-        f += srv3q_penalty; objfOut(6) = srv3q_penalty; likeOut(6) = srv3q_penalty; wgtsOut(6) = 1;
+        srv3q_penalty = 0.5 * square((srv3_q - srv3_qPriorMean) / srv3_qPriorStD);
+        f += srv3_qPriorWgt*srv3q_penalty; objfOut(6) = srv3_qPriorWgt*srv3q_penalty; likeOut(6) = srv3q_penalty; wgtsOut(6) = srv3_qPriorWgt;
     }
-    if(active(srv3_femQ) && q_prior_switch>0) {  
+    if(active(srv3_qFem) && srv3_qFemPriorWgt>=0) {  
         //peak of females is at about 80mm underbag is 0.75 at this size - less uncertainty  
-        srv3q_penalty = 0.5 * square((srv3_femQ - 0.88) / 0.05);                //hard-wired
-        //    srv3q_penalty = 0.0 * square((srv3_femQ - 0.88) / 0.05);
-        f += srv3q_penalty; objfOut(7) = srv3q_penalty; likeOut(7) = srv3q_penalty; wgtsOut(7) = 1;
+        srv3q_penalty = 0.5 * square((srv3_qFem - srv3_qFemPriorMean) / srv3_qFemPriorStD);
+        f += srv3_qFemPriorWgt*srv3q_penalty; objfOut(7) = srv3_qFemPriorWgt*srv3q_penalty; likeOut(7) = srv3q_penalty; wgtsOut(7) = srv3_qFemPriorWgt;
     }
     
     // bayesian part - likelihood on growth parameters af,am,bf,bm
