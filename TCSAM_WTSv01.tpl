@@ -36,6 +36,9 @@
 //            3. Changed ...femQ... to ...qFem...
 //            4. Now reading phsM from control file to control estimation phase for natural mortality components
 //            5. Now reading initial values for Mmult_imat, Mmultm, Mmultf, mat_big from control file
+//--20150823: 1. Added switch to control asymptotic behavior of logistic selectivity functions
+//--20150901: 1. Corrected when asymptotic behavior was applied to survey selectivities. Previous
+//              implementation inadvertently set Q = 1.
 //
 //IMPORTANT: 2013-09 assessment model had RKC params for 1992+ discard mortality TURNED OFF. 
 //           THE ESTIMATION PHASE FOR RKC DISCARD MORTALITY IS NOW SET IN THE CONTROLLER FILE!
@@ -748,7 +751,7 @@ DATA_SECTION
     init_int phase_moltingp           // phase to estimate molting prob for mature males
     init_int phase_fishsel            // phase to estimate dome shape parameters for fishery selectivities
     init_int survsel_phase            // switch for which survey selectivty to use for 1989 to present - positive estimated negative fixed at somerton and otto
-    init_int survsel1_phase           // switch for fixing all survey selTCFM to somerton and otto - <0 fix, >0 estimate
+    init_int survsel1_phase           // switch for fixing all survey selectivities to somerton and otto - <0 fix, >0 estimate
     init_int phase_logistic_sel       // phase to estimate selectivities using logistic function
     init_vector sel_som(1,5)          // parameters for somerton-otto selectivity curve
     !!CheckFile<<"q1                 = "<<q1<<endl;
@@ -857,6 +860,17 @@ DATA_SECTION
     if (optFM!=1) optFM = 0;//if gmacs not specified, then use original
     CheckFile<<"#---Fishing mortality model options"<<endl;
     CheckFile<<"optFM = "<<optFM<<endl;
+ END_CALCS
+    
+    //new 20150823: revised 20151005
+    init_int optFshSel;//option to force asymptote=1 for logistic fishery selectivity functions
+    init_int optSrvSel;//option to force asymptote=1 for logistic survey selectivity functions
+ LOCAL_CALCS
+    if (optFshSel!=1) optFshSel = 0;//if not 1 (on), use old approach to normalization
+    if (optSrvSel!=1) optSrvSel = 0;//if not 1 (on), use old approach to normalization
+    CheckFile<<"#---Options for asymptotic behavior of selectivity functions"<<endl;
+    CheckFile<<"optFshSel = "<<optFshSel<<endl;
+    CheckFile<<"optSrvSel = "<<optSrvSel<<endl;
  END_CALCS
     
     !!CheckFile<<"Finished reading control file."<<endl;
@@ -2557,25 +2571,25 @@ FUNCTION get_selectivity                  //wts: revised
     selSrv2.initialize();
     selSrv2a.initialize();
     selSrv3.initialize();
-    // somerton and otto curve for survey selectivities
-    if (survsel_phase<0)
-        selSrv3(MALE) = sel_som(1)/(1.+sel_som(2)*mfexp(-1.*sel_som(3)*length_bins));
-    else
-        selSrv3(MALE) = srv3_q*1./(1.+mfexp(-1.*log(19.)*(length_bins-srv3_sel50)/(srv3_seldiff)));
-    // this sets time periods 1 and 2 survey selectivities to somerton otto as well
-    if (survsel1_phase < 0)
-        selSrv2(MALE) = selSrv3(MALE);
-    else { 
-        selSrv2(MALE)  = srv2_q*1./(1.+mfexp(-1.*log(19.)*(length_bins-srv2_sel50)/(srv2_seldiff)));
-        selSrv2a(MALE) = srv3_q*1./(1.+mfexp(-1.*log(19.)*(length_bins-srv3_sel50)/(srv3_seldiff)));
-    }
-        
-    //set male and female equal unless estimating qFem
-    selSrv2(FEMALE)  = srv2_qFem*1./(1.+mfexp(-1.*log(19.)*(length_bins-srv2_sel50_f)/(srv2_seldiff_f)));
-    selSrv2a(FEMALE) = srv3_qFem*1./(1.+mfexp(-1.*log(19.)*(length_bins-srv3_sel50_f)/(srv3_seldiff_f)));
-    selSrv3(FEMALE)  = srv3_qFem*1./(1.+mfexp(-1.*log(19.)*(length_bins-srv3_sel50_f)/(srv3_seldiff_f)));
+//    // somerton and otto curve for survey selectivities
+//    if (survsel_phase<0)
+//        selSrv3(MALE) = sel_som(1)/(1.+sel_som(2)*mfexp(-1.*sel_som(3)*length_bins));
+//    else
+//        selSrv3(MALE) = srv3_q*1./(1.+mfexp(-1.*log(19.)*(length_bins-srv3_sel50)/(srv3_seldiff)));
+//    // this sets time periods 1 and 2 survey selectivities to somerton otto as well
+//    if (survsel1_phase < 0)
+//        selSrv2(MALE) = selSrv3(MALE);
+//    else { 
+//        selSrv2(MALE)  = srv2_q*1./(1.+mfexp(-1.*log(19.)*(length_bins-srv2_sel50)/(srv2_seldiff)));
+//        selSrv2a(MALE) = srv3_q*1./(1.+mfexp(-1.*log(19.)*(length_bins-srv3_sel50)/(srv3_seldiff)));
+//    }
+//        
+//    //set male and female equal unless estimating qFem
+//    selSrv2(FEMALE)  = srv2_qFem*1./(1.+mfexp(-1.*log(19.)*(length_bins-srv2_sel50_f)/(srv2_seldiff_f)));
+//    selSrv2a(FEMALE) = srv3_qFem*1./(1.+mfexp(-1.*log(19.)*(length_bins-srv3_sel50_f)/(srv3_seldiff_f)));
+//    selSrv3(FEMALE)  = srv3_qFem*1./(1.+mfexp(-1.*log(19.)*(length_bins-srv3_sel50_f)/(srv3_seldiff_f)));
 //    cout<<"get_sel: 3"<<endl;
-    
+//    
     dvariable maxsel;
     selTCFR.initialize();
     for(int iy=styr;iy<endyr;iy++){          //used to be iy<=endyr
@@ -2588,6 +2602,80 @@ FUNCTION get_selectivity                  //wts: revised
     }
 //    cout<<"get_sel: 4"<<endl;
 //    cout<<"done"<<endl;
+    
+    //new 20150901-->
+    //calculate survey selectivities
+    selSrv3( MALE) = 1./(1.+mfexp(-1.*log(19.)*(length_bins-srv3_sel50)/(srv3_seldiff)));
+    selSrv2( MALE) = 1./(1.+mfexp(-1.*log(19.)*(length_bins-srv2_sel50)/(srv2_seldiff)));
+    selSrv2a(MALE) = 1./(1.+mfexp(-1.*log(19.)*(length_bins-srv3_sel50)/(srv3_seldiff)));
+        
+    selSrv2( FEMALE) = 1./(1.+mfexp(-1.*log(19.)*(length_bins-srv2_sel50_f)/(srv2_seldiff_f)));
+    selSrv2a(FEMALE) = 1./(1.+mfexp(-1.*log(19.)*(length_bins-srv3_sel50_f)/(srv3_seldiff_f)));
+    selSrv3( FEMALE) = 1./(1.+mfexp(-1.*log(19.)*(length_bins-srv3_sel50_f)/(srv3_seldiff_f)));
+//    cout<<"get_sel: 3"<<endl;
+    
+     if (optFshSel==1){//set logistic selectivity = 1 in largest size bin
+        //TCFM and retFcn
+        for(int iy=styr;iy<endyr;iy++){
+            selTCFM(NEW_SHELL,iy) /= selTCFM(NEW_SHELL,iy,nZBs);
+            retFcn( NEW_SHELL,iy) /= retFcn( NEW_SHELL,iy,nZBs);
+            selTCFM(OLD_SHELL,iy) /= selTCFM(OLD_SHELL,iy,nZBs);
+            retFcn( OLD_SHELL,iy) /= retFcn( OLD_SHELL,iy,nZBs);
+        }
+        //TCFF
+        selTCFF /= selTCFF(nZBs);
+        //SCF females (only)
+        selSCF(1,FEMALE) /= selSCF(1,FEMALE,nZBs);
+        selSCF(2,FEMALE) /= selSCF(2,FEMALE,nZBs);
+        selSCF(3,FEMALE) /= selSCF(3,FEMALE,nZBs);
+        //RKF
+        selRKF(1,  MALE) /= selRKF(1,  MALE,nZBs);
+        selRKF(2,  MALE) /= selRKF(2,  MALE,nZBs);
+        selRKF(3,  MALE) /= selRKF(3,  MALE,nZBs);
+        selRKF(1,FEMALE) /= selRKF(1,FEMALE,nZBs);
+        selRKF(2,FEMALE) /= selRKF(2,FEMALE,nZBs);
+        selRKF(3,FEMALE) /= selRKF(3,FEMALE,nZBs);
+        //GTF
+        selGTF(1,  MALE) /= selGTF(1,  MALE,nZBs);
+        selGTF(2,  MALE) /= selGTF(2,  MALE,nZBs);
+        selGTF(3,  MALE) /= selGTF(3,  MALE,nZBs);
+        selGTF(1,FEMALE) /= selGTF(1,FEMALE,nZBs);
+        selGTF(2,FEMALE) /= selGTF(2,FEMALE,nZBs);
+        selGTF(3,FEMALE) /= selGTF(3,FEMALE,nZBs);
+     }
+    
+    //survey selectivities
+     if (optSrvSel==1){//set logistic selectivity = 1 in largest size bin
+        selSrv2(   MALE) /= selSrv2(   MALE,nZBs);
+        selSrv2a(  MALE) /= selSrv2a(  MALE,nZBs);
+        selSrv3(   MALE) /= selSrv3(   MALE,nZBs);
+        selSrv2( FEMALE) /= selSrv2( FEMALE,nZBs);
+        selSrv2a(FEMALE) /= selSrv2a(FEMALE,nZBs);
+        selSrv3( FEMALE) /= selSrv3( FEMALE,nZBs);
+    }
+    
+    if (survsel_phase<0)
+        // use somerton and otto curve for survey selectivities
+        selSrv3(MALE) = sel_som(1)/(1.+sel_som(2)*mfexp(-1.*sel_som(3)*length_bins));
+    else
+        //scale survey selectivity by survey catchability
+        selSrv3(MALE) *= srv3_q;
+    
+    if (survsel1_phase < 0)
+        // this sets time periods 1 and 2 survey selectivities to somerton otto as well
+        selSrv2(MALE) = selSrv3(MALE);
+    else { 
+        //scale survey selectivity by survey catchability
+        selSrv2(MALE)  *= srv2_q;
+        selSrv2a(MALE) *= srv3_q;
+    }
+        
+    //scale survey selectivity by survey catchability
+    selSrv2(FEMALE)  *= srv2_qFem;
+    selSrv2a(FEMALE) *= srv3_qFem;
+    selSrv3(FEMALE)  *= srv3_qFem;
+//    cout<<"get_sel: 3"<<endl;
+    //<--
     
 // -------------------------------------------------------------------------
 // -------------------------------------------------------------------------
