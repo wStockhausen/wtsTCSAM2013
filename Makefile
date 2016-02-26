@@ -45,7 +45,7 @@
 
 
 # Environment 
-PLATFORM=WIN
+PLATFORM=MAC
 ADMB_HOME_WIN=C:/Programs/admb/build/dist
 ADMB_HOME_MAC=/Users/WilliamStockhausen/Programs/admb/build/dist
 ADMB_HOME=${ADMB_HOME_${PLATFORM}}

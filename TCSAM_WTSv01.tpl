@@ -1715,7 +1715,7 @@ PRELIMINARY_CALCS_SECTION
             }
         }
     }
-    CheckFile<<"obs_srv1_num"  <<endl<<obs_srv1_num    <<endl;
+    CheckFile<<"obs_srv1_num"   <<endl<<obs_srv1_num    <<endl;
     CheckFile<<"obs_srv1_biom"  <<endl<<obs_srv1_biom  <<endl;
     CheckFile<<"obs_srv1_bioms" <<endl<<obs_srv1_bioms <<endl;
     CheckFile<<"obs_srv1_spbiom"<<endl<<obs_srv1_spbiom<<endl;
@@ -1733,9 +1733,10 @@ PRELIMINARY_CALCS_SECTION
             obs_lmales_bio(i) += obs_srv1_num(MALE,yrsObsSrvZCs(i),j)*wtm(j);
         }
     }
-    CheckFile<<"obs_lmales"<<endl<<obs_lmales<<endl;
+    CheckFile<<"obs_lmales"    <<endl<<obs_lmales<<endl;
     CheckFile<<"obs_lmales_bio"<<endl<<obs_lmales_bio<<endl;
-        
+
+    //make sure these calculations get done at least once!!
     // Compute the moulting probabilities
     get_moltingp();
     //  cout<<"done moltingp"<<endl;
@@ -1745,8 +1746,16 @@ PRELIMINARY_CALCS_SECTION
     // Set maturity
     get_maturity();
     
-//     Misc_output();//for testing    
-//     writeReport(CheckFile);
+    //run population mode with initial parameter values
+    runPopMod();
+    
+    //write reports for initial model configuration
+    ofstream initRept("TCSAM_WTS.init.rep");
+    writeReport(initRept);
+    initRept.close();
+    ofstream initReptToR("TCSAM_WTS.init.R");
+    writeReport(initReptToR);
+    initReptToR.close();
     
     if (option_match(ad_comm::argc,ad_comm::argv,"-mceval")>-1) {
         openMCMCFile();
@@ -1770,26 +1779,10 @@ PRELIMINARY_CALCS_SECTION
 // ============================================================================
 PROCEDURE_SECTION                                          //wts: revised
 
-    // Update growth (if the parameters are being estimated)
-    if (active(moltp_af) || active(moltp_bf) || active(moltp_am) || active(moltp_bm) || active(moltp_ammat) || active(moltp_bmmat)) get_moltingp();
-    
-    // growth estimated in prelimn calcs if growth parameters estimated in the model
-    // then will redo growth matrix, otherwise not
-    if(active(am1) || active(bm1) || active(af1) || active(bf1) || active(growth_beta)) {
-        get_growth1();//only option now
-    }
-    
-    get_maturity();
-//     cout<<" maturity "<<endl;
-    get_selectivity();
-//     cout<<" selectivity "<<endl;
-    get_mortality();
-//     cout<<" mortality "<<endl;
-    get_numbers_at_len();
-//     cout<<" n at len "<<endl;
-    get_catch_at_len();
-//     cout<<" catch at len "<<endl;
-    
+    //run the population model
+    runPopMod();
+
+    //evaluate the model fit
     evaluate_the_objective_function();
 //    cout<<"evaluate_the_objective_function "<<endl;
     
@@ -1884,6 +1877,31 @@ PROCEDURE_SECTION                                          //wts: revised
 //     CheckFile<<"------------------------------------------------------------------------"<<endl<<endl;
 //     if (call_no>0) exit(-1);
 
+// ----------------------------------------------------------------------
+// ----------------------------------------------------------------------
+FUNCTION runPopMod
+    // Update growth (if the parameters are being estimated)
+    if (active(moltp_af) || active(moltp_bf) || active(moltp_am) || active(moltp_bm) || active(moltp_ammat) || active(moltp_bmmat)) {
+        get_moltingp();
+    }
+    
+    // growth estimated in prelimn calcs if growth parameters estimated in the model
+    // then will redo growth matrix, otherwise not
+    if(active(am1) || active(bm1) || active(af1) || active(bf1) || active(growth_beta)) {
+        get_growth1();//only option now
+    }
+    
+    get_maturity();
+//     cout<<" maturity "<<endl;
+    get_selectivity();
+//     cout<<" selectivity "<<endl;
+    get_mortality();
+//     cout<<" mortality "<<endl;
+    get_numbers_at_len();
+//     cout<<" n at len "<<endl;
+    get_catch_at_len();
+//     cout<<" catch at len "<<endl;
+    
 // ----------------------------------------------------------------------
 // ----------------------------------------------------------------------
 FUNCTION void writeParameters(ofstream& os,int toR, int willBeActive)                        //wts: new
