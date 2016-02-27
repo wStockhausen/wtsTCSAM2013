@@ -1012,6 +1012,8 @@ INITIALIZATION_SECTION
     selSCF_lnZ50_md_3 4.0
 
     pAvgLnF_TCFF 0.0
+    pAvgLnF_SCFF 0.0
+    pAvgLnF_RKFF 0.0
     pAvgLnF_GTFF 0.0
  
 // =======================================================================
@@ -1216,6 +1218,7 @@ PARAMETER_SECTION
 
     init_bounded_number pAvgLnF_TCFF(-5.0,5.0,-1)  // female offset to ln-scale mean fishing mortality in directed fishery
     init_bounded_number pAvgLnF_SCFF(-5.0,5.0,-1)  // female offset to ln-scale mean fishing mortality in snow crab fishery
+    init_bounded_number pAvgLnF_RKFF(-5.0,5.0,-1)  // female offset to ln-scale mean fishing mortality in BBRKC fishery
     init_bounded_number pAvgLnF_GTFF(-5.0,5.0,-1)  // female offset to ln-scale mean fishing mortality in groundfish trawl fisheries
 
     ////end of estimated parameters///////////////
@@ -1305,7 +1308,7 @@ PARAMETER_SECTION
     //20160225: changing to matrices to incorporate sex-specific rates
     matrix fTCF_xy(1,nSXs,styr,endyr-1)    //directed fishery
     matrix fSCF_xy(1,nSXs,styr,endyr-1)    //snow crab fishery
-    vector fRKF_y(styr,endyr-1)    //BBRKC fishery
+    matrix fRKF_xy(1,nSXs,styr,endyr-1)    //BBRKC fishery
     matrix fGTF_xy(1,nSXs,styr,endyr-1)    //groundfish fisheries
     
     //ratios for extrapolating effort to fishing mortality
@@ -1833,7 +1836,7 @@ PROCEDURE_SECTION                                          //wts: revised
 //     CheckFile<<"fTCF_xy       = "<<endl<<tb<<fTCF_xy<<endl;
 //     CheckFile<<"fmortdf     = "<<endl<<tb<<fmortdf<<endl;
 //     CheckFile<<"fSCF_xy = "<<endl<<tb<<fSCF_xy<<endl;
-//     CheckFile<<"fRKF_y   = "<<endl<<tb<<fRKF_y<<endl;
+//     CheckFile<<"fRKF_xy   = "<<endl<<tb<<fRKF_xy<<endl;
 //     CheckFile<<"fGTF_xy      = "<<endl<<tb<<fGTF_xy<<endl;
 //     CheckFile<<"M_imm      = "<<M_imm<<endl;
 //     CheckFile<<"M_matn = "<<M_matn<<endl;
@@ -2754,25 +2757,26 @@ FUNCTION get_mortality
     f_RKF1 = mfexp(pAvgLnF_RKF+pF_DevsRKF);
     brRKF = mean(1-exp(-f_RKF1))/(mean(effRKF(yrsObsDscRKF)));
 //    cout<<"4a"<<endl;
-    fRKF_y.initialize();
-    fRKF_y(styr,1952)= 0.02; //brRKF*mean(rkccatch(1969,1973));
+    fRKF_xy.initialize();
+    fRKF_xy(MALE)(styr,1952)= 0.02; //brRKF*mean(rkccatch(1969,1973));
 //    cout<<"4a"<<endl;
-    for (int iy=1953;iy<=1965;iy++) fRKF_y(iy) = -log(1-brRKF*effRKF(iy));//WTS: used to be rkceffortjap(iy)
+    for (int iy=1953;iy<=1965;iy++) fRKF_xy(MALE)(iy) = -log(1-brRKF*effRKF(iy));//WTS: used to be rkceffortjap(iy)
 //    cout<<"4a"<<endl;
-    for (int iy=1966;iy<=1972;iy++) fRKF_y(iy) = -log(1-brRKF*effRKF(iy));//WTS: used to be effRKF(iy)+rkceffortjap(iy)
+    for (int iy=1966;iy<=1972;iy++) fRKF_xy(MALE)(iy) = -log(1-brRKF*effRKF(iy));//WTS: used to be effRKF(iy)+rkceffortjap(iy)
 //    cout<<"4b"<<endl;
-    for (int iy=1973;iy<=1991;iy++) fRKF_y(iy) = -log(1-brRKF*effRKF(iy));
+    for (int iy=1973;iy<=1991;iy++) fRKF_xy(MALE)(iy) = -log(1-brRKF*effRKF(iy));
 //    cout<<"4c"<<endl;
-    for (int iy=1953;iy<=1991;iy++) if(fRKF_y(iy)< 0.01) fRKF_y(iy) = 0.01;       
+    for (int iy=1953;iy<=1991;iy++) if(fRKF_xy(MALE)(iy)< 0.01) fRKF_xy(MALE)(iy) = 0.01;       
 //    cout<<"4d"<<endl;
-    for (int iy=1984;iy<=1985;iy++) fRKF_y(iy) = 0.0;
+    for (int iy=1984;iy<=1985;iy++) fRKF_xy(MALE)(iy) = 0.0;
 //    cout<<"4e"<<endl;
-    for (int iy=1994;iy<=1995;iy++) fRKF_y(iy) = 0.0;
+    for (int iy=1994;iy<=1995;iy++) fRKF_xy(MALE)(iy) = 0.0;
 //    cout<<"4f"<<endl;
     for (int iy=1;iy<=nObsDscRKF;iy++) {
         int y = yrsObsDscRKF(iy);
-        fRKF_y(y) = mfexp(pAvgLnF_RKF+pF_DevsRKF(iy));
+        fRKF_xy(MALE)(y) = mfexp(pAvgLnF_RKF+pF_DevsRKF(iy));
     }
+    fRKF_xy(FEMALE) = fRKF_xy(MALE)*mfexp(pAvgLnF_RKFF);
     if (debug) cout<<"5"<<endl;
     
     fGTF_xy.initialize();
@@ -2783,7 +2787,7 @@ FUNCTION get_mortality
     
     //  cout<<"fTCF_xy "<<fTCF_xy<<endl;
     //  cout<<"fSCF_xy "<<fSCF_xy<<endl;
-    //  cout<<"fRKF_y "<<fRKF_y<<endl;
+    //  cout<<"fRKF_xy "<<fRKF_xy<<endl;
     //  cout<<"rkcatch = "<<rkccatch<<endl;
     
     //initialize capture rates
@@ -2883,8 +2887,8 @@ FUNCTION get_mortality
             fmGTF_xyz(  MALE,iy) = sel_trawl_use(  MALE)    *fGTF_xy(  MALE,iy);   
             fmSCF_xyz(FEMALE,iy) = sel_disc_snow_use(FEMALE)*fSCF_xy(FEMALE,iy);   
             fmSCF_xyz(  MALE,iy) = sel_disc_snow_use(  MALE)*fSCF_xy(  MALE,iy);   
-            fmRKF_xyz(FEMALE,iy) = sel_disc_rkc_use(FEMALE) *fRKF_y(iy);   
-            fmRKF_xyz(  MALE,iy) = sel_disc_rkc_use(  MALE) *fRKF_y(iy);   
+            fmRKF_xyz(FEMALE,iy) = sel_disc_rkc_use(FEMALE) *fRKF_xy(FEMALE,iy);   
+            fmRKF_xyz(  MALE,iy) = sel_disc_rkc_use(  MALE) *fRKF_xy(  MALE,iy);   
             fmTCFF_yz(iy)= selTCFF*fTCF_xy(FEMALE,iy);
             for(int s=NEW_SHELL;s<=OLD_SHELL;s++) {
                 fmTCFM_syz(s,iy)     = selTCFM(s,iy)*fTCF_xy(MALE,iy);//total fishing mortality on males in directed fishery       
@@ -2901,8 +2905,8 @@ FUNCTION get_mortality
             //capture rates
             fcSCF_xyz(FEMALE,iy) = sel_disc_snow_use(FEMALE)*fSCF_xy(FEMALE,iy);   
             fcSCF_xyz(  MALE,iy) = sel_disc_snow_use(  MALE)*fSCF_xy(  MALE,iy);   
-            fcRKF_xyz(FEMALE,iy) = sel_disc_rkc_use(FEMALE) *fRKF_y(iy);   
-            fcRKF_xyz(  MALE,iy) = sel_disc_rkc_use(  MALE) *fRKF_y(iy);   
+            fcRKF_xyz(FEMALE,iy) = sel_disc_rkc_use(FEMALE) *fRKF_xy(FEMALE,iy);   
+            fcRKF_xyz(  MALE,iy) = sel_disc_rkc_use(  MALE) *fRKF_xy(  MALE,iy);   
             fcGTF_xyz(FEMALE,iy) = sel_trawl_use(FEMALE)    *fGTF_xy(FEMALE,iy);   
             fcGTF_xyz(  MALE,iy) = sel_trawl_use(  MALE)    *fGTF_xy(  MALE,iy);   
             fcTCFF_yz(iy)= selTCFF*fTCF_xy(FEMALE,iy);
@@ -4612,8 +4616,8 @@ FUNCTION void writeReport(ostream& report)
   report << fTCF_xy(MALE)(styr,endyr-1) << endl;
   report << "estimated annual male snow fishing mortality: seq("<<styr<<","<<endyr-1<<")" << endl;
   report << fSCF_xy(MALE)(styr,endyr-1) << endl;
-  report << "estimated annual red king fishing mortality: seq("<<styr<<","<<endyr-1<<")" << endl;
-  report << fRKF_y(styr,endyr-1) << endl;
+  report << "estimated annual male red king fishing mortality: seq("<<styr<<","<<endyr-1<<")" << endl;
+  report << fRKF_xy(MALE)(styr,endyr-1) << endl;
   report << "estimated annual male fishing mortality trawl bycatch: seq("<<styr<<","<<endyr-1<<")" << endl;
   report << fGTF_xy(MALE)(styr,endyr-1) <<endl;
   report << "estimated annual total fishing mortality: seq("<<styr<<","<<endyr-1<<")" << endl;
@@ -4900,16 +4904,16 @@ FUNCTION void writeReport(ostream& report)
   report<<len_len<<endl;
   report<<"#female discard pot fishing fmTCFM_syz average last 5 yrs (removed 20150601)"<<endl;
 //  report<<mean(fmortdf(endyr-5,endyr-1))<<endl;
-  report<<"#trawl fishing fGTF_xy(MALE) average last 5 yrs"<<endl;
-  report<<mean(fGTF_xy(MALE)(endyr-5,endyr-1))<<endl;
-  report<<"#snow fishing fmTCFM_syz male average last 5 yrs"<<endl;
+  report<<"#fSCF_xy male average last 5 yrs"<<endl;
   report<<mean(fSCF_xy(MALE)(endyr-5,endyr-1))<<endl;
-  report<<"#red king fishing fmTCFM_syz female male average last 5 yrs"<<endl;
-  report<<mean(fRKF_y(endyr-5,endyr-1))<<endl;
+  report<<"#fRKF_xy male average last 5 yrs"<<endl;
+  report<<mean(fRKF_xy(MALE)(endyr-5,endyr-1))<<endl;
+  report<<"#fGTF_xy(MALE) average last 5 yrs"<<endl;
+  report<<mean(fGTF_xy(MALE)(endyr-5,endyr-1))<<endl;
   report<<"#number of recruits from the model styr to endyr"<<endl;//was endyr-1
   report<<endyr-styr+1<<endl;
   report<<"#number of recruits for avg to estimate B35%"<<endl;
-  report<<endyr-1960+1<<endl;
+  report<<endyr-1982+1<<endl;
   report <<"#recruitments female, male start year to endyr from model (1000's)" << endl;//was endyr-1
   report << rec_y <<endl;//was endyr-1
   report << "#recruitments male, male start 1960 to endyr from model (1000's)" << endl;//was endyr-1
@@ -4987,7 +4991,7 @@ FUNCTION void writeMyProjectionFile(ofstream& os)
       
       os<<0<<tb<<tb<<"#inpFmTCF: input F for directed Tanner crab fishing mortality"<<endl;
       os<<mean(fSCF_xy(MALE)(endyr-5,endyr-1))<<tb<<tb<<"#inpFmSCF: input male F for snow crab fishing mortality"<<endl;
-      os<<mean(fRKF_y(endyr-5,endyr-1))<<tb<<tb<<"#inpFmRKF: input F for BBRKC  fishing mortality"<<endl;
+      os<<mean(fRKF_xy(MALE)(endyr-5,endyr-1))<<tb<<tb<<"#inpFmRKF: input male F for BBRKC  fishing mortality"<<endl;
       os<<mean(fGTF_xy(MALE)(endyr-5,endyr-1))<<tb<<tb<<"#inpFmGTF: input male F for groundfish fishery fishing mortality"<<endl;
       
       os<<"#selTCF_TotMale(nSCs,nSXs): average of last 4 years selTCFM total male new old shell"<<endl;
@@ -5526,7 +5530,7 @@ FUNCTION void writeToR(ofstream& R_out)
         R_out << "$estimated.SCF.fully.selected."<<ftype<<".rate"<<endl;
         R_out << fSCF_xy(MALE)(styr,endyr-1) << endl;
         R_out << "$estimated.RKF.fully.selected."<<ftype<<".rate"<<endl;
-        R_out << fRKF_y(styr,endyr-1) << endl;
+        R_out << fRKF_xy(MALE)(styr,endyr-1) << endl;
         R_out << "$estimated.GTF.fully.selected."<<ftype<<".rate"<<endl;
         R_out << fGTF_xy(MALE)(styr,endyr-1) <<endl;
 
