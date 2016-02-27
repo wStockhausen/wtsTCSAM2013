@@ -42,7 +42,7 @@
 //--20160225: 1. Reconfigured population dynamics in PROCEDURE_SECTION into separate function (runPopMod).
 //            2. Added call to runPopMod() in PRELIMINARY_CALCS section and output to init files to have
 //               output with initial parameter settings available.
-//--20160225: 1. Started adding options for ln-scale female offset parameters to fishing mortality/capture rates. 
+//--20160225: 1. Added options for ln-scale female offset parameters to fishing mortality/capture rates. 
 //
 //IMPORTANT: 2013-09 assessment model had RKC params for 1992+ discard mortality TURNED OFF. 
 //           THE ESTIMATION PHASE FOR RKC DISCARD MORTALITY IS NOW SET IN THE CONTROLLER FILE!
@@ -741,6 +741,7 @@ DATA_SECTION
     //---------------------------------------------------------------------------------------
     // Open control file....
     !! ad_comm::change_datafile_name(ptrMC->fnCtl);
+    !!CheckFile<<"--------------------------------------"<<endl;
     !!CheckFile<<"Reading control file ''"<<ptrMC->fnCtl<<"'"<<endl;
     
     init_number q1                    // Q  mult by pop biomass to get survey biomass
@@ -877,7 +878,20 @@ DATA_SECTION
     CheckFile<<"optSrvSel = "<<optSrvSel<<endl;
  END_CALCS
     
+    //new 20160226: added female fishing mortality offsets
+    init_int phsTCFF;//phase to turn on estimation of female fishing mortality in TCF
+    init_int phsSCFF;//phase to turn on estimation of female fishing mortality in SCF
+    init_int phsRKFF;//phase to turn on estimation of female fishing mortality in RKF
+    init_int phsGTFF;//phase to turn on estimation of female fishing mortality in GTF
+ LOCAL_CALCS
+    CheckFile<<"#---Phases for female fishing mortality"<<endl;
+    CheckFile<<"phsTCFF = "<<phsTCFF<<endl;
+    CheckFile<<"phsSCFF = "<<phsSCFF<<endl;
+    CheckFile<<"phsRKFF = "<<phsRKFF<<endl;
+    CheckFile<<"phsGTFF = "<<phsGTFF<<endl;
+ END_CALCS
     !!CheckFile<<"Finished reading control file."<<endl;
+    !!CheckFile<<"--------------------------------------"<<endl;
     
     // the rest are working variables 
     
@@ -1216,10 +1230,10 @@ PARAMETER_SECTION
     
     init_bounded_number proprecn(1.0,1.0,-2)       // proportion new shell in recruits  NOT ESTIMATED
 
-    init_bounded_number pAvgLnF_TCFF(-5.0,5.0,-1)  // female offset to ln-scale mean fishing mortality in directed fishery
-    init_bounded_number pAvgLnF_SCFF(-5.0,5.0,-1)  // female offset to ln-scale mean fishing mortality in snow crab fishery
-    init_bounded_number pAvgLnF_RKFF(-5.0,5.0,-1)  // female offset to ln-scale mean fishing mortality in BBRKC fishery
-    init_bounded_number pAvgLnF_GTFF(-5.0,5.0,-1)  // female offset to ln-scale mean fishing mortality in groundfish trawl fisheries
+    init_bounded_number pAvgLnF_TCFF(-5.0,5.0,phsTCFF)  // female offset to ln-scale mean fishing mortality in directed fishery
+    init_bounded_number pAvgLnF_SCFF(-5.0,5.0,phsSCFF)  // female offset to ln-scale mean fishing mortality in snow crab fishery
+    init_bounded_number pAvgLnF_RKFF(-5.0,5.0,phsRKFF)  // female offset to ln-scale mean fishing mortality in BBRKC fishery
+    init_bounded_number pAvgLnF_GTFF(-5.0,5.0,phsGTFF)  // female offset to ln-scale mean fishing mortality in groundfish trawl fisheries
 
     ////end of estimated parameters///////////////
     
@@ -2827,68 +2841,68 @@ FUNCTION get_mortality
     S_xsyz.initialize();
     
     //calculate fully-expanded fishery capture and mortality rates
-    dvar_matrix sel_trawl_use(1,nSXs,1,nZBs);                                          
-    dvar_matrix sel_disc_snow_use(1,nSXs,1,nZBs);                                               
-    dvar_matrix sel_disc_rkc_use(1,nSXs,1,nZBs);                                               
+    dvar_matrix tmpSelSCF(1,nSXs,1,nZBs);                                               
+    dvar_matrix tmpSelRKF(1,nSXs,1,nZBs);                                               
+    dvar_matrix tmpSelGTF(1,nSXs,1,nZBs);                                          
     for (int iy=styr;iy<endyr;iy++) {
-        sel_trawl_use.initialize();
-        sel_disc_snow_use.initialize();
-        sel_disc_rkc_use.initialize();
+        tmpSelGTF.initialize();
+        tmpSelSCF.initialize();
+        tmpSelRKF.initialize();
         
         //need to set fmTCFM_syz in directed fishery to 0.0 when was closed 1985-1986 and 1997-2004 and?
         //set fmTCFM_syz in red king to 0 when closed 84-85 and 94-95
         
-        // test on year for 3 trawl selectivity periods
-        if (iy<=1986) {
-            sel_trawl_use(FEMALE)=selGTF(1,FEMALE);
-            sel_trawl_use(MALE)  =selGTF(1,MALE);
-        }
-        if (1987<=iy && iy<=1996) {
-            sel_trawl_use(FEMALE)=selGTF(2,FEMALE);
-            sel_trawl_use(MALE)  =selGTF(2,MALE);
-        }
-        if (1997<=iy) {
-            sel_trawl_use(FEMALE)=selGTF(3,FEMALE);
-            sel_trawl_use(MALE)  =selGTF(3,MALE);
-        }
-        
         // test on year for 3 snow selectivity periods
         if (iy<=1996) {
-            sel_disc_snow_use(FEMALE)=selSCF(1,FEMALE);
-            sel_disc_snow_use(MALE)  =selSCF(1,MALE);
+            tmpSelSCF(FEMALE)=selSCF(1,FEMALE);
+            tmpSelSCF(MALE)  =selSCF(1,MALE);
         }
         if (1997<=iy && iy<=2004) {
-            sel_disc_snow_use(FEMALE)=selSCF(2,FEMALE);
-            sel_disc_snow_use(MALE)  =selSCF(2,MALE);
+            tmpSelSCF(FEMALE)=selSCF(2,FEMALE);
+            tmpSelSCF(MALE)  =selSCF(2,MALE);
         }
         if (2005<=iy) {
-            sel_disc_snow_use(FEMALE)=selSCF(3,FEMALE);
-            sel_disc_snow_use(MALE)  =selSCF(3,MALE);
+            tmpSelSCF(FEMALE)=selSCF(3,FEMALE);
+            tmpSelSCF(MALE)  =selSCF(3,MALE);
         }
         
         // test on year for 3 red selectivity periods
         if (iy<=1996) {
-            sel_disc_rkc_use(FEMALE)=selRKF(1,FEMALE);
-            sel_disc_rkc_use(MALE)  =selRKF(1,MALE);
+            tmpSelRKF(FEMALE)=selRKF(1,FEMALE);
+            tmpSelRKF(MALE)  =selRKF(1,MALE);
         }
         if (1997<=iy && iy<=2004) {
-            sel_disc_rkc_use(FEMALE)=selRKF(2,FEMALE);
-            sel_disc_rkc_use(MALE)  =selRKF(2,MALE);
+            tmpSelRKF(FEMALE)=selRKF(2,FEMALE);
+            tmpSelRKF(MALE)  =selRKF(2,MALE);
         }
         if (2005<=iy) {
-            sel_disc_rkc_use(FEMALE)=selRKF(3,FEMALE);
-            sel_disc_rkc_use(MALE)  =selRKF(3,MALE);
+            tmpSelRKF(FEMALE)=selRKF(3,FEMALE);
+            tmpSelRKF(MALE)  =selRKF(3,MALE);
+        }
+        
+        // test on year for 3 trawl selectivity periods
+        if (iy<=1986) {
+            tmpSelGTF(FEMALE)=selGTF(1,FEMALE);
+            tmpSelGTF(MALE)  =selGTF(1,MALE);
+        }
+        if (1987<=iy && iy<=1996) {
+            tmpSelGTF(FEMALE)=selGTF(2,FEMALE);
+            tmpSelGTF(MALE)  =selGTF(2,MALE);
+        }
+        if (1997<=iy) {
+            tmpSelGTF(FEMALE)=selGTF(3,FEMALE);
+            tmpSelGTF(MALE)  =selGTF(3,MALE);
         }
         
         //20150601: Added option to use gmacs model
         if (optFM==0){//original fishing mortality formulation
             //fishing mortality
-            fmGTF_xyz(FEMALE,iy) = sel_trawl_use(FEMALE)    *fGTF_xy(FEMALE,iy);   
-            fmGTF_xyz(  MALE,iy) = sel_trawl_use(  MALE)    *fGTF_xy(  MALE,iy);   
-            fmSCF_xyz(FEMALE,iy) = sel_disc_snow_use(FEMALE)*fSCF_xy(FEMALE,iy);   
-            fmSCF_xyz(  MALE,iy) = sel_disc_snow_use(  MALE)*fSCF_xy(  MALE,iy);   
-            fmRKF_xyz(FEMALE,iy) = sel_disc_rkc_use(FEMALE) *fRKF_xy(FEMALE,iy);   
-            fmRKF_xyz(  MALE,iy) = sel_disc_rkc_use(  MALE) *fRKF_xy(  MALE,iy);   
+            fmSCF_xyz(FEMALE,iy) = tmpSelSCF(FEMALE)*fSCF_xy(FEMALE,iy);   
+            fmSCF_xyz(  MALE,iy) = tmpSelSCF(  MALE)*fSCF_xy(  MALE,iy);   
+            fmRKF_xyz(FEMALE,iy) = tmpSelRKF(FEMALE)*fRKF_xy(FEMALE,iy);   
+            fmRKF_xyz(  MALE,iy) = tmpSelRKF(  MALE)*fRKF_xy(  MALE,iy);   
+            fmGTF_xyz(FEMALE,iy) = tmpSelGTF(FEMALE)*fGTF_xy(FEMALE,iy);   
+            fmGTF_xyz(  MALE,iy) = tmpSelGTF(  MALE)*fGTF_xy(  MALE,iy);   
             fmTCFF_yz(iy)= selTCFF*fTCF_xy(FEMALE,iy);
             for(int s=NEW_SHELL;s<=OLD_SHELL;s++) {
                 fmTCFM_syz(s,iy)     = selTCFM(s,iy)*fTCF_xy(MALE,iy);//total fishing mortality on males in directed fishery       
@@ -2903,12 +2917,12 @@ FUNCTION get_mortality
         } else 
         if (optFM==1){//gmacs-style fishing capture/mortality
             //capture rates
-            fcSCF_xyz(FEMALE,iy) = sel_disc_snow_use(FEMALE)*fSCF_xy(FEMALE,iy);   
-            fcSCF_xyz(  MALE,iy) = sel_disc_snow_use(  MALE)*fSCF_xy(  MALE,iy);   
-            fcRKF_xyz(FEMALE,iy) = sel_disc_rkc_use(FEMALE) *fRKF_xy(FEMALE,iy);   
-            fcRKF_xyz(  MALE,iy) = sel_disc_rkc_use(  MALE) *fRKF_xy(  MALE,iy);   
-            fcGTF_xyz(FEMALE,iy) = sel_trawl_use(FEMALE)    *fGTF_xy(FEMALE,iy);   
-            fcGTF_xyz(  MALE,iy) = sel_trawl_use(  MALE)    *fGTF_xy(  MALE,iy);   
+            fcSCF_xyz(FEMALE,iy) = tmpSelSCF(FEMALE)*fSCF_xy(FEMALE,iy);   
+            fcSCF_xyz(  MALE,iy) = tmpSelSCF(  MALE)*fSCF_xy(  MALE,iy);   
+            fcRKF_xyz(FEMALE,iy) = tmpSelRKF(FEMALE)*fRKF_xy(FEMALE,iy);   
+            fcRKF_xyz(  MALE,iy) = tmpSelRKF(  MALE)*fRKF_xy(  MALE,iy);   
+            fcGTF_xyz(FEMALE,iy) = tmpSelGTF(FEMALE)*fGTF_xy(FEMALE,iy);   
+            fcGTF_xyz(  MALE,iy) = tmpSelGTF(  MALE)*fGTF_xy(  MALE,iy);   
             fcTCFF_yz(iy)= selTCFF*fTCF_xy(FEMALE,iy);
             for(int s=NEW_SHELL;s<=OLD_SHELL;s++) fcTCFM_syz(s,iy) = selTCFM(s,iy)*fTCF_xy(MALE,iy);       
         
