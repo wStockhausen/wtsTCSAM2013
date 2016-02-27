@@ -2071,6 +2071,11 @@ FUNCTION void writeParameters(ofstream& os,int toR, int willBeActive)           
     
     wts::writeParameter(os,proprecn,toR,willBeActive);
     
+    wts::writeParameter(os,pAvgLnF_TCFF,toR,willBeActive);
+    wts::writeParameter(os,pAvgLnF_SCFF,toR,willBeActive);
+    wts::writeParameter(os,pAvgLnF_RKFF,toR,willBeActive);
+    wts::writeParameter(os,pAvgLnF_GTFF,toR,willBeActive);
+    
 //// ----------------------------------------------------------------------
 //// ----------------------------------------------------------------------
 //FUNCTION void writeParameter(ofstream& os, param_init_number& p, int toR, int willBeActive)                        //wts: new
@@ -2317,6 +2322,12 @@ FUNCTION void jitterParameters(double fac)   //wts: new 2014-05-10
     
     
     proprecn = wts::jitterParameter(proprecn,fac,rng);
+    
+    pAvgLnF_TCFF = wts::jitterParameter(pAvgLnF_TCFF,fac,rng);
+    pAvgLnF_SCFF = wts::jitterParameter(pAvgLnF_SCFF,fac,rng);
+    pAvgLnF_RKFF = wts::jitterParameter(pAvgLnF_RKFF,fac,rng);
+    pAvgLnF_GTFF = wts::jitterParameter(pAvgLnF_GTFF,fac,rng);
+    
     cout<<"finished jittering"<<endl;
 //    cout<<"enter 1 to continue >> ";
 //    int dummy = 0;
