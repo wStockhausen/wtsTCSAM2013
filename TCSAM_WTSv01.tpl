@@ -43,6 +43,8 @@
 //            2. Added call to runPopMod() in PRELIMINARY_CALCS section and output to init files to have
 //               output with initial parameter settings available.
 //--20160225: 1. Added options for ln-scale female offset parameters to fishing mortality/capture rates. 
+//--20160229: 1. Turned off setting TCF devs to 0.00001 in initialization section.
+//            2. Added model "version".
 //
 //IMPORTANT: 2013-09 assessment model had RKC params for 1992+ discard mortality TURNED OFF. 
 //           THE ESTIMATION PHASE FOR RKC DISCARD MORTALITY IS NOW SET IN THE CONTROLLER FILE!
@@ -67,6 +69,8 @@ GLOBALS_SECTION
     #include "FisheryData.hpp"
     #include "ModelData.hpp"
     
+    adstring version = "20160229";//model version
+
     //model objects
     ModelConfiguration*  ptrMC;      //ptr to model configuration object
     ModelDatasets* ptrMDS;           //ptr to model datasets object
@@ -136,8 +140,10 @@ DATA_SECTION
  LOCAL_CALCS
     echo.open("EchoOut.dat", ios::trunc);
     echo<<"#Starting TCSAM2013 Code"<<endl;
+    echo<<"#model version = "<<version<<endl;
     echo<<"#Starting DATA_SECTION"<<endl;
     cout<<"#Starting TCSAM2013 Code"<<endl;
+    cout<<"#model version = "<<version<<endl;
     cout<<"#Starting DATA_SECTION"<<endl;
  END_CALCS
  
@@ -205,7 +211,7 @@ DATA_SECTION
     //recruitment lag
     if ((on=option_match(ad_comm::argc,ad_comm::argv,"-lag"))>-1) {
         reclag=atoi(ad_comm::argv[on+1]);
-        CheckFile<<"#assumed lag for recruitment changed to: "<<reclag<<endl;
+        echo<<"#assumed lag for recruitment changed to: "<<reclag<<endl;
     }
     //configFile
     fnConfigFile = "TCSAM2013_ModelConfig.dat";//default model config filename
@@ -340,6 +346,7 @@ DATA_SECTION
                    // so, if spmo=0, mating and fishery are concurrent. if spmo=2/12, mating occurs 2 months after fishery
                    
     //old data file inputs
+    !!CheckFile<<"#model version = "<<version<<endl;
     int styr; // start year of the model
     int endyr;// end year of the model (generally assessment year and last year of survey data. final fishery year is endyr-1)
     !!styr  = ptrMC->mnYr;
@@ -983,7 +990,7 @@ INITIALIZATION_SECTION
     pAvgLnF_SCF -3.0
     pAvgLnF_RKF -5.25       //to initialize same as TCSAM_WTS for 2013-09
     log_avg_sel50_mn  4.87  //this is 130.3 mm
-    pF_DevsTCF 0.00001                           //wts: dev.s should be mean 0!
+//    pF_DevsTCF 0.00001                           //wts: dev.s should be mean 0!
     matestf -1.0
     matestm -1.0
     mat_big  1.0      //<-NEW by wts!!
