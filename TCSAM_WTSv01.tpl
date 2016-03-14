@@ -2340,65 +2340,6 @@ FUNCTION void jitterParameters(double fac)   //wts: new 2014-05-10
 //    int dummy = 0;
 //    cin>>dummy;
     
-//// ----------------------------------------------------------------------
-//// ----------------------------------------------------------------------
-//FUNCTION void jitterParameter(param_init_number& p, double fac)   //wts: new
-//    if (p.phase_start>0){//arithmetic jitter
-////        cout<<"number:"<<endl;
-//        double v = value(p);
-//        double r = rng.better_rand();
-//        double vp = v+wts::min(1.0,fac)*2.0*(r-0.5);
-//        p = vp;
-////        cout<<"r = "<<r<<cc<<"fac = "<<fac<<cc<<"minf = "<<wts::min(1.0,fac)<<cc<<"vp = "<<vp<<endl;
-////        cout<<"orig = "<<v<<cc<<"new  = "<<p<<endl;
-//    }
-//    
-//// ----------------------------------------------------------------------
-//// ----------------------------------------------------------------------
-//FUNCTION void jitterParameter(param_init_bounded_number& p, double fac)   //wts: new
-//    if (p.phase_start>0){//arithmetic jitter
-////        cout<<"bounded number:"<<endl;
-//        double v = value(p);
-//        double d = p.maxb-p.minb;
-//        double r = rng.better_rand();
-//        double vp = p.minb+0.5*d+wts::min(1.0,fac)*(r-0.5)*d;
-//        p = vp;
-////        cout<<"r = "<<r<<cc<<"fac = "<<fac<<cc<<"minf = "<<wts::min(1.0,fac)<<cc<<"vp = "<<vp<<endl;
-////        cout<<"orig = "<<v<<cc<<"new  = "<<p<<cc<<"lims="<<p.minb<<cc<<p.maxb<<endl;
-//    }
-//    
-//// ----------------------------------------------------------------------
-//// ----------------------------------------------------------------------
-//FUNCTION void jitterParameter(param_init_bounded_vector& p, double fac)   //wts: new
-//    if (p.phase_start>0){//arithmetic jitter
-////        cout<<"vector:"<<endl;
-//        dvector v = value(p);
-//        double d = p.maxb-p.minb;
-//        for (int i=p.indexmin();i<=p.indexmax();i++){
-//            double r = rng.better_rand();
-//            double vp = p.minb+0.5*d+wts::min(1.0,fac)*(r-0.5)*d;
-//            p(i) = vp;
-////            cout<<"r = "<<r<<cc<<"fac = "<<fac<<cc<<"minf = "<<wts::min(1.0,fac)<<cc<<"vp = "<<vp<<endl;
-////            cout<<"orig = "<<v[i]<<cc<<"new  = "<<p[i]<<cc<<"lims="<<p.minb<<cc<<p.maxb<<endl;
-//        }
-//    }
-//    
-//// ----------------------------------------------------------------------
-//// ----------------------------------------------------------------------
-//FUNCTION void jitterParameter(param_init_bounded_dev_vector& p, double fac)   //wts: new
-//    if (p.phase_start>0){//arithmetic jitter
-////        cout<<"devs vector:"<<endl;
-//        dvector v = value(p);
-//        double d = p.maxb-p.minb;
-//        for (int i=p.indexmin();i<=p.indexmax();i++){
-//            double r = rng.better_rand();
-//            double vp = p.minb+0.5*d+wts::min(1.0,fac)*(r-0.5)*d;
-//            p(i) = vp;
-////            cout<<"r = "<<r<<cc<<"fac = "<<fac<<cc<<"minf = "<<wts::min(1.0,fac)<<cc<<"vp = "<<vp<<endl;
-////            cout<<"orig = "<<v[i]<<cc<<"new  = "<<p[i]<<cc<<"lims="<<p.minb<<cc<<p.maxb<<endl;
-//        }
-//    }
-//    
 // ----------------------------------------------------------------------
 // ----------------------------------------------------------------------
 FUNCTION openMCMCFile                                     //wts: new
