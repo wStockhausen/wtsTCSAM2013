@@ -926,6 +926,14 @@ DATA_SECTION
     CheckFile<<"optPrNatZ_GTF = "<<optPrNatZ_GTF<<endl;
  END_CALCS
             
+    //new 20160316: options for calculating size comps
+    init_int optRecYr; //year to start estimating "current" recruitment
+ LOCAL_CALCS
+    if (optRecYr==0) optRecYr = 1974;
+    CheckFile<<"#---Start year for 'current' recruitment"<<endl;
+    CheckFile<<"optRecYr = "<<optRecYr<<endl;
+ END_CALCS
+            
     //Finished reading control file
     !!CheckFile<<"Finished reading control file."<<endl;
     !!CheckFile<<"--------------------------------------"<<endl;
@@ -1092,9 +1100,9 @@ PARAMETER_SECTION
     init_bounded_number moltp_bmmat(1,120,phase_moltingp)        // logistic molting prob for mature males
     
     init_number pMnLnRec(1)                                  // Mean log-scale recruitment 1974+ (males, females are equal)
-    init_bounded_dev_vector pRecDevs(1974,endyr,-15,15,1)    // Deviations about mean recruitment 1974+ (IMPORTANT CHANGE: used to be "endyr-1")
-    init_number pMnLnRecEarly(1)                             // Mean log-scale recruitment in early phase (pre-1974)
-    init_bounded_dev_vector pRecDevsEarly(styr,1973,-15,15,1)// Deviations about logscale mean recruitment in early phase (pre-1974)
+    init_bounded_dev_vector pRecDevs(optRecYr,endyr,-15,15,1)    // Deviations about mean recruitment 1974+ (IMPORTANT CHANGE: used to be "endyr-1")
+    init_number pMnLnRecEarly(1)                             // Mean log-scale recruitment in early phase (pre- optRecYr)
+    init_bounded_dev_vector pRecDevsEarly(styr,optRecYr-1,-15,15,1)// Deviations about logscale mean recruitment in early phase (pre- optRecYr)
     vector rec_y(styr,endyr)                                 //arithmetic-scale recruitments (1000's ??)
     
     //20150601: changed ...Fm... to ...F_... because of ambiguity as to whether
@@ -1270,7 +1278,6 @@ PARAMETER_SECTION
     3darray selSCF(1,3,1,nSXs,1,nZBs)      // 3D array to accommodate 3 selectivity periods 
     3darray selRKF(1,3,1,nSXs,1,nZBs)      // 3D array to accommodate 3 selectivity periods 
     
-    matrix sel_srv1(1,nSXs,1,nZBs) // Survey selectivity 1
     matrix selSrv2(1,nSXs,1,nZBs)  // Survey selectivity 2
     matrix selSrv2a(1,nSXs,1,nZBs) // Survey selectivity 2a
     matrix selSrv3(1,nSXs,1,nZBs)  // Survey selectivity 3
@@ -1283,7 +1290,7 @@ PARAMETER_SECTION
     
     3darray M_msx(1,nMSs,1,nSCs,1,nSXs);//natural mortality rates
     
-    vector pred_bio(styr,endyr) // Predicted biomass (determines depletion) 
+    vector pred_bio(styr,endyr) // Predicted biomass (determines sdrDepletion) 
     
     vector fspbio(styr,endyr)                       // Predicted female spawning biomass on July 1
     vector mspbio(styr,endyr)                       // Predicted   male spawning biomass on July 1  
@@ -1292,8 +1299,8 @@ PARAMETER_SECTION
     matrix fspbio_srv1_num(1,nSCs,styr,endyr)       // Predicted survey numbers for mature females by shell condition (output)
     matrix mspbio_srv1_num(1,nSCs,styr,endyr)       // Predicted survey numbers for mature   males by shell condition (output)                
     
-    vector legal_males(styr,endyr)                  // Number of legal males at time of survey 
-    vector legal_males_bio(styr,endyr)              // Biomass of legal males in survey (output)          
+    vector numLegalMales_y(styr,endyr)              // Number of legal males at time of survey 
+    vector bioLegalMales_y(styr,endyr)              // Biomass of legal males in survey (output)          
     
     matrix totn_srv1(1,nSXs,styr,endyr)              // total survey abundance          
     vector legal_srv_males(styr,endyr)              // Survey-selected males (output)  
@@ -1504,13 +1511,13 @@ PARAMETER_SECTION
     vector tmpp4(1,nZBs)
     number like_mat
     
-    sdreport_vector fspbios(1974,endyr)                                // Sd_report stuff
-    sdreport_vector mspbios(1974,endyr)                       //male spawning biomass (1000's t)
-    sdreport_vector legal_malesd(1974,endyr)
-    sdreport_vector rec_early_sd(styr,1973)
-    sdreport_vector recf_sd(1974,endyr)  //was endyr-1
-    sdreport_vector recm_sd(1974,endyr)  //was endyr-1
-    sdreport_number depletion
+    sdreport_vector sdrSpBioF(optRecYr,endyr)                                // Sd_report stuff
+    sdreport_vector sdrSpBioM(optRecYr,endyr)                       //male spawning biomass (1000's t)
+    sdreport_vector sdrLegalMales(optRecYr,endyr)
+    sdreport_vector sdrRecEarly(styr,optRecYr-1)
+    sdreport_vector sdrRecF(optRecYr,endyr)  //was endyr-1
+    sdreport_vector sdrRecM(optRecYr,endyr)  //was endyr-1
+    sdreport_number sdrDepletion
     
     sdreport_matrix sdrNatMortImm(1,nSXs,styr,endyr);//natural mortality by year on immatures
     sdreport_matrix sdrNatMortNS(1,nSXs,styr,endyr);
@@ -2240,10 +2247,10 @@ FUNCTION void jitterParameters(double fac)   //wts: new 2014-05-10
     moltp_ammat = wts::jitterParameter(moltp_ammat,fac,rng);    // logistic molting prob for mature males
     moltp_ammat = wts::jitterParameter(moltp_bmmat,fac,rng);    // logistic molting prob for mature males
     
-    pMnLnRec = wts::jitterParameter(pMnLnRec,fac,rng);         // Mean log-scale recruitment 1974+ (males, females are equal)
-    pRecDevs = wts::jitterParameter(pRecDevs,0.1*fac,rng);     // Deviations about mean recruitment 1974+ (IMPORTANT CHANGE: used to be "endyr-1")
-    pMnLnRecEarly = wts::jitterParameter(pMnLnRecEarly,fac,rng);    // Mean log-scale recruitment in early phase (pre-1974)
-    pRecDevsEarly = wts::jitterParameter(pRecDevsEarly,0.1*fac,rng);// Deviations about logscale mean recruitment in early phase (pre-1974)
+    pMnLnRec = wts::jitterParameter(pMnLnRec,fac,rng);         // Mean log-scale recruitment optRecYr+ (males, females are equal)
+    pRecDevs = wts::jitterParameter(pRecDevs,0.1*fac,rng);     // Deviations about mean recruitment optRecYr+ (IMPORTANT CHANGE: used to be "endyr-1")
+    pMnLnRecEarly = wts::jitterParameter(pMnLnRecEarly,fac,rng);    // Mean log-scale recruitment in early phase (pre-optRecYr)
+    pRecDevsEarly = wts::jitterParameter(pRecDevsEarly,0.1*fac,rng);// Deviations about logscale mean recruitment in early phase (pre-optRecYr)
     
     pAvgLnF_TCF = wts::jitterParameter(pAvgLnF_TCF,fac,rng);           //log-scale mean directed fishing mortality
     pF_DevsTCF  = wts::jitterParameter(pF_DevsTCF,0.1*fac,rng);//log-scale directed fishing mortality devs IMPORTANT CHANGE: USED TO BE "1966,endyr-12"
@@ -2660,9 +2667,9 @@ FUNCTION get_selectivity                  //wts: revised
     
     //new 20150901-->
     //calculate survey selectivities
-    selSrv3( MALE) = 1./(1.+mfexp(-1.*log(19.)*(length_bins-srv3_sel50)/(srv3_seldiff)));
     selSrv2( MALE) = 1./(1.+mfexp(-1.*log(19.)*(length_bins-srv2_sel50)/(srv2_seldiff)));
     selSrv2a(MALE) = 1./(1.+mfexp(-1.*log(19.)*(length_bins-srv3_sel50)/(srv3_seldiff)));
+    selSrv3( MALE) = 1./(1.+mfexp(-1.*log(19.)*(length_bins-srv3_sel50)/(srv3_seldiff)));
         
     selSrv2( FEMALE) = 1./(1.+mfexp(-1.*log(19.)*(length_bins-srv2_sel50_f)/(srv2_seldiff_f)));
     selSrv2a(FEMALE) = 1./(1.+mfexp(-1.*log(19.)*(length_bins-srv3_sel50_f)/(srv3_seldiff_f)));
@@ -2742,11 +2749,11 @@ FUNCTION get_mortality
     
     M_msx(IMMATURE,NEW_SHELL,FEMALE) = baseM_msx(IMMATURE,NEW_SHELL,FEMALE)*Mmult_imat;
     M_msx(IMMATURE,NEW_SHELL,  MALE) = baseM_msx(IMMATURE,NEW_SHELL,  MALE)*Mmult_imat;
-    M_msx(IMMATURE,NEW_SHELL,FEMALE) = baseM_msx(IMMATURE,OLD_SHELL,FEMALE)*Mmult_imat;
+    M_msx(IMMATURE,OLD_SHELL,FEMALE) = baseM_msx(IMMATURE,OLD_SHELL,FEMALE)*Mmult_imat;
     M_msx(IMMATURE,OLD_SHELL,  MALE) = baseM_msx(IMMATURE,OLD_SHELL,  MALE)*Mmult_imat;
     M_msx(  MATURE,NEW_SHELL,FEMALE) = baseM_msx(  MATURE,NEW_SHELL,FEMALE)*Mmultf;
     M_msx(  MATURE,NEW_SHELL,  MALE) = baseM_msx(  MATURE,NEW_SHELL,  MALE)*Mmultm;
-    M_msx(  MATURE,NEW_SHELL,FEMALE) = baseM_msx(  MATURE,OLD_SHELL,FEMALE)*Mmultf;
+    M_msx(  MATURE,OLD_SHELL,FEMALE) = baseM_msx(  MATURE,OLD_SHELL,FEMALE)*Mmultf;
     M_msx(  MATURE,OLD_SHELL,  MALE) = baseM_msx(  MATURE,OLD_SHELL,  MALE)*Mmultm;
     if (debug) cout<<"0"<<endl;
     
@@ -2974,8 +2981,8 @@ FUNCTION get_numbers_at_len                                    //wts: revised
     
     //nAtZ_msxy.initialize();
     
-    rec_y(styr,1973)  = mfexp(pMnLnRecEarly+pRecDevsEarly);
-    rec_y(1974,endyr) = mfexp(pMnLnRec+pRecDevs);
+    rec_y(styr,optRecYr-1) = mfexp(pMnLnRecEarly+pRecDevsEarly);
+    rec_y(optRecYr,endyr)  = mfexp(pMnLnRec+pRecDevs);
 //    cout<<"1"<<endl;
     
     //numbers at length from styr to endyr
@@ -3118,7 +3125,6 @@ FUNCTION get_numbers_at_len                                    //wts: revised
     // predicted survey values 
     for (int yr=styr;yr<=endyr;yr++){
         for(int sex=FEMALE;sex<=MALE;sex++) {
-            //     if(yr<1974) totn_srv1(sex,yr)=(natlength(sex,yr)*sel_srv1(sex));
             if (yr<1982)             {totn_srv1(sex,yr) = (natlength(sex,yr)*selSrv2(sex));}  else
             if (1982<=yr && yr<1988) {totn_srv1(sex,yr) = (natlength(sex,yr)*selSrv2a(sex));} else
             if (1988<=yr)            {totn_srv1(sex,yr) = (natlength(sex,yr)*selSrv3(sex));}
@@ -3136,7 +3142,6 @@ FUNCTION get_numbers_at_len                                    //wts: revised
         mspbio(yr) = natlength_mat(  MALE,yr)*wtm_z;        //dot product sum
         
         // Selection pattern
-        //    if (yr<1974) sel_srv_use = sel_srv1;
         if (yr<1982)             {sel_srv_use = selSrv2;}  else
         if (1982<=yr && yr<1988) {sel_srv_use = selSrv2a;} else
         if (1988<=yr)            {sel_srv_use = selSrv3;}
@@ -3158,34 +3163,33 @@ FUNCTION get_numbers_at_len                                    //wts: revised
                       +(natlength_inew(MALE,  yr)              + natlength_mnew(MALE,  yr)+natlength_mold(MALE,  yr))*wtm_z;
     }  
     //    cout<<" end srv 2"<<endl;
-    depletion = pred_bio(endyr) / pred_bio(styr);
-    fspbios   = fspbio(1974,endyr);
-    mspbios   = mspbio(1974,endyr);
+    sdrDepletion = pred_bio(endyr) / pred_bio(styr);
+    sdrSpBioF   = fspbio(optRecYr,endyr);
+    sdrSpBioM   = mspbio(optRecYr,endyr);
 //    cout<<"5"<<endl;
     
     // Legal males
-    legal_males.initialize();
+    numLegalMales_y.initialize();
     legal_srv_males.initialize();
     for (int yr=styr;yr<=endyr;yr++) {
         // Selection pattern//
-        //    if (yr<1974) sel_srv_use = sel_srv1;
         if (yr<1982)             {sel_srv_use = selSrv2;}  else
         if (1982<=yr && yr<1988) {sel_srv_use = selSrv2a;} else
         if (1988<=yr)            {sel_srv_use = selSrv3;}        
         // legal is >=138mm take half the numbers in the 135-139 bin
-        legal_males(yr)     = 0.5*natlength(MALE,yr,23);
+        numLegalMales_y(yr)     = 0.5*natlength(MALE,yr,23);
         legal_srv_males(yr) = 0.5*natlength(MALE,yr,23)*sel_srv_use(MALE,23);  //fixed indices; need vector of 0's, 0.5 and 1's to mult here
         for(int j=24;j<=nZBs;j++) {
-            legal_males(yr)     += natlength(MALE,yr,j);
+            numLegalMales_y(yr)     += natlength(MALE,yr,j);
             legal_srv_males(yr) += natlength(MALE,yr,j)*sel_srv_use(MALE,j);
         }
     }
 //    cout<<"6"<<endl;
     
-    legal_malesd = legal_males(1974,endyr);                                       //fixed index
-    rec_early_sd = rec_y(styr,1973);
-    recf_sd      = rec_y(1974,endyr);//was "endyr-1"
-    recm_sd      = rec_y(1974,endyr);//was "endyr-1"
+    sdrLegalMales = numLegalMales_y(optRecYr,endyr);                                       //fixed index
+    sdrRecEarly = rec_y(styr,optRecYr-1);
+    sdrRecF      = rec_y(optRecYr,endyr);//was "endyr-1"
+    sdrRecM      = rec_y(optRecYr,endyr);//was "endyr-1"
     //  cout<<" to end of number at len "<<endl;
 //    cout<<"done"<<endl;
 
@@ -3682,16 +3686,11 @@ FUNCTION evaluate_the_objective_function    //wts: revising
     //    CheckFile <<"obs surv = "<<obs_srv1_spbiom<<endl;
     //    CheckFile <<"pred surv = "<<biom_tmp<<endl;
     // this fits mature biomass separate male and female
-    //female biomass only for 1974 to endyr, male biomass from 1969 to endyr
     surv_like.initialize();
     surv_like  = norm2(elem_div( log(obs_srv1_spbiom(FEMALE)(yrsObsSrvBio_n)+smlValSrv)-log(fspbio_srv1(yrsObsSrvBio_n)+smlValSrv),
                                  sqrt(2)*sqrt(log(elem_prod(cv_srv1(FEMALE)(yrsObsSrvBio_n),cv_srv1(FEMALE)(yrsObsSrvBio_n))+1.0))
                                 ));
 //     cout<<"1"<<endl;    
-   
-    //likelihood for female initial biomass fitting to 1974 biomass for anchoring 
-    //       surv_like  += pow((log(obs_srv1_spbiom(1)(1974)+0.000001)-log(biom_tmp(1)(1969)+.000001))/(sqrt(2)*0.05),2.0);
-    
     surv_like += norm2(elem_div( log(obs_srv1_spbiom(MALE)(yrsObsSrvBio_n)+smlValSrv)-log(mspbio_srv1(yrsObsSrvBio_n)+smlValSrv),
                                  sqrt(2)*sqrt(log(elem_prod(cv_srv1(MALE)(yrsObsSrvBio_n),cv_srv1(MALE)(yrsObsSrvBio_n))+1.0))
                                 ));
@@ -4013,18 +4012,17 @@ FUNCTION Misc_output
     pred_srv1_bioms.initialize();
     for (int i=styr;i<=endyr;i++) {
         // Selection pattern
-        //    if (i<1978) sel_srv_use = sel_srv1;
         if (i<1982) sel_srv_use = selSrv2;
         if (i>1981 && i<1988) sel_srv_use = selSrv2a;
         if (i>1987) sel_srv_use = selSrv3;
         
         // legal is >102mm take half the numbers in the 100-105 bin
-        legal_males_bio(i) = legal_males(i)*wtm_z(23);
+        bioLegalMales_y(i) = numLegalMales_y(i)*wtm_z(23);
         legal_srv_males_n(i) = 0.5*natlength_new(2,i,23)*sel_srv_use(2,23);
         legal_srv_males_o(i) = 0.5*natlength_old(2,i,23)*sel_srv_use(2,23);
         legal_srv_males_bio(i) = legal_srv_males(i)*wtm_z(23);
         for(int j=24;j<=nZBs;j++) {
-            legal_males_bio(i) += natlength(2,i,j)*wtm_z(j);
+            bioLegalMales_y(i) += natlength(2,i,j)*wtm_z(j);
             legal_srv_males_n(i) += natlength_new(2,i,j)*sel_srv_use(2,j);
             legal_srv_males_o(i) += natlength_old(2,i,j)*sel_srv_use(2,j);
             legal_srv_males_bio(i) += natlength(2,i,j)*sel_srv_use(2,j)*wtm_z(j);
@@ -4081,33 +4079,19 @@ FUNCTION Misc_output
 
 //    cout<<"before sd"<<endl;
     if(sd_phase()){
-        depletion    = pred_bio(endyr) / pred_bio(styr);
-        fspbios      = fspbio(1974,endyr);
-        mspbios      = mspbio(1974,endyr);
-        cout<<"0"<<endl;
-        legal_malesd = legal_males(1974,endyr);
-        cout<<"1"<<endl;
-        rec_early_sd = rec_y(styr,1973);
-        recf_sd      = rec_y(1974,endyr);//was endyr-1
-        recm_sd      = rec_y(1974,endyr);//was endyr-1
-        cout<<"2"<<endl;
+        sdrDepletion    = pred_bio(endyr) / pred_bio(styr);
+        sdrSpBioF      = fspbio(optRecYr,endyr);
+        sdrSpBioM      = mspbio(optRecYr,endyr);
+        //cout<<"0"<<endl;
+        sdrLegalMales = numLegalMales_y(1965,endyr);
+        //cout<<"1"<<endl;
+        sdrRecEarly = rec_y(styr,optRecYr-1);
+        sdrRecF      = rec_y(optRecYr,endyr);//was endyr-1
+        sdrRecM      = rec_y(optRecYr,endyr);//was endyr-1
+        //cout<<"2"<<endl;
         sdrMMB       = mspbio_matetime(styr+1,endyr-1);
-        cout<<"3"<<endl;
-//         for (int i=(styr+1);     i<=(1973-reclag+1);i++)    {
-// //            cout<<"year = "<<i<<endl;
-//             sdrRec(i)      = mfexp(pMnLnRecEarly+ pRecDevsEarly(i+reclag-1));
-//             sdrLnRec(i)    =      (pMnLnRecEarly+ pRecDevsEarly(i+reclag-1));
-//             sdrLnRecMMB(i) =      (pMnLnRecEarly+ pRecDevsEarly(i+reclag-1))-log(sdrMMB(i));
-//         }
-//         cout<<"4"<<endl;
-//         for (int i=(1974-reclag+1);i<=(endyr-reclag);i++) {
-// //            cout<<"year = "<<i<<endl;
-//             sdrRec(i)      = mfexp(mnLnRec_x(1)+ recDevs_xy(1)(i+reclag-1));
-//             sdrLnRec(i)    =      (mnLnRec_x(1)+ recDevs_xy(1)(i+reclag-1));
-//             sdrLnRecMMB(i) =      (mnLnRec_x(1)+ recDevs_xy(1)(i+reclag-1))-log(sdrMMB(i));
-//         }
+        //cout<<"3"<<endl;
         for (int i=(styr+1);i<=(endyr-reclag);i++) {
-//            cout<<"year = "<<i<<endl;
             sdrRec(i)      = rec_y(i+reclag-1);
             sdrLnRec(i)    = log(rec_y(i+reclag-1));
             sdrLnRecMMB(i) = log(rec_y(i+reclag-1))-log(sdrMMB(i));
@@ -4214,14 +4198,14 @@ FUNCTION void writeReport(ostream& report)
     for(i=styr;i<=endyr;i++) report<<i<<" "<< natlength(2,i)<< endl;
     
     //actual years for obs survey male are 1969,1970,1972-2009
-    report<<"observed number of males greater than 101 mm: seq(1974,"<<endyr<<")"<<endl;
+    report<<"observed number of males greater than 101 mm: seq(1965,"<<endyr<<")"<<endl;
     report<<obs_lmales<<endl;
-    report<<"observed biomass of males greater than 101 mm: seq(1974,"<<endyr<<")"<<endl;
+    report<<"observed biomass of males greater than 101 mm: seq(1965,"<<endyr<<")"<<endl;
     report<<obs_lmales_bio<<endl;
     report<<"pop estimate numbers of males >101: seq("<<styr<<","<<endyr<<")"<<endl;
-    report<<legal_males<<endl;
+    report<<numLegalMales_y<<endl;
     report<<"estimated population biomass of males > 101: seq("<<styr<<","<<endyr<<") "<<endl;
-    report<<legal_males_bio<<endl;
+    report<<bioLegalMales_y<<endl;
     report<<"estimated survey numbers of males > 101: seq("<<styr<<","<<endyr<<") "<<endl;
     report<<legal_srv_males<<endl;
     report<<"estimated survey biomass of males > 101: seq("<<styr<<","<<endyr<<") "<<endl;
@@ -4519,39 +4503,34 @@ FUNCTION void writeReport(ostream& report)
   report << "Observed Length Prop survey mature old males: 'year','27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'" << endl;
   for (i=1; i<=nObsZCsSrv; i++) report << yrsObsZCsSrv_n(i) <<" " <<obsPrNatZ_Srv_msxnz(2,2,2,i) << endl;
   report << "Predicted length prop survey mature old males: 'year','27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'" << endl;
-  for (i=1; i<=nObsZCsSrv; i++)
-   {
+  for (i=1; i<=nObsZCsSrv; i++){
     ii=yrsObsZCsSrv_n(i);  
     report << ii << " " << pred_p_srv1_len_old(2,2,ii) << endl;
    }
 //for females don't have length data in first four years first year is 1974
      report << "Observed Length Prop survey all females: 'year','27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'" << endl;
-  for (i=1; i<=nObsZCsSrv; i++)
-   {
+  for (i=1; i<=nObsZCsSrv; i++){
     ii=yrsObsZCsSrv_n(i);
     report << ii <<" " <<obsPrNatZ_Srv_msxnz(1,1,1,i)+obsPrNatZ_Srv_msxnz(2,1,1,i)+obsPrNatZ_Srv_msxnz(2,2,1,i)<< endl;
               tmpp4+=obsPrNatZ_Srv_msxnz(1,1,1,i)+obsPrNatZ_Srv_msxnz(2,1,1,i)+obsPrNatZ_Srv_msxnz(2,2,1,i);
    }
   report << "Predicted length prop survey all females: 'year','27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'" << endl;
-  for (i=1; i<=nObsZCsSrv; i++)
-   {
+  for (i=1; i<=nObsZCsSrv; i++) {
     ii=yrsObsZCsSrv_n(i);  
     report << ii << " " << pred_p_srv1_len_new(1,1,ii)+pred_p_srv1_len_new(2,1,ii)+pred_p_srv1_len_old(2,1,ii) << endl;
     tmpp1+=pred_p_srv1_len_new(1,1,ii)+pred_p_srv1_len_new(2,1,ii)+pred_p_srv1_len_old(2,1,ii);
    }
   report << "Observed Length Prop survey all males: 'year','27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'" << endl;
-  for (i=1; i<=nObsZCsSrv; i++)
-   {
+  for (i=1; i<=nObsZCsSrv; i++) {
     ii=yrsObsZCsSrv_n(i);
     report << ii <<" " <<obsPrNatZ_Srv_msxnz(1,1,2,i)+obsPrNatZ_Srv_msxnz(1,2,2,i)+obsPrNatZ_Srv_msxnz(2,1,2,i)+obsPrNatZ_Srv_msxnz(2,2,2,i)<< endl;
          tmpp2+=obsPrNatZ_Srv_msxnz(1,1,2,i)+obsPrNatZ_Srv_msxnz(1,2,2,i)+obsPrNatZ_Srv_msxnz(2,1,2,i)+obsPrNatZ_Srv_msxnz(2,2,2,i);
    }
   report << "Predicted length prop survey all males: 'year','27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'" << endl;
-  for (i=1; i<=nObsZCsSrv; i++)
-   {
+  for (i=1; i<=nObsZCsSrv; i++) {
     ii=yrsObsZCsSrv_n(i);  
     report << ii << " " << pred_p_srv1_len_new(1,2,ii)+pred_p_srv1_len_new(2,2,ii)+pred_p_srv1_len_old(2,2,ii) << endl;
-  tmpp3+=pred_p_srv1_len_new(1,2,ii)+pred_p_srv1_len_new(2,2,ii)+pred_p_srv1_len_old(2,2,ii);
+    tmpp3+=pred_p_srv1_len_new(1,2,ii)+pred_p_srv1_len_new(2,2,ii)+pred_p_srv1_len_old(2,2,ii);
    }
   report << "Sum of predicted prop survey all females: '27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'" << endl;
             report <<tmpp1<<endl;
@@ -4568,20 +4547,12 @@ FUNCTION void writeReport(ostream& report)
   report << mean_length(2)<<endl; 
   report << "af1: 'females'" << endl;
   report << af1 << endl;
-//  report << "af2: 'females'" << endl;
-//  report << af2 << endl;
   report << "am1: 'males'" << endl;
   report << am1 << endl;
-//  report << "am2: 'males'" << endl;
-//  report << am2 << endl;
   report << "bf1: 'females'" << endl;
   report << bf1 << endl;
-//  report << "bf2: 'females'" << endl;
-//  report << bf2 << endl;
   report << "bm1: 'males'" << endl;
   report << bm1 << endl;
-//  report << "bm2: 'males'" << endl;
-//  report << bm2 << endl;
   report<<"Predicted probability of maturing females: '27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'"<<endl;
   report<<maturity_est(1)<<endl;
   report<<"Predicted probability of maturing males: '27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'"<<endl;
@@ -4603,7 +4574,7 @@ FUNCTION void writeReport(ostream& report)
   report << "predicted TCF retained old catch biomass: seq("<<styr<<","<<endyr-1<<")" << endl;
   report << (catch_male_ret_old*wtm_z)(styr,endyr-1)<<endl;
   
- report << "observed TCF total male catch mortality biomass: ( "<<yrsObsDscTCF_n<<" )" << endl;
+  report << "observed TCF total male catch mortality biomass: ( "<<yrsObsDscTCF_n<<" )" << endl;
   report << obsTotBioMortTCFM << endl;
   report << "predicted TCF total male catch mortality biomass: seq("<<styr<<","<<endyr-1<<")" << endl;
   report << predTotBioMortTCFM(styr,endyr-1) << endl;
@@ -4687,11 +4658,9 @@ FUNCTION void writeReport(ostream& report)
 //  report << "selectivity fishery total new males 1992 to 1996: '27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'"<< endl;
 //  report << selTCFM(1,1991) << endl;
   report << "selectivity fishery total new males 1991 to 1996: '27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'"<< endl;
-   for(i=1991;i<=1996; i++) 
-   { report << selTCFM(1,i) << endl;}
+   for(i=1991;i<=1996; i++) { report << selTCFM(1,i) << endl;}
   report << "selectivity fishery total new males 2005 to present: '27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'"<< endl;
-   for(i=2005;i<endyr; i++) 
-   { report << selTCFM(1,i) << endl;}
+   for(i=2005;i<endyr; i++) { report << selTCFM(1,i) << endl;}
 //  report << "selectivity fishery total old males: '27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'"<< endl;
 //  report << selTCFM(2) << endl;
   //wts 2014-04-25 changed from selTCFR to retFcn
@@ -4701,24 +4670,16 @@ FUNCTION void writeReport(ostream& report)
 //  report << selTCFR(1,1991) << endl;
   //wts 2014-04-25 changed from selTCFR to retFcn
   report << "retention function new males 1991 to 1996: '27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'"<< endl;  
-  for(i=1991;i<=1996; i++) 
-   { for(j=1; j<=nZBs; j++){report <<retFcn(1,i,j)<<" ";
-   }
+  for(i=1991;i<=1996; i++) { 
+      for(j=1; j<=nZBs; j++){report <<retFcn(1,i,j)<<" ";}
       report<<endl;
    }
   //wts 2014-04-25 changed from selTCFR to retFcn
   report << "retention function new males 2005 to present: '27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'"<< endl;  
-  for(i=2005;i<endyr; i++)         //IMPORTANT CHANGE: was <=endyr 
-   { for(j=1; j<=nZBs; j++){report <<retFcn(1,i,j)<<" ";
+  for(i=2005;i<endyr; i++) {        //IMPORTANT CHANGE: was <=endyr 
+    for(j=1; j<=nZBs; j++){report <<retFcn(1,i,j)<<" ";}
+    report<<endl;
    }
-      report<<endl;
-   }
-//  report << "selectivity fishery ret new males: '27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'"<< endl;
-//  report << selTCFR(1) << endl;
-//  report << "selectivity fishery ret old males: '27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'"<< endl;
-//  report << selTCFR(2) << endl;
-//  report <<"retention curve males new: '27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'"<< endl;
-//  report <<retFcn<<endl;
   report <<"FINAL YEAR retention curve males new: '27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'"<< endl;
   report <<retFcn(NEW_SHELL,endyr-1)<<endl;
   report <<"FINAL YEAR retention curve males old: '27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'"<< endl;
@@ -4749,10 +4710,6 @@ FUNCTION void writeReport(ostream& report)
   report <<selRKF(1,MALE)<<endl;
   report <<selRKF(2,MALE)<<endl;
   report <<selRKF(3,MALE)<<endl;
-//  report << "selectivity survey females 1969 1973: '27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'"<< endl;
-//  report << sel_srv1(1) << endl;
-//  report << "selectivity survey males 1969 1973: '27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'"<< endl;
-//  report << sel_srv1(2) << endl;
   report << "selectivity survey females 1974 to 1981: '27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'"<< endl;
   report << selSrv2(FEMALE) << endl;
   report << "selectivity survey males 1974 to 1981: '27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'"<< endl;
@@ -4811,17 +4768,17 @@ FUNCTION void writeReport(ostream& report)
   report<<"Exploitation rates"<<endl;
   report<<"----------------------------------------------------------------------------"<<endl;
   report<<"male new shell total pot fishery exploitation rates"<<endl;
-  report<<1-mfexp(-1.0*fmTCFM_syz(1))<<endl;
+  report<<1-mfexp(-1.0*fmTCFM_syz(NEW_SHELL))<<endl;
   report<<"male old shell total pot fishery exploitation rates"<<endl;
-  report<<1-mfexp(-1.0*fmTCFM_syz(2))<<endl;
+  report<<1-mfexp(-1.0*fmTCFM_syz(OLD_SHELL))<<endl;
   
   report<<"----------------------------------------------------------------------------"<<endl;
   report<<"Numbers at fish time and catch"<<endl;
   report<<"----------------------------------------------------------------------------"<<endl;
   report<<"numbers new shell males at time of pop fishery"<<endl;
-  report<<natl_new_fishtime(2)<<endl;
+  report<<natl_new_fishtime(MALE)<<endl;
   report<<"numbers old shell males at time of pop fishery"<<endl;
-  report<<natl_old_fishtime(2)<<endl;
+  report<<natl_old_fishtime(MALE)<<endl;
   report<<"total catch in numbers new shell males"<<endl;
   report<<catch_lmale_new<<endl;
   report<<"total catch in numbers old shell males"<<endl;
@@ -4832,10 +4789,10 @@ FUNCTION void writeReport(ostream& report)
   report<<catch_male_ret_old<<endl;
   report<<"observed retained catch new shell males"<<endl;
   for (i=1; i<=nObsRetZCsTCF; i++) 
-   report<<yrsObsRetZCsTCF_n(i)<<" "<<obsPrNatZ_TCFRsn(1,i)*obsRetCatchNum(yrsObsRetZCsTCF_n(i))<<endl;
+   report<<yrsObsRetZCsTCF_n(i)<<" "<<obsPrNatZ_TCFRsn(NEW_SHELL,i)*obsRetCatchNum(yrsObsRetZCsTCF_n(i))<<endl;
   report<<"observed retained catch old shell males"<<endl;
   for (i=1; i<=nObsRetZCsTCF; i++) 
-   report<<yrsObsRetZCsTCF_n(i)<<" "<<obsPrNatZ_TCFRsn(2,i)*obsRetCatchNum(yrsObsRetZCsTCF_n(i))<<endl;
+   report<<yrsObsRetZCsTCF_n(i)<<" "<<obsPrNatZ_TCFRsn(OLD_SHELL,i)*obsRetCatchNum(yrsObsRetZCsTCF_n(i))<<endl;
   
     //compute GHL 
     for(i=2000;i<=endyr;i++){    
@@ -5176,8 +5133,8 @@ FUNCTION void writeToR(ofstream& R_out)
         
         R_out<<"$observed.number.of.males.greater.than.101.mm"<<endl<<obs_lmales<<endl;
         R_out<<"$observed.biomass.of.males.greater.than.101.mm"<<endl<<obs_lmales_bio<<endl;
-        R_out<<"$pop.estimate.numbers.of.males.101"        <<endl<<legal_males<<endl;
-        R_out<<"$estimated.population.biomass.of.males.101"<<endl<<legal_males_bio<<endl;
+        R_out<<"$pop.estimate.numbers.of.males.101"        <<endl<<numLegalMales_y<<endl;
+        R_out<<"$estimated.population.biomass.of.males.101"<<endl<<bioLegalMales_y<<endl;
         R_out<<"$estimated.survey.numbers.of.males.101"    <<endl<<legal_srv_males<<endl;
         R_out<<"$estimated.survey.biomass.of.males.101"    <<endl<<legal_srv_males_bio<<endl;
         R_out<<"$estimated.biomass.of.males.101.fishtime"  <<endl<<bio_males_gt101<<endl;
@@ -5443,7 +5400,6 @@ FUNCTION void writeToR(ofstream& R_out)
             ii=yrsObsZCsSrv_n(i);  
             R_out << ii << " " << pred_p_srv1_len_old(2,2,ii) << endl;
         }
-        //for females don't have length data in first four years first year is 1974
          R_out << "$Observed.Length.Prop.survey.all.females" << endl;
         for (int i=1; i<=nObsZCsSrv; i++) {
             ii=yrsObsZCsSrv_n(i);
@@ -5483,20 +5439,12 @@ FUNCTION void writeToR(ofstream& R_out)
         R_out << mean_length(2)<<endl; 
         R_out << "$af1" << endl;
         R_out << af1 << endl;
-        //  R_out << "$af2" << endl;
-        //  R_out << af2 << endl;
         R_out << "$am1" << endl;
         R_out << am1 << endl;
-        //  R_out << "$am2" << endl;
-        //  R_out << am2 << endl;
         R_out << "$bf1" << endl;
         R_out << bf1 << endl;
-        //  R_out << "$bf2" << endl;
-        //  R_out << bf2 << endl;
         R_out << "$bm1" << endl;
         R_out << bm1 << endl;
-        //  R_out << "$bm2" << endl;
-        //  R_out << bm2 << endl;
         R_out << "$Predicted.probability.of.maturing.females"<<endl<<maturity_est(FEMALE)<<endl;
         R_out << "$Predicted.probability.of.maturing.males"  <<endl<<maturity_est(MALE)<<endl;
         R_out << "$molting.probs.female"<<endl<<moltp(FEMALE)<<endl;
@@ -5963,10 +5911,6 @@ FUNCTION void writeToR(ofstream& R_out)
         R_out <<selRKF(1,MALE)<<endl;
         R_out <<selRKF(2,MALE)<<endl;
         R_out <<selRKF(3,MALE)<<endl;  
-        R_out << "$selectivity.survey.females.1969.1973"<< endl;
-        R_out << sel_srv1(FEMALE) << endl;
-        R_out << "$selectivity.survey.males.1969.1973"<< endl;
-        R_out << sel_srv1(MALE) << endl;
         R_out << "$selectivity.survey.females.1974.to.1981"<< endl;
         R_out << selSrv2(FEMALE) << endl;
         R_out << "$selectivity.survey.males.1974.to.1981"<< endl;
@@ -6050,10 +5994,10 @@ FUNCTION void myWriteParamsToR(ostream& os)
             os<<"b="<<moltp_bmmat; 
         os<<")"<<cc;
         os<<"recruitment=list(";
-            strp = "y="+str(1974)+":"+str(endyr);
+            strp = "y="+str(optRecYr)+":"+str(endyr);
             os<<"pMnLnRec="<<pMnLnRec<<cc;
             os<<"pRecDevs="; wts::writeToR(os,value(pRecDevs),strp);  os<<cc;
-            strp = "y="+str(styr)+":"+str(1973);
+            strp = "y="+str(styr)+":"+str(optRecYr-1);
             os<<"pMnLnRecEarly="<<pMnLnRecEarly<<cc;
             os<<"pRecDevsEarly="; wts::writeToR(os,value(pRecDevsEarly),strp); 
         os<<")"<<cc;
