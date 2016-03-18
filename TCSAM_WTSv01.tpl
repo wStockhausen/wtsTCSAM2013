@@ -1487,12 +1487,10 @@ PARAMETER_SECTION
     number lkDscMortBio_TCFF                                                // catches - 4
     number lkDscMortBio_SCF                                                // catches snow crab
     number lkDscMortBio_RKF                                                // catches red king crab
-    vector len_like(1,NUM_LEN_LIKE)                                   // size compositions
-    number largemale_like                                             // Large males (why - AEP)
-    number surv_like                                                  // Survey biomass data
-    number like_initn
+    vector lkZCs(1,NUM_LEN_LIKE)                                      // size compositions
+    number lkSrvSpBio                                                   // Survey biomass data
     number surv_like_nowt                                             // Surveys (output)
-    3darray len_like_srv(1,nMSs,1,nSCs,1,nSXs)    // Summary of survey likelihood
+    3darray lkSrvZCs(1,nMSs,1,nSCs,1,nSXs)    // Summary of survey likelihood
     
     //IMPORTANT CHANGE: was "endyr".  cannot be calculated in endyr. 
     vector emspbio_matetime(styr,endyr-1)   // Spawning biomass at mating time stuff
@@ -3395,8 +3393,6 @@ FUNCTION evaluate_the_objective_function    //wts: revising
     dvar_matrix cv_srv1(1,nSXs,styr,endyr);
     dvariable multi;
     
-    like_initn.initialize();
-    
     f.initialize();
     objfOut.initialize();
     likeOut.initialize();
@@ -3546,12 +3542,12 @@ FUNCTION evaluate_the_objective_function    //wts: revising
     // LIKELIHOODS
     // ===========
     
-    len_like.initialize();
+    lkZCs.initialize();
     
     // retained (male) catch in TCF length likelihood (old and new shell together)
     for (int i=1; i <= nObsRetZCsTCF; i++) {
         yr = yrsObsRetZCsTCF_n(i);
-        len_like(1) -= ssRetZCsTCF_sn(NEW_SHELL,i)*((obsPrNatZ_TCFRsn(NEW_SHELL,i)+obsPrNatZ_TCFRsn(OLD_SHELL,i))
+        lkZCs(1) -= ssRetZCsTCF_sn(NEW_SHELL,i)*((obsPrNatZ_TCFRsn(NEW_SHELL,i)+obsPrNatZ_TCFRsn(OLD_SHELL,i))
                                                     *log(modPrNatZ_TCFR_snz(NEW_SHELL,yr)+modPrNatZ_TCFR_snz(OLD_SHELL,yr)+p_const));
     }
     //  CheckFile << "Yrs fish "<<yrsObsRetZCsTCF_n<<endl;
@@ -3563,7 +3559,7 @@ FUNCTION evaluate_the_objective_function    //wts: revising
     // total male catch in TCF length likelihood (old and new shell together) AEP???
     for (int i=1; i <= nObsZCsTCFM; i++) {
         yr = yrsObsZCsTCFM_n(i);
-        len_like(2) -= ssObsZCsTCFM_sn(NEW_SHELL,i)*((obsPrNatZ_TCFM_snz(NEW_SHELL,i)+obsPrNatZ_TCFM_snz(OLD_SHELL,i))
+        lkZCs(2) -= ssObsZCsTCFM_sn(NEW_SHELL,i)*((obsPrNatZ_TCFM_snz(NEW_SHELL,i)+obsPrNatZ_TCFM_snz(OLD_SHELL,i))
                                                      *log(modPrNatZ_TCFM_snz(NEW_SHELL,yr)+modPrNatZ_TCFM_snz(OLD_SHELL,yr)+p_const));
     }
     //  cout<<" discm length "<<endl;
@@ -3572,7 +3568,7 @@ FUNCTION evaluate_the_objective_function    //wts: revising
     // total female catch (discards) in TCF fishery length likelihood
     for (int i=1; i <= nObsZCsTCFF; i++) {
         yr=yrsObsZCsTCFF_n(i);
-        len_like(3) -= ssObsZCsTCFF_n(i)*(obsPrNatZ_TCFF_nz(i)*log(modPrNatZ_TCFF_yz(yr)+p_const));
+        lkZCs(3) -= ssObsZCsTCFF_n(i)*(obsPrNatZ_TCFF_nz(i)*log(modPrNatZ_TCFF_yz(yr)+p_const));
     }
     //      cout<<" disc f length "<<endl;
 //    cout<<"4"<<endl;    
@@ -3580,30 +3576,30 @@ FUNCTION evaluate_the_objective_function    //wts: revising
     // total male catch (discards) in SCF fishery length likelihood
     for (int i=1; i <= nObsZCsSCF; i++) {
         yr=yrsObsZCsSCF_n(i);
-        len_like(4) -= ssObsZCsSCFM_sn(NEW_SHELL,i)*(obsPrNatZ_SCF_xnz(MALE,i)*log(modPrNatZ_SCF_xyz(MALE,yr)+p_const));
+        lkZCs(4) -= ssObsZCsSCFM_sn(NEW_SHELL,i)*(obsPrNatZ_SCF_xnz(MALE,i)*log(modPrNatZ_SCF_xyz(MALE,yr)+p_const));
     }
 //    cout<<" snow m length "<<endl;
 //    CheckFile<<"+++++++++++++++++"<<endl;
-//    CheckFile<<"snf males LL = "<<len_like(4)<<endl;
+//    CheckFile<<"snf males LL = "<<lkZCs(4)<<endl;
 //    CheckFile<<modPrNatZ_SCF_xyz(MALE)<<endl;
 //    CheckFile<<"+++++++++++++++++"<<endl;
     
     // total female catch (discards) in SCF fishery length likelihood
     for (int i=1; i <= nObsZCsSCF; i++) {
         yr=yrsObsZCsSCF_n(i);
-        len_like(5) -= ssObsZCsSCFF_n(i)*(obsPrNatZ_SCF_xnz(FEMALE,i)*log(modPrNatZ_SCF_xyz(FEMALE,yr)+p_const));
+        lkZCs(5) -= ssObsZCsSCFF_n(i)*(obsPrNatZ_SCF_xnz(FEMALE,i)*log(modPrNatZ_SCF_xyz(FEMALE,yr)+p_const));
     }
 //    cout<<"1"<<endl;    
     
     // total male/female catch (discards) in RKF fishery length likelihood
     for (int i=1; i <= nObsZCsRKF; i++) {
         yr=yrsObsZCsRKF_n(i);
-        len_like(6) -= ssObsZCsRKFM_sn(NEW_SHELL,i)*(obsPrNatZ_RKF_xnz(MALE,i)*log(modPrNatZ_RKF_xyz(MALE,yr)+p_const));
-        len_like(7) -= ssObsZCsRKFF_n(i)*(obsPrNatZ_RKF_xnz(FEMALE,i)*log(modPrNatZ_RKF_xyz(FEMALE,yr)+p_const));
+        lkZCs(6) -= ssObsZCsRKFM_sn(NEW_SHELL,i)*(obsPrNatZ_RKF_xnz(MALE,i)*log(modPrNatZ_RKF_xyz(MALE,yr)+p_const));
+        lkZCs(7) -= ssObsZCsRKFF_n(i)*(obsPrNatZ_RKF_xnz(FEMALE,i)*log(modPrNatZ_RKF_xyz(FEMALE,yr)+p_const));
     }
 //    cout<<" red f length "<<endl;
 //    CheckFile<<"+++++++++++++++++"<<endl;
-//    CheckFile<<"rkf males LL = "<<len_like(6)<<endl;
+//    CheckFile<<"rkf males LL = "<<lkZCs(6)<<endl;
 //    CheckFile<<modPrNatZ_RKF_xyz(MALE)<<endl;
 //    CheckFile<<"+++++++++++++++++"<<endl;
     
@@ -3615,14 +3611,14 @@ FUNCTION evaluate_the_objective_function    //wts: revising
             //1. normalize observed extended size comp by total counts
             //2. weight sex-specific components of extended size comp by sex-specific ss
             for(int x=1;x<=nSXs;x++){
-                len_like(8) -= ssObsZCsGTF_xn(x,n)*(obsPrNatZ_GTF_xnz(x,n)*log(modPrNatZ_GTF_xyz(x,yr)+p_const));
+                lkZCs(8) -= ssObsZCsGTF_xn(x,n)*(obsPrNatZ_GTF_xnz(x,n)*log(modPrNatZ_GTF_xyz(x,yr)+p_const));
             }
         } else if (optPrNatZ_GTF==1){
             //new way 1: 
             //1. normalize observed extended size comp by total counts
             //2. weight extended size comp by ss summed over sexes
             for(int x=1;x<=nSXs;x++){
-                len_like(8) -= ssObsZCsGTF_n(n)*(obsPrNatZ_GTF_xnz(x,n)*log(modPrNatZ_GTF_xyz(x,yr)+p_const));
+                lkZCs(8) -= ssObsZCsGTF_n(n)*(obsPrNatZ_GTF_xnz(x,n)*log(modPrNatZ_GTF_xyz(x,yr)+p_const));
             }
         } else if (optPrNatZ_GTF==2){
             //new way 2: 
@@ -3630,7 +3626,7 @@ FUNCTION evaluate_the_objective_function    //wts: revising
             //2. create extended comp by weighting sex-specific parts by sex-specific ss 
             //3. weight extended size comp by ss summed over sexes
             for(int x=1;x<=nSXs;x++){
-                len_like(8) -= ssObsZCsGTF_n(n)*(obsPrNatZ_GTF_xnz(x,n)*log(modPrNatZ_GTF_xyz(x,yr)+p_const));
+                lkZCs(8) -= ssObsZCsGTF_n(n)*(obsPrNatZ_GTF_xnz(x,n)*log(modPrNatZ_GTF_xyz(x,yr)+p_const));
             }
         } 
     }//n
@@ -3644,12 +3640,12 @@ FUNCTION evaluate_the_objective_function    //wts: revising
         sex = MALE;   
         // obs(maturity, SC, sex, year), pred(maturity,sex, year)
         // immature new and old together
-        len_like( 9) -= ssObsZCsSrv_msxn(IMMATURE,NEW_SHELL,sex,i)*(
+        lkZCs( 9) -= ssObsZCsSrv_msxn(IMMATURE,NEW_SHELL,sex,i)*(
                          (obsPrNatZ_Srv_msxnz(IMMATURE,NEW_SHELL,sex,i)+obsPrNatZ_Srv_msxnz(IMMATURE,OLD_SHELL,sex,i))*
                           log(pred_p_srv1_len_new(IMMATURE,sex,yr)+pred_p_srv1_len_old(IMMATURE,sex,yr)+p_const)
                         );
         // this is for mature new and old shell together
-        len_like(10) -= ssObsZCsSrv_msxn(MATURE,NEW_SHELL,sex,i)*(
+        lkZCs(10) -= ssObsZCsSrv_msxn(MATURE,NEW_SHELL,sex,i)*(
                         (obsPrNatZ_Srv_msxnz(MATURE,NEW_SHELL,sex,i)+obsPrNatZ_Srv_msxnz(MATURE,OLD_SHELL,sex,i))*
                          log(pred_p_srv1_len_new(MATURE,sex,yr)+pred_p_srv1_len_old(MATURE,sex,yr)+p_const)
                         );       
@@ -3657,12 +3653,12 @@ FUNCTION evaluate_the_objective_function    //wts: revising
         sex = FEMALE;   
         // obs(maturity, SC, sex, year), pred(maturity,sex, year)
         // immature new and old together
-        len_like(11) -= ssObsZCsSrv_msxn(IMMATURE,NEW_SHELL,sex,i)*(
+        lkZCs(11) -= ssObsZCsSrv_msxn(IMMATURE,NEW_SHELL,sex,i)*(
                          (obsPrNatZ_Srv_msxnz(IMMATURE,NEW_SHELL,sex,i)+obsPrNatZ_Srv_msxnz(IMMATURE,OLD_SHELL,sex,i))*
                           log(pred_p_srv1_len_new(IMMATURE,sex,yr)+pred_p_srv1_len_old(IMMATURE,sex,yr)+p_const)
                         );
         // this is for mature new and old shell together
-        len_like(12) -= ssObsZCsSrv_msxn(MATURE,NEW_SHELL,sex,i)*(
+        lkZCs(12) -= ssObsZCsSrv_msxn(MATURE,NEW_SHELL,sex,i)*(
                         (obsPrNatZ_Srv_msxnz(MATURE,NEW_SHELL,sex,i)+obsPrNatZ_Srv_msxnz(MATURE,OLD_SHELL,sex,i))*
                          log(pred_p_srv1_len_new(MATURE,sex,yr)+pred_p_srv1_len_old(MATURE,sex,yr)+p_const)
                         );        
@@ -3670,23 +3666,23 @@ FUNCTION evaluate_the_objective_function    //wts: revising
 //    cout<<"1"<<endl;    
     
     //add the offset to the likelihood   
-    for (int i=1;i<=NUM_LEN_LIKE;i++) len_like(i) -= offset(i);
+    for (int i=1;i<=NUM_LEN_LIKE;i++) lkZCs(i) -= offset(i);
     
     // extra weight for start year length comp.
     if (current_phase() > 6) multi = 1.0; else multi = 1.0;//wts: does nothing! 
     
-    nextf = like_wght( 1)*len_like( 1); objfOut(19) = nextf; f += nextf; likeOut(19) = len_like( 1); wgtsOut(19) = like_wght( 1);  // directed fishery: retained males     
-    nextf = like_wght( 2)*len_like( 2); objfOut(20) = nextf; f += nextf; likeOut(20) = len_like( 2); wgtsOut(20) = like_wght( 2);  // directed fishery: total (ret+disc) males
-    nextf = like_wght( 3)*len_like( 3); objfOut(21) = nextf; f += nextf; likeOut(21) = len_like( 3); wgtsOut(21) = like_wght( 3);  // directed fishery: females     
-    nextf = like_wght( 4)*len_like( 4); objfOut(22) = nextf; f += nextf; likeOut(22) = len_like( 4); wgtsOut(22) = like_wght( 4);  // snow crab fishery: males
-    nextf = like_wght( 5)*len_like( 5); objfOut(23) = nextf; f += nextf; likeOut(23) = len_like( 5); wgtsOut(23) = like_wght( 5);  // snow crab fishery: females
-    nextf = like_wght( 6)*len_like( 6); objfOut(24) = nextf; f += nextf; likeOut(24) = len_like( 6); wgtsOut(24) = like_wght( 6);  // BBRKC fishery: males
-    nextf = like_wght( 7)*len_like( 7); objfOut(25) = nextf; f += nextf; likeOut(25) = len_like( 7); wgtsOut(25) = like_wght( 7);  // BBRKC fishery: females
-    nextf = like_wght( 8)*len_like( 8); objfOut(26) = nextf; f += nextf; likeOut(26) = len_like( 8); wgtsOut(26) = like_wght( 8);  // groundfish fishery: all
-    nextf = like_wght( 9)*len_like( 9); objfOut(27) = nextf; f += nextf; likeOut(27) = len_like( 9); wgtsOut(27) = like_wght( 9);  // survey: immature males
-    nextf = like_wght(10)*len_like(10); objfOut(28) = nextf; f += nextf; likeOut(28) = len_like(10); wgtsOut(28) = like_wght(10);  // survey: mature males
-    nextf = like_wght(11)*len_like(11); objfOut(29) = nextf; f += nextf; likeOut(29) = len_like(11); wgtsOut(29) = like_wght(11);  // survey: immature females
-    nextf = like_wght(12)*len_like(12); objfOut(30) = nextf; f += nextf; likeOut(30) = len_like(12); wgtsOut(30) = like_wght(12);  // survey: mature females
+    nextf = like_wght( 1)*lkZCs( 1); objfOut(19) = nextf; f += nextf; likeOut(19) = lkZCs( 1); wgtsOut(19) = like_wght( 1);  // directed fishery: retained males     
+    nextf = like_wght( 2)*lkZCs( 2); objfOut(20) = nextf; f += nextf; likeOut(20) = lkZCs( 2); wgtsOut(20) = like_wght( 2);  // directed fishery: total (ret+disc) males
+    nextf = like_wght( 3)*lkZCs( 3); objfOut(21) = nextf; f += nextf; likeOut(21) = lkZCs( 3); wgtsOut(21) = like_wght( 3);  // directed fishery: females     
+    nextf = like_wght( 4)*lkZCs( 4); objfOut(22) = nextf; f += nextf; likeOut(22) = lkZCs( 4); wgtsOut(22) = like_wght( 4);  // snow crab fishery: males
+    nextf = like_wght( 5)*lkZCs( 5); objfOut(23) = nextf; f += nextf; likeOut(23) = lkZCs( 5); wgtsOut(23) = like_wght( 5);  // snow crab fishery: females
+    nextf = like_wght( 6)*lkZCs( 6); objfOut(24) = nextf; f += nextf; likeOut(24) = lkZCs( 6); wgtsOut(24) = like_wght( 6);  // BBRKC fishery: males
+    nextf = like_wght( 7)*lkZCs( 7); objfOut(25) = nextf; f += nextf; likeOut(25) = lkZCs( 7); wgtsOut(25) = like_wght( 7);  // BBRKC fishery: females
+    nextf = like_wght( 8)*lkZCs( 8); objfOut(26) = nextf; f += nextf; likeOut(26) = lkZCs( 8); wgtsOut(26) = like_wght( 8);  // groundfish fishery: all
+    nextf = like_wght( 9)*lkZCs( 9); objfOut(27) = nextf; f += nextf; likeOut(27) = lkZCs( 9); wgtsOut(27) = like_wght( 9);  // survey: immature males
+    nextf = like_wght(10)*lkZCs(10); objfOut(28) = nextf; f += nextf; likeOut(28) = lkZCs(10); wgtsOut(28) = like_wght(10);  // survey: mature males
+    nextf = like_wght(11)*lkZCs(11); objfOut(29) = nextf; f += nextf; likeOut(29) = lkZCs(11); wgtsOut(29) = like_wght(11);  // survey: immature females
+    nextf = like_wght(12)*lkZCs(12); objfOut(30) = nextf; f += nextf; likeOut(30) = lkZCs(12); wgtsOut(30) = like_wght(12);  // survey: mature females
     
     // Fit to indices (lognormal) - AEP DIFFERENT Variance multipliers
     //weight each years estimate by 1/(2*variance) - use cv of biomass in sqrt(log(cv^2+1)) as sd of log(biomass) 
@@ -3701,17 +3697,17 @@ FUNCTION evaluate_the_objective_function    //wts: revising
     //    CheckFile <<"obs surv = "<<obs_srv1_spbiom<<endl;
     //    CheckFile <<"pred surv = "<<biom_tmp<<endl;
     // this fits mature biomass separate male and female
-    surv_like.initialize();
-    surv_like  = norm2(elem_div( log(obs_srv1_spbiom(FEMALE)(yrsObsSrvBio_n)+smlValSrv)-log(fspbio_srv1(yrsObsSrvBio_n)+smlValSrv),
+    lkSrvSpBio.initialize();
+    lkSrvSpBio  = norm2(elem_div( log(obs_srv1_spbiom(FEMALE)(yrsObsSrvBio_n)+smlValSrv)-log(fspbio_srv1(yrsObsSrvBio_n)+smlValSrv),
                                  sqrt(2)*sqrt(log(elem_prod(cv_srv1(FEMALE)(yrsObsSrvBio_n),cv_srv1(FEMALE)(yrsObsSrvBio_n))+1.0))
                                 ));
 //     cout<<"1"<<endl;    
-    surv_like += norm2(elem_div( log(obs_srv1_spbiom(MALE)(yrsObsSrvBio_n)+smlValSrv)-log(mspbio_srv1(yrsObsSrvBio_n)+smlValSrv),
+    lkSrvSpBio += norm2(elem_div( log(obs_srv1_spbiom(MALE)(yrsObsSrvBio_n)+smlValSrv)-log(mspbio_srv1(yrsObsSrvBio_n)+smlValSrv),
                                  sqrt(2)*sqrt(log(elem_prod(cv_srv1(MALE)(yrsObsSrvBio_n),cv_srv1(MALE)(yrsObsSrvBio_n))+1.0))
                                 ));
 //    cout<<"2"<<endl;    
     
-    f += surv_like; objfOut(31) = surv_like; likeOut(31) = surv_like; wgtsOut(31) = 1;
+    f += lkSrvSpBio; objfOut(31) = lkSrvSpBio; likeOut(31) = lkSrvSpBio; wgtsOut(31) = 1;
     
     //Likelihoods for bulk fishery catch data
     // Male retained catch in TCF
@@ -4063,17 +4059,17 @@ FUNCTION Misc_output
     }
 //    cout<<" to surv like "<<endl;
     // Survey likelihood (by year)
-    len_like_srv.initialize();
+    lkSrvZCs.initialize();
     for(int sex=1;sex<=2;sex++) {
         for (int i=1; i <=nObsZCsSrv; i++) {
             yr=yrsObsZCsSrv_n(i);            
             for (int j=1; j<=nZBs; j++) {
                 // immature new and old together in likelihood indices are (mat,shell,sex,year,length)
-                len_like_srv(1,1,sex) -= ssObsZCsSrv_msxn(1,1,sex,i)*(1e-9+obsPrNatZ_Srv_msxnz(1,1,sex,i,j)+obsPrNatZ_Srv_msxnz(1,2,sex,i,j))*log(pred_p_srv1_len_new(1,sex,yr,j)+pred_p_srv1_len_old(1,sex,yr,j)+1e-9);
-                len_like_srv(1,2,sex) = 0.0;
+                lkSrvZCs(1,1,sex) -= ssObsZCsSrv_msxn(1,1,sex,i)*(1e-9+obsPrNatZ_Srv_msxnz(1,1,sex,i,j)+obsPrNatZ_Srv_msxnz(1,2,sex,i,j))*log(pred_p_srv1_len_new(1,sex,yr,j)+pred_p_srv1_len_old(1,sex,yr,j)+1e-9);
+                lkSrvZCs(1,2,sex) = 0.0;
                 // mature
-                len_like_srv(2,1,sex) -= ssObsZCsSrv_msxn(2,1,sex,i)*(1e-9+obsPrNatZ_Srv_msxnz(2,1,sex,i,j))*log(pred_p_srv1_len_new(2,sex,yr,j)+1e-9);
-                len_like_srv(2,2,sex) -= ssObsZCsSrv_msxn(2,2,sex,i)*(1e-9+obsPrNatZ_Srv_msxnz(2,2,sex,i,j))*log(pred_p_srv1_len_old(2,sex,yr,j)+1e-9);            
+                lkSrvZCs(2,1,sex) -= ssObsZCsSrv_msxn(2,1,sex,i)*(1e-9+obsPrNatZ_Srv_msxnz(2,1,sex,i,j))*log(pred_p_srv1_len_new(2,sex,yr,j)+1e-9);
+                lkSrvZCs(2,2,sex) -= ssObsZCsSrv_msxn(2,2,sex,i)*(1e-9+obsPrNatZ_Srv_msxnz(2,2,sex,i,j))*log(pred_p_srv1_len_old(2,sex,yr,j)+1e-9);            
             }  //j loop     
         } // year loop
     } //sex loop
