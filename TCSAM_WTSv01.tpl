@@ -48,6 +48,8 @@
 //            3. Removed initial value for TCF devs (was 0.05)
 //--20160316: 1. Started adding options for normalizing extended size comps (optPrNatZ_GTF)
 //            2. Started renaming lots of variables
+//--20160317: 1. Completed options for normalizing GTF
+//            2. Added verModelControlFile (20160317) to check on model control file compatibility
 //
 //IMPORTANT: 2013-09 assessment model had RKC params for 1992+ discard mortality TURNED OFF. 
 //           THE ESTIMATION PHASE FOR RKC DISCARD MORTALITY IS NOW SET IN THE CONTROLLER FILE!
@@ -73,6 +75,7 @@ GLOBALS_SECTION
     #include "ModelData.hpp"
     
     adstring version = "20160316";//model version
+    int verModelControlFile = 20160317;//model control file version
 
     //model objects
     ModelConfiguration*  ptrMC;      //ptr to model configuration object
@@ -760,6 +763,18 @@ DATA_SECTION
     !!CheckFile<<"--------------------------------------"<<endl;
     !!CheckFile<<"Reading control file ''"<<ptrMC->fnCtl<<"'"<<endl;
     
+    init_number inpVerMCF   //input version number for control file
+ LOCAL_CALCS
+    CheckFile<<"Model ControlFile version = "<<inpVerMCF<<endl;
+    if (inpVerMCF!=verModelControlFile){
+        cout<<"Model Control File version inconsistent with model."<<endl;
+        cout<<"Current version = "<<verModelControlFile<<endl;
+        cout<<"Version in file = "<<inpVerMCF<<endl;
+        cout<<"Please use correct version."<<endl;
+        cout<<"Aborting..."<<endl;
+        exit(-1);
+    }
+ END_CALCS
     init_number multQ                 // Q  mult by pop biomass to get survey biomass
     init_int phsM                     // phase to turn on ordinary M component estimation
     init_vector M_in(1,nSXs)          // base value for natural mortality by sex
@@ -1303,7 +1318,7 @@ PARAMETER_SECTION
     vector bioLegalMales_y(styr,endyr)              // Biomass of legal males in survey (output)          
     
     matrix totn_srv1(1,nSXs,styr,endyr)              // total survey abundance          
-    vector legal_srv_males(styr,endyr)              // Survey-selected males (output)  
+    vector numLegalMalesSrv_y(styr,endyr)              // Survey-selected males (output)  
     vector legal_srv_males_n(styr,endyr)            // Survey-selected males (output)  
     vector legal_srv_males_o(styr,endyr)            // Survey-selected males (output)  
     vector legal_srv_males_bio(styr,endyr)          // Survey-selected males (output)  
@@ -2992,7 +3007,7 @@ FUNCTION get_numbers_at_len                                    //wts: revised
 //     cout<<"mat_big = "<<mat_big<<endl;
     if (sd_phase()){
         for (int x=1;x<=nSXs;x++){
-            for (int yr=styr;yr<=endyr;yr++) {
+            for (int yr=sdrNatMortImm(x).indexmin();yr<=sdrNatMortImm(x).indexmax();yr++) {
                 sdrNatMortImm(x,yr) = M_msx(IMMATURE,NEW_SHELL,x);
                 if((lyr_mort<=yr) && (yr<=uyr_mort) && (mort_switch==1)) {
                     sdrNatMortNS(x,yr) = M_msx(MATURE,NEW_SHELL,x)*mat_big(x);
@@ -3164,34 +3179,34 @@ FUNCTION get_numbers_at_len                                    //wts: revised
     }  
     //    cout<<" end srv 2"<<endl;
     sdrDepletion = pred_bio(endyr) / pred_bio(styr);
-    sdrSpBioF   = fspbio(optRecYr,endyr);
-    sdrSpBioM   = mspbio(optRecYr,endyr);
+    sdrSpBioF   = fspbio(sdrSpBioF.indexmin(),sdrSpBioF.indexmax());
+    sdrSpBioM   = mspbio(sdrSpBioM.indexmin(),sdrSpBioM.indexmax());
 //    cout<<"5"<<endl;
     
     // Legal males
     numLegalMales_y.initialize();
-    legal_srv_males.initialize();
+    numLegalMalesSrv_y.initialize();
     for (int yr=styr;yr<=endyr;yr++) {
         // Selection pattern//
         if (yr<1982)             {sel_srv_use = selSrv2;}  else
         if (1982<=yr && yr<1988) {sel_srv_use = selSrv2a;} else
         if (1988<=yr)            {sel_srv_use = selSrv3;}        
         // legal is >=138mm take half the numbers in the 135-139 bin
-        numLegalMales_y(yr)     = 0.5*natlength(MALE,yr,23);
-        legal_srv_males(yr) = 0.5*natlength(MALE,yr,23)*sel_srv_use(MALE,23);  //fixed indices; need vector of 0's, 0.5 and 1's to mult here
+        numLegalMales_y(yr)    = 0.5*natlength(MALE,yr,23);
+        numLegalMalesSrv_y(yr) = 0.5*natlength(MALE,yr,23)*sel_srv_use(MALE,23);  //fixed indices; need vector of 0's, 0.5 and 1's to mult here
         for(int j=24;j<=nZBs;j++) {
-            numLegalMales_y(yr)     += natlength(MALE,yr,j);
-            legal_srv_males(yr) += natlength(MALE,yr,j)*sel_srv_use(MALE,j);
+            numLegalMales_y(yr)    += natlength(MALE,yr,j);
+            numLegalMalesSrv_y(yr) += natlength(MALE,yr,j)*sel_srv_use(MALE,j);
         }
     }
-//    cout<<"6"<<endl;
+    //  cout<<"6"<<endl;
     
-    sdrLegalMales = numLegalMales_y(optRecYr,endyr);                                       //fixed index
-    sdrRecEarly = rec_y(styr,optRecYr-1);
-    sdrRecF      = rec_y(optRecYr,endyr);//was "endyr-1"
-    sdrRecM      = rec_y(optRecYr,endyr);//was "endyr-1"
+    sdrLegalMales = numLegalMales_y(sdrLegalMales.indexmin(),sdrLegalMales.indexmax());                                       //fixed index
+    sdrRecEarly   = rec_y(sdrRecEarly.indexmin(),sdrRecEarly.indexmax());
+    sdrRecF       = rec_y(sdrRecF.indexmin(),sdrRecF.indexmax());//was "endyr-1"
+    sdrRecM       = rec_y(sdrRecM.indexmin(),sdrRecM.indexmax());//was "endyr-1"
     //  cout<<" to end of number at len "<<endl;
-//    cout<<"done"<<endl;
+    //  cout<<"done"<<endl;
 
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
@@ -4020,7 +4035,7 @@ FUNCTION Misc_output
         bioLegalMales_y(i) = numLegalMales_y(i)*wtm_z(23);
         legal_srv_males_n(i) = 0.5*natlength_new(2,i,23)*sel_srv_use(2,23);
         legal_srv_males_o(i) = 0.5*natlength_old(2,i,23)*sel_srv_use(2,23);
-        legal_srv_males_bio(i) = legal_srv_males(i)*wtm_z(23);
+        legal_srv_males_bio(i) = numLegalMalesSrv_y(i)*wtm_z(23);
         for(int j=24;j<=nZBs;j++) {
             bioLegalMales_y(i) += natlength(2,i,j)*wtm_z(j);
             legal_srv_males_n(i) += natlength_new(2,i,j)*sel_srv_use(2,j);
@@ -4079,17 +4094,17 @@ FUNCTION Misc_output
 
 //    cout<<"before sd"<<endl;
     if(sd_phase()){
-        sdrDepletion    = pred_bio(endyr) / pred_bio(styr);
-        sdrSpBioF      = fspbio(optRecYr,endyr);
-        sdrSpBioM      = mspbio(optRecYr,endyr);
+        sdrDepletion = pred_bio(endyr) / pred_bio(styr);
+        sdrSpBioF    = fspbio(sdrSpBioF.indexmin(),sdrSpBioF.indexmax());
+        sdrSpBioM    = mspbio(sdrSpBioM.indexmin(),sdrSpBioM.indexmax());
         //cout<<"0"<<endl;
-        sdrLegalMales = numLegalMales_y(1965,endyr);
+        sdrLegalMales = numLegalMales_y(sdrLegalMales.indexmin(),sdrLegalMales.indexmax());
         //cout<<"1"<<endl;
         sdrRecEarly = rec_y(styr,optRecYr-1);
-        sdrRecF      = rec_y(optRecYr,endyr);//was endyr-1
-        sdrRecM      = rec_y(optRecYr,endyr);//was endyr-1
+        sdrRecF     = rec_y(optRecYr,endyr);//was endyr-1
+        sdrRecM     = rec_y(optRecYr,endyr);//was endyr-1
         //cout<<"2"<<endl;
-        sdrMMB       = mspbio_matetime(styr+1,endyr-1);
+        sdrMMB      = mspbio_matetime(styr+1,endyr-1);
         //cout<<"3"<<endl;
         for (int i=(styr+1);i<=(endyr-reclag);i++) {
             sdrRec(i)      = rec_y(i+reclag-1);
@@ -4207,7 +4222,7 @@ FUNCTION void writeReport(ostream& report)
     report<<"estimated population biomass of males > 101: seq("<<styr<<","<<endyr<<") "<<endl;
     report<<bioLegalMales_y<<endl;
     report<<"estimated survey numbers of males > 101: seq("<<styr<<","<<endyr<<") "<<endl;
-    report<<legal_srv_males<<endl;
+    report<<numLegalMalesSrv_y<<endl;
     report<<"estimated survey biomass of males > 101: seq("<<styr<<","<<endyr<<") "<<endl;
     report<<legal_srv_males_bio<<endl;
     report << "Observed survey biomass: seq(1974,"<<endyr<<")"<<endl;
@@ -5135,7 +5150,7 @@ FUNCTION void writeToR(ofstream& R_out)
         R_out<<"$observed.biomass.of.males.greater.than.101.mm"<<endl<<obs_lmales_bio<<endl;
         R_out<<"$pop.estimate.numbers.of.males.101"        <<endl<<numLegalMales_y<<endl;
         R_out<<"$estimated.population.biomass.of.males.101"<<endl<<bioLegalMales_y<<endl;
-        R_out<<"$estimated.survey.numbers.of.males.101"    <<endl<<legal_srv_males<<endl;
+        R_out<<"$estimated.survey.numbers.of.males.101"    <<endl<<numLegalMalesSrv_y<<endl;
         R_out<<"$estimated.survey.biomass.of.males.101"    <<endl<<legal_srv_males_bio<<endl;
         R_out<<"$estimated.biomass.of.males.101.fishtime"  <<endl<<bio_males_gt101<<endl;
         R_out<<"$Observed.survey.biomass"                  <<endl<< obs_srv1_biom(yrsObsSrvBio_n(1),endyr)<<endl;
