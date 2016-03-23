@@ -6184,7 +6184,7 @@ FUNCTION void myWriteModFshInfoToR(ostream& os)
                 os<<"zscr="; wts::writeToR(os,zsDMB_GTF_y,dmYm1); os<<cc<<endl;
                 os<<"like="<<lkDscMortBio_GTF<<endl;
             os<<")"; os<<endl;
-        os<<")"; os<<cc<<endl;
+        os<<")"; os<<endl;
     os<<")";
     
     cout<<"finished myWriteModFshInfoToR"<<endl;
