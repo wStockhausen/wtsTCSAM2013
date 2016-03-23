@@ -51,8 +51,8 @@
 //--20160317: 1. Completed options for normalizing GTF
 //            2. Added verModelControlFile (20160317) to check on model control file compatibility
 //--20160321: 1. Added zLegal and iZLegal to calculate legal crab numbers/biomass
-//            2. Revised calculations in MiscOutput too vectorize calculations, correct some formulas
-//            3. Added output for z-scores from likelihood calculations
+//            2. Revised calculations in MiscOutput to vectorize calculations, correct some formulas
+//            3. Added output for z-scores from likelihood calculations to TCSAM_WTS.final.R
 //
 //IMPORTANT: 2013-09 assessment model had RKC params for 1992+ discard mortality TURNED OFF. 
 //           THE ESTIMATION PHASE FOR RKC DISCARD MORTALITY IS NOW SET IN THE CONTROLLER FILE!
@@ -1433,9 +1433,10 @@ PARAMETER_SECTION
     matrix catch_male_ret(styr,endyr-1,1,nZBs)        // Catch mortality-in-numbers (males, retained)
     matrix catch_lmale(styr,endyr-1,1,nZBs)           // Catch mortality-in-numbers (males, total)
     matrix catch_female_d(styr,endyr-1,1,nZBs)
-    vector predRetCatchBio(styr,endyr-1)         // Retained catch mortality (males, directed)
-    vector predTotBioMortTCFM(styr,endyr-1)       // Total catch mortality (males, directed)
-    vector predDscBioMortTCFF(styr,endyr-1)      // Discard catch mortality (females, directed)
+    vector predRetBioMortTCFM_y(styr,endyr-1)      // Retained catch mortality (males, directed)
+    vector predTotBioMortTCFM_y(styr,endyr-1)      // Total catch mortality (males, directed)
+    vector predDscBioMortTCFM_y(styr,endyr-1)      // Discard catch mortality (males, directed)
+    vector predDscBioMortTCFF_y(styr,endyr-1)      // Discard catch mortality (females, directed)
     
     //SCF
     matrix catch_male_snowd_new(styr,endyr-1,1,nZBs)
@@ -1444,8 +1445,7 @@ PARAMETER_SECTION
     matrix catch_female_snowd_old(styr,endyr-1,1,nZBs)
     matrix catch_male_snowd(styr,endyr-1,1,nZBs)
     matrix catch_female_snowd(styr,endyr-1,1,nZBs)
-    vector predDscBioMortSCFM(styr,endyr-1)
-    vector predDscBioMortSCFF(styr,endyr-1)
+    matrix predDscBioMortSCF_xy(1,nSXs,styr,endyr-1)
     
     //BBRKC
     matrix catch_male_rkd_new(styr,endyr-1,1,nZBs)
@@ -1454,13 +1454,12 @@ PARAMETER_SECTION
     matrix catch_female_rkd_old(styr,endyr-1,1,nZBs)
     matrix catch_male_rkd(styr,endyr-1,1,nZBs)
     matrix catch_female_rkd(styr,endyr-1,1,nZBs)
-    vector predDscBioMortRKFM(styr,endyr-1)
-    vector predDscBioMortRKFF(styr,endyr-1)
+    matrix predDscBioMortRKF_xy(1,nSXs,styr,endyr-1)
     
     //GTF
     matrix catch_trawl_female(styr,endyr-1,1,nZBs)
     matrix catch_trawl_male(styr,endyr-1,1,nZBs)
-    vector predDscBioMortGTF(styr,endyr-1)            // Trawl catch mortality (in mass and by sex)
+    vector predDscBioMortGTF_y(styr,endyr-1)            // Trawl catch mortality (in mass and by sex)
     
     //changed endyr to endyr-1   
     matrix effn_fish_ret(1,nSCs,styr,endyr-1)           // Effective sample sizes
@@ -1491,23 +1490,23 @@ PARAMETER_SECTION
     
     // Likelihood components
     vector zsRetMortBio_TCFR_y(styr,endyr-1)        // z-scores for fit to retained male catch mortality in directed TCF 
-    vector zsTotMortBio_TCFM_y(styr,endyr-1)        // z-scores for fit to total male catch mortality in directed TCF 
-    vector zsDscMortBio_TCFF_y(styr,endyr-1)        // z-scores for fit to female bycatch mortality in directed TCF 
-    matrix zsDscMortBio_SCF_xy(1,nSXs,styr,endyr-1) // z-scores for fit to bycatch mortality, by sex, in SCF 
-    matrix zsDscMortBio_RKF_xy(1,nSXs,styr,endyr-1) // z-scores for fit to bycatch mortality, by sex, in RKFCF 
-    matrix zsDscMortBio_GTF_y(styr,endyr-1)        // z-scores for fit to total bycatch mortality in GTF 
+    vector zsTotMortBio_TCFM_n(1,nObsDscTCF)        // z-scores for fit to total male catch mortality in directed TCF 
+    vector zsDscMortBio_TCFF_n(1,nObsDscTCF)        // z-scores for fit to female bycatch mortality in directed TCF 
+    matrix zsDscMortBio_SCF_xn(1,nSXs,1,nObsDscSCF) // z-scores for fit to bycatch mortality, by sex, in SCF 
+    matrix zsDscMortBio_RKF_xn(1,nSXs,1,nObsDscRKF) // z-scores for fit to bycatch mortality, by sex, in RKFCF 
+    vector zsDscMortBio_GTF_n(1,nObsDscGTF)         // z-scores for fit to total bycatch mortality in GTF 
     number lkRetMortBio_TCFR          // likelihood for retained male catch mortality in directed TCF 
     number lkTotMortBio_TCFM          // likelihood for total male catch mortality in directed TCF
     number lkDscMortBio_TCFF          // likelihood for female bycatch mortality in directed TCF 
-    number lkDscMortBio_SCF           // likelihood for bycatch in SCF
-    number lkDscMortBio_RKF           // likelihood for bycatch in RKF
+    vector lkDscMortBio_SCF_x(1,nSXs) // likelihood for bycatch in SCF, by sex
+    vector lkDscMortBio_RKF_x(1,nSXs) // likelihood for bycatch in RKF, by sex
     number lkDscMortBio_GTF           // likelihood for bycatch in GTF
     vector lkZCs(1,NUM_LEN_LIKE)      // likelihood for fishery size compositions
     
-    matrix zsSrvMatBio_xy(1,nSXs,1,nObsSrvBio) //z-scores for fits to survey mature biomass
-    vector lkSrvMatBio_x(1,nSXs)            // likelihood for survey mature biomass data
+    matrix zsSrvMatBio_xn(1,nSXs,1,nObsSrvBio) // z-scores for fits to survey mature biomass
+    vector lkSrvMatBio_x(1,nSXs)               // likelihood for survey mature biomass data
 //    number surv_like_nowt                                             // Surveys (output)
-    3darray lkSrvZCs_msx(1,nMSs,1,nSCs,1,nSXs)  // likelihood for survey size composition components
+    3darray lkSrvZCs_msx(1,nMSs,1,nSCs,1,nSXs) // likelihood for survey size composition components
     
     //IMPORTANT CHANGE: was "endyr".  cannot be calculated in endyr. 
     vector mspnum_new_matetime(styr,endyr-1)
@@ -1879,12 +1878,15 @@ PRELIMINARY_CALCS_SECTION
     //run population mode with initial parameter values
     runPopMod();
     
+    //evaluate the objective function for initial parameter values
+    evaluate_the_objective_function();
+    
     //write reports for initial model configuration
     ofstream initRept("TCSAM_WTS.init.rep");
     writeReport(initRept);
     initRept.close();
     ofstream initReptToR("TCSAM_WTS.init.R");
-    writeReport(initReptToR);
+    myWriteToR(initReptToR);
     initReptToR.close();
     
     if (option_match(ad_comm::argc,ad_comm::argv,"-mceval")>-1) {
@@ -3152,14 +3154,12 @@ FUNCTION get_catch_at_len                  //wts: new version
     dvar_vector ratio1(1,nZBs);
     dvar_vector ratio2(1,nZBs);
     
-    predRetCatchBio.initialize();
-    predTotBioMortTCFM.initialize();
-    predDscBioMortTCFF.initialize();
-    predDscBioMortSCFM.initialize();
-    predDscBioMortSCFF.initialize();
-    predDscBioMortRKFM.initialize();
-    predDscBioMortRKFF.initialize();
-    predDscBioMortGTF.initialize();
+    predRetBioMortTCFM_y.initialize();
+    predTotBioMortTCFM_y.initialize();
+    predDscBioMortTCFF_y.initialize();
+    predDscBioMortSCF_xy.initialize();
+    predDscBioMortRKF_xy.initialize();
+    predDscBioMortGTF_y.initialize();
     //   cout<<" to get catch at length "<<endl;
     for (int yr=styr;yr<endyr;yr++){                //(IMPORTANT CHANGE: used to be "endyr")        
         //total male directed catch mortality
@@ -3172,7 +3172,7 @@ FUNCTION get_catch_at_len                  //wts: new version
         catch_lmale_new(yr) = elem_prod(ratio1,natl_inew_fishtime(MALE,yr) + natl_mnew_fishtime(MALE,yr));
         catch_lmale_old(yr) = elem_prod(ratio2,natl_iold_fishtime(MALE,yr) + natl_mold_fishtime(MALE,yr));
         catch_lmale(yr)     = catch_lmale_new(yr)+catch_lmale_old(yr);
-        predTotBioMortTCFM(yr)  = catch_lmale(yr)*wtm_z;//note dot product sum over size bins here
+        predTotBioMortTCFM_y(yr) = catch_lmale(yr)*wtm_z;//note dot product sum over size bins here
         //         cout<<ratio1<<endl;
         //         cout<<ratio2<<endl;
         
@@ -3186,7 +3186,9 @@ FUNCTION get_catch_at_len                  //wts: new version
         catch_male_ret_new(yr) = elem_prod(ratio1,natl_inew_fishtime(MALE,yr) + natl_mnew_fishtime(MALE,yr)); 
         catch_male_ret_old(yr) = elem_prod(ratio2,natl_iold_fishtime(MALE,yr) + natl_mold_fishtime(MALE,yr));
         catch_male_ret(yr)     = catch_male_ret_new(yr)+catch_male_ret_old(yr);
-        predRetCatchBio(yr)     = catch_male_ret(yr)*wtm_z;
+        predRetBioMortTCFM_y(yr) = catch_male_ret(yr)*wtm_z;
+        
+        predDscBioMortTCFM_y(yr) = predTotBioMortTCFM_y(yr) - predRetBioMortTCFM_y(yr);
         
         //snow crab discard catch male mortality
         ratio1 = elem_prod(elem_div(fmSCF_xyz(MALE,yr),fmTOT_xsyz(MALE,NEW_SHELL,yr)),1.0-S_xsyz(MALE,NEW_SHELL,yr));
@@ -3198,7 +3200,7 @@ FUNCTION get_catch_at_len                  //wts: new version
         catch_male_snowd_new(yr) = elem_prod(ratio1,natl_inew_fishtime(MALE,yr) + natl_mnew_fishtime(MALE,yr)); 
         catch_male_snowd_old(yr) = elem_prod(ratio2,natl_iold_fishtime(MALE,yr) + natl_mold_fishtime(MALE,yr));
         catch_male_snowd(yr)     = catch_male_snowd_new(yr)+catch_male_snowd_old(yr);
-        predDscBioMortSCFM(yr)     = catch_male_snowd(yr)*wtm_z;
+        predDscBioMortSCF_xy(MALE,yr) = catch_male_snowd(yr)*wtm_z;
         
         //red king crab discard catch male     
         ratio1 = elem_prod(elem_div(fmRKF_xyz(MALE,yr),fmTOT_xsyz(MALE,NEW_SHELL,yr)),1.0-S_xsyz(MALE,NEW_SHELL,yr));
@@ -3210,7 +3212,7 @@ FUNCTION get_catch_at_len                  //wts: new version
         catch_male_rkd_new(yr) = elem_prod(ratio1,natl_inew_fishtime(MALE,yr) + natl_mnew_fishtime(MALE,yr)); 
         catch_male_rkd_old(yr) = elem_prod(ratio2,natl_iold_fishtime(MALE,yr) + natl_mold_fishtime(MALE,yr));
         catch_male_rkd(yr)     = catch_male_rkd_new(yr)+catch_male_rkd_old(yr);
-        predDscBioMortRKFM(yr) = catch_male_rkd(yr)*wtm_z;
+        predDscBioMortRKF_xy(MALE,yr) = catch_male_rkd(yr)*wtm_z;
         
         //trawl bycatch male (20150601: is this correct?!->rates are indep of shell condition)
         ratio1 = elem_prod(elem_div(fmGTF_xyz(MALE,yr),fmTOT_xsyz(MALE,NEW_SHELL,yr)),1.0-S_xsyz(MALE,NEW_SHELL,yr));
@@ -3221,7 +3223,7 @@ FUNCTION get_catch_at_len                  //wts: new version
         tmN_fyxmsz(iGTF,yr,MALE,  MATURE,OLD_SHELL) = elem_prod(ratio2,natl_mold_fishtime(MALE,yr));
         catch_trawl_male(yr)  = elem_prod(ratio1,natl_inew_fishtime(MALE,yr) + natl_mnew_fishtime(MALE,yr)) + 
                                 elem_prod(ratio2,natl_iold_fishtime(MALE,yr) + natl_mold_fishtime(MALE,yr)); 
-        predDscBioMortGTF(yr)+= catch_trawl_male(yr)*wtm_z;
+        predDscBioMortGTF_y(yr) += catch_trawl_male(yr)*wtm_z;
         
         //directed tanner discard catch female
         ratio1 = elem_prod(elem_div(fmTCFF_yz(yr),fmTOT_xsyz(FEMALE,NEW_SHELL,yr)),1.0-S_xsyz(FEMALE,NEW_SHELL,yr));
@@ -3233,7 +3235,7 @@ FUNCTION get_catch_at_len                  //wts: new version
         catch_female_d_new(yr)  = elem_prod(ratio1,natl_inew_fishtime(FEMALE,yr) + natl_mnew_fishtime(FEMALE,yr)); 
         catch_female_d_old(yr)  = elem_prod(ratio2,natl_iold_fishtime(FEMALE,yr) + natl_mold_fishtime(FEMALE,yr));
         catch_female_d(yr)      = catch_female_d_new(yr)+catch_female_d_old(yr);
-        predDscBioMortTCFF(yr)  = catch_female_d(yr)*wtf_mz(MATURE);            
+        predDscBioMortTCFF_y(yr)  = catch_female_d(yr)*wtf_mz(MATURE);            
         
         //snow crab discard catch female
         ratio1 = elem_prod(elem_div(fmSCF_xyz(FEMALE,yr),fmTOT_xsyz(FEMALE,NEW_SHELL,yr)),1.0-S_xsyz(FEMALE,NEW_SHELL,yr));
@@ -3245,7 +3247,7 @@ FUNCTION get_catch_at_len                  //wts: new version
         catch_female_snowd_new(yr)  = elem_prod(ratio1,natl_inew_fishtime(FEMALE,yr) + natl_mnew_fishtime(FEMALE,yr)); 
         catch_female_snowd_old(yr)  = elem_prod(ratio2,natl_iold_fishtime(FEMALE,yr) + natl_mold_fishtime(FEMALE,yr));
         catch_female_snowd(yr)      = catch_female_snowd_new(yr)+catch_female_snowd_old(yr);
-        predDscBioMortSCFF(yr) = catch_female_snowd(yr)*wtf_mz(MATURE);
+        predDscBioMortSCF_xy(FEMALE,yr) = catch_female_snowd(yr)*wtf_mz(MATURE);
         
         //red king crab discard catch female
         ratio1 = elem_prod(elem_div(fmRKF_xyz(FEMALE,yr),fmTOT_xsyz(FEMALE,NEW_SHELL,yr)),1.0-S_xsyz(FEMALE,NEW_SHELL,yr));
@@ -3257,7 +3259,7 @@ FUNCTION get_catch_at_len                  //wts: new version
         catch_female_rkd_new(yr)   = elem_prod(ratio1,natl_inew_fishtime(FEMALE,yr) + natl_mnew_fishtime(FEMALE,yr)); 
         catch_female_rkd_old(yr)   = elem_prod(ratio2,natl_iold_fishtime(FEMALE,yr) + natl_mold_fishtime(FEMALE,yr));
         catch_female_rkd(yr)       = catch_female_rkd_new(yr)+catch_female_rkd_old(yr);
-        predDscBioMortRKFF(yr)  = catch_female_rkd(yr)*wtf_mz(MATURE);
+        predDscBioMortRKF_xy(FEMALE,yr) = catch_female_rkd(yr)*wtf_mz(MATURE);
         
         //trawl bycatch female (20150601: explicitly calculating ratio 2 rather than assuming ratio2=ratio1)
         ratio1 = elem_prod(elem_div(fmGTF_xyz(FEMALE,yr),fmTOT_xsyz(FEMALE,NEW_SHELL,yr)),1.0-S_xsyz(FEMALE,NEW_SHELL,yr));
@@ -3268,7 +3270,7 @@ FUNCTION get_catch_at_len                  //wts: new version
         tmN_fyxmsz(iGTF,yr,FEMALE,  MATURE,OLD_SHELL) = elem_prod(ratio2,natl_mold_fishtime(FEMALE,yr));
         catch_trawl_female(yr) = elem_prod(ratio1,natl_inew_fishtime(FEMALE,yr) + natl_mnew_fishtime(FEMALE,yr)) + 
                                  elem_prod(ratio2,natl_iold_fishtime(FEMALE,yr) + natl_mold_fishtime(FEMALE,yr)); 
-        predDscBioMortGTF(yr)  += catch_trawl_female(yr)*wtf_mz(MATURE);//add in females to males for trawl catches
+        predDscBioMortGTF_y(yr) += catch_trawl_female(yr)*wtf_mz(MATURE);//add in females to males for trawl catches
     }    //end of year loop
     
     modPrNatZ_TCFR_syz.initialize();
@@ -3637,14 +3639,14 @@ FUNCTION evaluate_the_objective_function    //wts: revising
     //    CheckFile <<"obs surv = "<<obsSrvMatBio_xy<<endl;
     //    CheckFile <<"pred surv = "<<biom_tmp<<endl;
     // this fits mature biomass separate male and female
-    zsSrvMatBio_xy.initialize();
+    zsSrvMatBio_xn.initialize();
     lkSrvMatBio_x.initialize();
     dvar_vector stdSrv(1,nObsSrvBio);
     stdSrv.initialize();
     for (int x=1;x<=nSXs;x++){
         stdSrv = sqrt(log(elem_prod(cv_srv1(x)(yrsObsSrvBio_n),cv_srv1(x)(yrsObsSrvBio_n))+1.0));
-        zsSrvMatBio_xy(x) = elem_div(log(obsSrvMatBio_xy(x)(yrsObsSrvBio_n)+smlValSrv)-log(modSrvMatBio_xy(x)(yrsObsSrvBio_n)+smlValSrv),stdSrv);
-        lkSrvMatBio_x(x)  = 0.5*norm2(zsSrvMatBio_xy(x));
+        zsSrvMatBio_xn(x) = elem_div(log(obsSrvMatBio_xy(x)(yrsObsSrvBio_n)+smlValSrv)-log(modSrvMatBio_xy(x)(yrsObsSrvBio_n)+smlValSrv),stdSrv);
+        lkSrvMatBio_x(x)  = 0.5*norm2(zsSrvMatBio_xn(x));
         if (lkSrvMatBio_x(x)==0.0){
             cout<<"x = "<<x<<endl;
             cout<<"yrsObsSrvBio_n = "<<endl<<yrsObsSrvBio_n<<endl;
@@ -3652,7 +3654,7 @@ FUNCTION evaluate_the_objective_function    //wts: revising
             cout<<"log(obsSrvMatBio_xy(x)(yrsObsSrvBio_n) = "<<endl<<log(obsSrvMatBio_xy(x)(yrsObsSrvBio_n))<<endl;
             cout<<"log(modSrvMatBio_xy(x)(yrsObsSrvBio_n) = "<<endl<<log(modSrvMatBio_xy(x)(yrsObsSrvBio_n))<<endl;
             cout<<"stdSrv = "<<stdSrv<<endl;
-            cout<<"zsSrvMatBio_xy = "<<endl<<zsSrvMatBio_xy<<endl;
+            cout<<"zsSrvMatBio_xn = "<<endl<<zsSrvMatBio_xn<<endl;
             cout<<"lkSrvMatBio_x  = "<<lkSrvMatBio_x<<endl;
             exit(-1.0);
         }
@@ -3667,97 +3669,102 @@ FUNCTION evaluate_the_objective_function    //wts: revising
     lkRetMortBio_TCFR.initialize();
     if (optFshNLLs==0){
         //normal error assumption, sd=sqrt(2) [fixed]
-        zsRetMortBio_TCFR_y(1965,endyr-1) = (obsRetCatchBio(1965,endyr-1)-predRetCatchBio(1965,endyr-1))/sqrt(0.5);
+        zsRetMortBio_TCFR_y(1965,endyr-1) = (obsRetCatchBio(1965,endyr-1)-predRetBioMortTCFM_y(1965,endyr-1))/sqrt(0.5);
         lkRetMortBio_TCFR                  = 0.5*norm2(zsRetMortBio_TCFR_y);
         nextf = like_wght_CatchBio*lkRetMortBio_TCFR; objfOut(32) = nextf; f += nextf; likeOut(32) = lkRetMortBio_TCFR; wgtsOut(32) = like_wght_CatchBio;
     } else {
         //lognormal error assumption
         double stdv = sqrt(log(1.0+square(obsErrTCFR)));
-        zsRetMortBio_TCFR_y(1965,endyr-1) = (log(obsRetCatchBio(1965,endyr-1)+smlValFsh)-log(predRetCatchBio(1965,endyr-1)+smlValFsh))/stdv;
+        zsRetMortBio_TCFR_y(1965,endyr-1) = (log(obsRetCatchBio(1965,endyr-1)+smlValFsh)-log(predRetBioMortTCFM_y(1965,endyr-1)+smlValFsh))/stdv;
         lkRetMortBio_TCFR = 0.5*norm2(zsRetMortBio_TCFR_y);
         nextf = lkRetMortBio_TCFR; objfOut(32) = nextf; f += nextf; likeOut(32) = lkRetMortBio_TCFR; wgtsOut(32) = 1.0;
     }
     
     // Total male catch MORTALITY in TCF
+    zsTotMortBio_TCFM_n.initialize();
     lkTotMortBio_TCFM.initialize();
     if (optFshNLLs==0){
         //normal error assumption, sd=sqrt(2) [fixed]
-        lkTotMortBio_TCFM = norm2(obsTotBioMortTCFM - predTotBioMortTCFM(yrsObsDscTCF_n));
+        zsTotMortBio_TCFM_n = (obsTotBioMortTCFM - predTotBioMortTCFM_y(yrsObsDscTCF_n))/sqrt(0.5);
+        lkTotMortBio_TCFM = 0.5*norm2(zsTotMortBio_TCFM_n);
         nextf = like_wght_CatchBio*lkTotMortBio_TCFM; objfOut(33) = nextf; f += nextf; likeOut(33) = lkTotMortBio_TCFM; wgtsOut(33) = like_wght_CatchBio;
     } else {
         //lognormal error assumption
-        double var = log(1.0+square(obsErrTCFD));
-        lkTotMortBio_TCFM = (1.0/(2*var))*norm2(log(obsTotBioMortTCFM+smlValFsh) - log(predTotBioMortTCFM(yrsObsDscTCF_n)+smlValFsh));
+        double stdv = sqrt(log(1.0+square(obsErrTCFD)));
+        zsTotMortBio_TCFM_n = (log(obsTotBioMortTCFM+smlValFsh)-log(predTotBioMortTCFM_y(yrsObsDscTCF_n)+smlValFsh))/stdv;
+        lkTotMortBio_TCFM = 0.5*norm2(zsTotMortBio_TCFM_n);
         nextf = lkTotMortBio_TCFM; objfOut(33) = nextf; f += nextf; likeOut(33) = lkTotMortBio_TCFM; wgtsOut(33) = 1.0;
     }
     
     //  female catch in directed fishery
+    zsDscMortBio_TCFF_n.initialize();
     lkDscMortBio_TCFF.initialize();
     if (optFshNLLs==0){
         //normal error assumption, sd=sqrt(2) [fixed]
-        lkDscMortBio_TCFF = norm2(obsDscBioMortTCF(FEMALE)-predDscBioMortTCFF(yrsObsDscTCF_n));
+        zsDscMortBio_TCFF_n = (obsDscBioMortTCF(FEMALE)-predDscBioMortTCFF_y(yrsObsDscTCF_n))/sqrt(0.5);
+        lkDscMortBio_TCFF = 0.5*norm2(zsDscMortBio_TCFF_n);
         nextf = like_wght_CatchBio*lkDscMortBio_TCFF; objfOut(34) = nextf; f+= nextf; likeOut(34) = lkDscMortBio_TCFF; wgtsOut(34) = like_wght_CatchBio;
     } else {
         //lognormal error assumption
-        double var = log(1.0+square(obsErrTCFD));
-        lkDscMortBio_TCFF = (1.0/(2*var))*norm2(log(obsDscBioMortTCF(FEMALE)+smlValFsh)-log(predDscBioMortTCFF(yrsObsDscTCF_n)+smlValFsh));
+        double stdv = sqrt(log(1.0+square(obsErrTCFD)));
+        zsDscMortBio_TCFF_n = (log(obsDscBioMortTCF(FEMALE)+smlValFsh)-log(predDscBioMortTCFF_y(yrsObsDscTCF_n)+smlValFsh))/stdv;
+        lkDscMortBio_TCFF = 0.5*norm2(zsDscMortBio_TCFF_n);
         nextf = lkDscMortBio_TCFF; objfOut(34) = nextf; f+= nextf; likeOut(34) = lkDscMortBio_TCFF; wgtsOut(34) = 1.0;
     }
     
     //snow crab fishery
-//    for(int i=1;i<=nObsDscSCF;i++){
-//        pred_tmp_snow(FEMALE,i)=predDscBioMortSCFF(yrsObsDscSCF(i)); //females
-//        pred_tmp_snow(  MALE,i)=predDscBioMortSCFM(yrsObsDscSCF(i)); //males
-//    }
-    lkDscMortBio_SCF.initialize();
+    zsDscMortBio_SCF_xn.initialize();
+    lkDscMortBio_SCF_x.initialize();
     if (optFshNLLs==0){
         //normal error assumption, sd=sqrt(2) [fixed]
-        lkDscMortBio_SCF  = norm2(obsDscBioMortSCF(FEMALE) - predDscBioMortSCFF(yrsObsDscSCF));
-        lkDscMortBio_SCF  += norm2(obsDscBioMortSCF( MALE) - predDscBioMortSCFM(yrsObsDscSCF));
-//        lkDscMortBio_SCF  = norm2((obsDscBioSCF_xn(FEMALE))-(pred_tmp_snow(1)));
-//        lkDscMortBio_SCF += norm2((obsDscBioSCF_xn(  MALE))-(pred_tmp_snow(2)));
-        nextf = like_wght_CatchBio*lkDscMortBio_SCF; objfOut(35) = nextf; f += nextf; likeOut(35) = lkDscMortBio_SCF; wgtsOut(35) = like_wght_CatchBio;
+        for (int x=1;x<=nSXs;x++){
+            zsDscMortBio_SCF_xn(x) = (obsDscBioMortSCF(x) - predDscBioMortSCF_xy(x)(yrsObsDscSCF))/sqrt(0.5);
+            lkDscMortBio_SCF_x(x)  = 0.5*norm2(zsDscMortBio_SCF_xn(x));
+        }
+        nextf = like_wght_CatchBio*sum(lkDscMortBio_SCF_x); objfOut(35) = nextf; f += nextf; likeOut(35) = sum(lkDscMortBio_SCF_x); wgtsOut(35) = like_wght_CatchBio;
     } else {
         //lognormal error assumption
-        double var = log(1.0+square(obsErrSCF));
-        lkDscMortBio_SCF  = (1.0/(2*var))*norm2(log(obsDscBioMortSCF(FEMALE)+smlValFsh)-log(predDscBioMortSCFF(yrsObsDscSCF)+smlValFsh));
-        lkDscMortBio_SCF += (1.0/(2*var))*norm2(log(obsDscBioMortSCF(  MALE)+smlValFsh)-log(predDscBioMortSCFM(yrsObsDscSCF)+smlValFsh));
-        nextf = lkDscMortBio_SCF; objfOut(35) = nextf; f += nextf; likeOut(35) = lkDscMortBio_SCF; wgtsOut(35) = 1.0;
+        double stdv = sqrt(log(1.0+square(obsErrSCF)));
+        for (int x=1;x<=nSXs;x++){
+            zsDscMortBio_SCF_xn(x) = (log(obsDscBioMortSCF(x)+smlValFsh)-log(predDscBioMortSCF_xy(x)(yrsObsDscSCF)+smlValFsh))/stdv;
+            lkDscMortBio_SCF_x(x)  = 0.5*norm2(zsDscMortBio_SCF_xn(x));
+        }
+        nextf = sum(lkDscMortBio_SCF_x); objfOut(35) = nextf; f += nextf; likeOut(35) = sum(lkDscMortBio_SCF_x); wgtsOut(35) = 1.0;
     }
     
     //BBRKC fishery
-//    for(int i=1;i<=nObsDscRKF;i++){
-//        pred_tmp_rkc(FEMALE,i)=predDscBioMortRKFF(yrsObsDscRKF(i));   //females
-//        pred_tmp_rkc(  MALE,i)=predDscBioMortRKFM(yrsObsDscRKF(i));          //males
-//    }
-    lkDscMortBio_RKF.initialize();
+    zsDscMortBio_RKF_xn.initialize();
+    lkDscMortBio_RKF_x.initialize();
     if (optFshNLLs==0){
         //normal error assumption, sd=sqrt(2) [fixed]
-        lkDscMortBio_RKF  = norm2(obsDscBioMortRKF(FEMALE) - predDscBioMortRKFF(yrsObsDscRKF));
-        lkDscMortBio_RKF += norm2(obsDscBioMortRKF(  MALE) - predDscBioMortRKFM(yrsObsDscRKF));
-//        lkDscMortBio_RKF  = norm2((obsDscBioRKF_xn(FEMALE))-(pred_tmp_rkc(FEMALE)));
-//        lkDscMortBio_RKF += norm2((obsDscBioRKF_xn(  MALE))-(pred_tmp_rkc(  MALE)));
-        nextf = like_wght_CatchBio*lkDscMortBio_RKF; objfOut(36) = nextf; f += nextf; likeOut(36) = lkDscMortBio_RKF; wgtsOut(36) = like_wght_CatchBio;
+        for (int x=1;x<=nSXs;x++){
+            zsDscMortBio_RKF_xn(x) = (obsDscBioMortRKF(x) - predDscBioMortRKF_xy(x)(yrsObsDscRKF))/sqrt(0.5);
+            lkDscMortBio_RKF_x(x)  = 0.5*norm2(zsDscMortBio_RKF_xn(x));
+        }
+        nextf = like_wght_CatchBio*sum(lkDscMortBio_RKF_x); objfOut(36) = nextf; f += nextf; likeOut(36) = sum(lkDscMortBio_RKF_x); wgtsOut(36) = like_wght_CatchBio;
     } else {
         //lognormal error assumption
-        double var = log(1.0+square(obsErrRKF));
-        lkDscMortBio_RKF  = (1.0/(2*var))*norm2(log(obsDscBioMortRKF(FEMALE)+smlValFsh)-log(predDscBioMortRKFF(yrsObsDscRKF)+smlValFsh));
-        lkDscMortBio_RKF += (1.0/(2*var))*norm2(log(obsDscBioMortRKF(  MALE)+smlValFsh)-log(predDscBioMortRKFM(yrsObsDscRKF)+smlValFsh));
-//        lkDscMortBio_RKF  = (1.0/(2*var))*norm2(log(obsDscBioRKF_xn(FEMALE)+smlValFsh)-log(pred_tmp_rkc(FEMALE)+smlValFsh));
-//        lkDscMortBio_RKF += (1.0/(2*var))*norm2(log(obsDscBioRKF_xn(  MALE)+smlValFsh)-log(pred_tmp_rkc(  MALE)+smlValFsh));
-        nextf = lkDscMortBio_RKF; objfOut(36) = nextf; f += nextf; likeOut(36) = lkDscMortBio_RKF; wgtsOut(36) = 1.0;
+        double stdv = sqrt(log(1.0+square(obsErrRKF)));
+        for (int x=1;x<=nSXs;x++){
+            zsDscMortBio_RKF_xn(x) = (log(obsDscBioMortRKF(x)+smlValFsh)-log(predDscBioMortRKF_xy(x)(yrsObsDscRKF)+smlValFsh))/stdv;
+            lkDscMortBio_RKF_x(x)  = 0.5*norm2(zsDscMortBio_RKF_xn(x));
+        }
+        nextf = sum(lkDscMortBio_RKF_x); objfOut(36) = nextf; f += nextf; likeOut(36) = sum(lkDscMortBio_RKF_x); wgtsOut(36) = 1.0;
     }
     
-    //trawl fishery
+    //groundfish trawl fishery
+    zsDscMortBio_GTF_n.initialize();
     lkDscMortBio_GTF.initialize();
     if (optFshNLLs==0){
         //normal error assumption, sd=sqrt(1/2) [fixed]
-        lkDscMortBio_GTF = norm2(obsDscBioMortGTF - predDscBioMortGTF(yrsObsDscGTF));
+        zsDscMortBio_GTF_n = (obsDscBioMortGTF - predDscBioMortGTF_y(yrsObsDscGTF))/sqrt(0.5);
+        lkDscMortBio_GTF = 0.5*norm2(zsDscMortBio_GTF_n);
         nextf = like_wght_CatchBio*lkDscMortBio_GTF;  objfOut(37) = nextf; f += nextf; likeOut(37) = lkDscMortBio_GTF; wgtsOut(37) = like_wght_CatchBio;
     } else {
         //lognormal error assumption
-        double var = log(1.0+square(obsErrGTF));
-        lkDscMortBio_GTF = (1.0/(2*var))*norm2(log(obsDscBioMortGTF+smlValFsh) - (predDscBioMortGTF(yrsObsDscGTF)+smlValFsh));
+        double stdv = sqrt(log(1.0+square(obsErrGTF)));
+        zsDscMortBio_GTF_n = (log(obsDscBioMortGTF+smlValFsh) - (predDscBioMortGTF_y(yrsObsDscGTF)+smlValFsh))/stdv;
+        lkDscMortBio_GTF = 0.5*norm2(zsDscMortBio_GTF_n);
         nextf = lkDscMortBio_GTF;  objfOut(37) = nextf; f += nextf; likeOut(37) = lkDscMortBio_GTF; wgtsOut(37) = 1.0;
     }
     // ------------------------------------------
@@ -4591,7 +4598,7 @@ FUNCTION void writeReport(ostream& report)
   report << "observed TCF retained catch biomass: seq(1965,"<<endyr-1<<")" << endl;
   report << obsRetCatchBio(1965,endyr-1) << endl;
   report << "predicted TCF retained catch biomass: seq("<<styr<<","<<endyr-1<<")" << endl;
-  report << predRetCatchBio(styr,endyr-1)<<endl;
+  report << predRetBioMortTCFM_y(styr,endyr-1)<<endl;
   report << "predicted TCF retained new catch biomass: seq("<<styr<<","<<endyr-1<<")" << endl;
   report << (catch_male_ret_new*wtm_z)(styr,endyr-1)<<endl;
   report << "predicted TCF retained old catch biomass: seq("<<styr<<","<<endyr-1<<")" << endl;
@@ -4600,7 +4607,7 @@ FUNCTION void writeReport(ostream& report)
   report << "observed TCF total male catch mortality biomass: ( "<<yrsObsDscTCF_n<<" )" << endl;
   report << obsTotBioMortTCFM << endl;
   report << "predicted TCF total male catch mortality biomass: seq("<<styr<<","<<endyr-1<<")" << endl;
-  report << predTotBioMortTCFM(styr,endyr-1) << endl;
+  report << predTotBioMortTCFM_y(styr,endyr-1) << endl;
   report << "predicted TCF total new male catch mortality biomass: seq("<<styr<<","<<endyr-1<<")" << endl;
   report << (catch_lmale_new*wtm_z)(styr,endyr-1) << endl;
   report << "predicted TCF total old male catch mortality biomass: seq("<<styr<<","<<endyr-1<<")" << endl;
@@ -4611,39 +4618,39 @@ FUNCTION void writeReport(ostream& report)
   report << "observed TCF male discard mortality biomass: ("<<yrsObsDscTCF_n<<")" << endl;
   report << obsDscBioMortTCF(MALE) << endl;
   report << "predicted TCF male discard mortality biomass1: seq("<<styr<<","<<endyr-1<<")" << endl;
-  report << predTotBioMortTCFM - predRetCatchBio<< endl;
+  report << predTotBioMortTCFM_y - predRetBioMortTCFM_y<< endl;
   report << "observed TCF female discard mortality biomass: ( "<<yrsObsDscTCF_n<<" )" << endl;
   report << obsDscBioMortTCF(FEMALE) << endl;
   report << "predicted TCF female discard mortality biomass: seq("<<styr<<","<<endyr-1<<")" << endl;  
-  report << predDscBioMortTCFF(styr,endyr-1) << endl;
+  report << predDscBioMortTCFF_y(styr,endyr-1) << endl;
   
   report << "observed SCF female discard mortality biomass: ( "<<yrsObsDscSCF<<" )" << endl;
   report << obsDscBioSCF_xn(FEMALE)<<endl;
   report << "predicted SCF female discard mortality biomass: seq("<<styr<<","<<endyr-1<<")" << endl;
-  report << predDscBioMortSCFF << endl;
+  report << predDscBioMortSCF_xy(FEMALE) << endl;
   report << "observed SCF male discard mortality biomass: ( "<<yrsObsDscSCF<<" )" << endl;
   report << obsDscBioSCF_xn(MALE)<<endl;
   report << "predicted SCF male discard mortality biomass: seq("<<styr<<","<<endyr-1<<")" << endl;
-  report << predDscBioMortSCFM << endl;  
+  report << predDscBioMortSCF_xy(MALE) << endl;  
   
   report << "observed RKC female discard mortality biomass: ( "<<yrsObsDscRKF<<" )" << endl;
   report << obsDscBioRKF_xn(FEMALE) << endl;
   report << "predicted RKC female discard mortality biomass: seq("<<styr<<","<<endyr-1<<")" << endl;
-  report << predDscBioMortRKFF << endl;
+  report << predDscBioMortRKF_xy(FEMALE) << endl;
   report << "observed RKC male discard mortality biomass: ( "<<yrsObsDscRKF<<" )" << endl;
   report << obsDscBioRKF_xn(MALE) << endl;
   report << "predicted RKC male discard mortality biomass: seq("<<styr<<","<<endyr-1<<")" << endl;
-  report << predDscBioMortRKFM << endl;
+  report << predDscBioMortRKF_xy(MALE) << endl;
   
   report << "observed GTF discard mortality biomass: ( "<<yrsObsDscGTF<<" )"<<endl;
   report << obsDscBioMortGTF<<endl;
   report << "predicted GTF discard mortality biomass: seq("<<styr<<","<<endyr-1<<")"<<endl;
-  report <<predDscBioMortGTF<<endl;
+  report <<predDscBioMortGTF_y<<endl;
   
   report << "predicted total male catch biomass: seq("<<styr<<","<<endyr-1<<")" << endl;
-  report<<predTotBioMortTCFM(styr,endyr-1)+predDscBioMortRKFM(styr,endyr-1)+predDscBioMortSCFM(styr,endyr-1)+predDscBioMortGTF(styr,endyr-1)/2.0<<endl;
+  report<<predTotBioMortTCFM_y(styr,endyr-1)+predDscBioMortRKF_xy(  MALE)(styr,endyr-1)+predDscBioMortSCF_xy(  MALE)(styr,endyr-1)+predDscBioMortGTF_y(styr,endyr-1)/2.0<<endl;
   report << "predicted total female catch biomass: seq("<<styr<<","<<endyr-1<<")" << endl;
-  report<<predDscBioMortTCFF(styr,endyr-1)+predDscBioMortRKFF(styr,endyr-1)+predDscBioMortSCFF(styr,endyr-1)+predDscBioMortGTF(styr,endyr-1)/2.0<<endl;
+  report<<predDscBioMortTCFF_y(styr,endyr-1)+predDscBioMortRKF_xy(FEMALE)(styr,endyr-1)+predDscBioMortSCF_xy(FEMALE)(styr,endyr-1)+predDscBioMortGTF_y(styr,endyr-1)/2.0<<endl;
   
   //fishing mortality rates
   report << "estimated annual total male directed fishing mortality: seq("<<styr<<","<<endyr-1<<")" << endl;
@@ -5453,63 +5460,51 @@ FUNCTION void writeToR(ofstream& R_out)
         
         R_out << "$observed.TCF.years.retained.catch"         <<endl<<1965<<":"<<endyr-1<<endl;
         R_out << "$observed.retained.catch.biomass"           <<endl<<obsRetCatchBio(1965,endyr-1)<<endl;
-        R_out << "$predicted.retained.catch.biomass"          <<endl<<predRetCatchBio<<endl;
+        R_out << "$predicted.retained.catch.biomass"          <<endl<<predRetBioMortTCFM_y<<endl;
         R_out << "$predicted.retained.new.catch.biomass"      <<endl<<(catch_male_ret_new*wtm_z)<<endl;
         R_out << "$predicted.retained.old.catch.biomass"      <<endl<<(catch_male_ret_old*wtm_z)<<endl;
         
         R_out << "$observed.TCF.years.discard.catch"             <<endl<<yrsObsDscTCF_n<<endl;
         R_out << "$observed.TCF.male.tot.biomass.mortality"      <<endl<<obsTotBioMortTCFM<<endl;
-        R_out << "$predicted.TCF.male.tot.biomass.mortality"     <<endl<<predTotBioMortTCFM<<endl;
+        R_out << "$predicted.TCF.male.tot.biomass.mortality"     <<endl<<predTotBioMortTCFM_y<<endl;
         R_out << "$predicted.TCF.new.male.tot.biomass.mortality" <<endl<<(catch_lmale_new*wtm_z)(styr,endyr-1)<<endl;
         R_out << "$predicted.TCF.old.male.to.biomass.mortality"  <<endl<<(catch_lmale_old*wtm_z)(styr,endyr-1) <<endl;
         
         R_out << "$observed.TCF.male.discard.mortality.biomass1"     <<endl<<(obsTotBioMortTCFM-obsRetCatchBio(yrsObsDscTCF_n))<<endl;
         R_out << "$observed.TCF.male.discard.mortality.biomass"      <<endl<< obsDscBioMortTCF(  MALE) << endl;
         R_out << "$observed.TCF.female.discard.mortality.biomass"    <<endl<< obsDscBioMortTCF(FEMALE) << endl;
-        R_out << "$predicted.TCF.male.discard.mortality.biomass"     <<endl<< predTotBioMortTCFM-predRetCatchBio<<endl;
-        R_out << "$predicted.TCF.female.discard.mortality.biomass"   <<endl<< predDscBioMortTCFF << endl;
+        R_out << "$predicted.TCF.male.discard.mortality.biomass"     <<endl<< predTotBioMortTCFM_y-predRetBioMortTCFM_y<<endl;
+        R_out << "$predicted.TCF.female.discard.mortality.biomass"   <<endl<< predDscBioMortTCFF_y << endl;
         
         R_out << "$observed.SCF.years.discard.catch"                 <<endl<<yrsObsDscSCF<<endl;
         R_out << "$observed.SCF.male.discard.mortality.biomass"      <<endl<< obsDscBioMortSCF(  MALE) << endl;
         R_out << "$observed.SCF.female.discard.mortality.biomass"    <<endl<< obsDscBioMortSCF(FEMALE) << endl;
-        R_out << "$predicted.SCF.male.discard.mortality.biomass"     <<endl<< predDscBioMortSCFM << endl;  
-        R_out << "$predicted.SCF.female.discard.mortality.biomass"   <<endl<< predDscBioMortSCFF << endl;
+        R_out << "$predicted.SCF.male.discard.mortality.biomass"     <<endl<< predDscBioMortSCF_xy(  MALE) << endl;  
+        R_out << "$predicted.SCF.female.discard.mortality.biomass"   <<endl<< predDscBioMortSCF_xy(FEMALE) << endl;
         
         R_out << "$observed.RKF.years.discard.catch"                 <<endl<<yrsObsDscRKF<<endl;
         R_out << "$observed.RKF.male.discard.mortality.biomass"      <<endl<< obsDscBioMortRKF(  MALE) << endl;
         R_out << "$observed.RKF.female.discard.mortality.biomass"    <<endl<< obsDscBioMortRKF(FEMALE) << endl;
-        R_out << "$predicted.RKF.male.discard.mortality.biomass"     <<endl<< predDscBioMortRKFM << endl;
-        R_out << "$predicted.RKF.female.discard.mortality.biomass"   <<endl<< predDscBioMortRKFF << endl;
+        R_out << "$predicted.RKF.male.discard.mortality.biomass"     <<endl<< predDscBioMortRKF_xy(  MALE) << endl;
+        R_out << "$predicted.RKF.female.discard.mortality.biomass"   <<endl<< predDscBioMortRKF_xy(FEMALE) << endl;
         
         R_out << "$observed.GTF.years.discard.catch"                 <<endl<< yrsObsDscGTF<<endl;
         R_out << "$observed.GTF.discard.mortality.biomass"           <<endl<< obsDscBioMortGTF<<endl;
-        R_out << "$predicted.GTF.discard.mortality.biomass"          <<endl<< predDscBioMortGTF<<endl;
+        R_out << "$predicted.GTF.discard.mortality.biomass"          <<endl<< predDscBioMortGTF_y<<endl;
         
         R_out << "$predicted.total.male.catch.biomass" << endl;
-        R_out<<predTotBioMortTCFM+predDscBioMortRKFM+predDscBioMortSCFM+predDscBioMortGTF/2.0<<endl;//WHY /2.0??
+        R_out<<predTotBioMortTCFM_y+predDscBioMortRKF_xy(  MALE)+predDscBioMortSCF_xy(  MALE)+predDscBioMortGTF_y/2.0<<endl;//WHY /2.0??
         R_out << "$predicted.total.female.catch.biomass" << endl;
-        R_out<<predDscBioMortTCFF+predDscBioMortRKFF+predDscBioMortSCFF+predDscBioMortGTF/2.0<<endl;//why /2.0??
+        R_out<<predDscBioMortTCFF_y+predDscBioMortRKF_xy(FEMALE)+predDscBioMortSCF_xy(FEMALE)+predDscBioMortGTF_y/2.0<<endl;//why /2.0??
         //  R_out<<"$Estimated total catch div. by male spawing biomass at fishtime"<<endl;
-        //  R_out<<elem_div(predTotBioMortTCFM(styr,endyr-1)+predDscBioMortRKFM(styr,endyr-1)+predDscBioMortSCFM(styr,endyr-1)+predDscBioMortGTF(styr,endyr-1)/2.0,mspbio_fishtime(styr,endyr-1))<<endl;
+        //  R_out<<elem_div(predTotBioMortTCFM_y(styr,endyr-1)+predDscBioMortRKFM(styr,endyr-1)+predDscBioMortSCFM(styr,endyr-1)+predDscBioMortGTF(styr,endyr-1)/2.0,mspbio_fishtime(styr,endyr-1))<<endl;
         //  R_out << "$estimated retained catch div. by male spawning biomass at fishtime" << endl;
-        //  R_out <<elem_div(predRetCatchBio,mspbio_fishtime)(styr,endyr-1) << endl;
+        //  R_out <<elem_div(predRetBioMortTCFM_y,mspbio_fishtime)(styr,endyr-1) << endl;
         R_out << "$estimated.total.catch.divided.by.male.spawning.biomass.at.fishtime" << endl;
-        totcatch=predTotBioMortTCFM(styr,endyr-1)+predDscBioMortRKFM(styr,endyr-1)+predDscBioMortSCFM(styr,endyr-1)+predDscBioMortGTF(styr,endyr-1)/2.0;//why /2.0??
+        totcatch=predTotBioMortTCFM_y(styr,endyr-1)+predDscBioMortRKF_xy(  MALE)(styr,endyr-1)+predDscBioMortSCF_xy(  MALE)(styr,endyr-1)+predDscBioMortGTF_y(styr,endyr-1)/2.0;//why /2.0??
         for (int i=styr;i<=(endyr-1);i++) R_out <<totcatch(i)/mspbio_fishtime(i) <<" "; R_out << endl;
         R_out << "$estimated.total.catch.of.legal.males.divided.by.legal.males.at.fishtime" << endl;
-        for (int i=styr;i<=(endyr-1);i++) R_out <<predRetCatchBio(i)/bio_males_gt101(i) <<" "; R_out << endl;
-        //  R_out << "$estimated total catch numbers of males >101 div. by males numbers >101 at fishtime" << endl;
-        //  R_out <<elem_div(modTotLglNum_TCFM_y(styr,endyr-1),num_males_gt101(styr,endyr-1)) << endl;
-        //  R_out << "$estimated total catch numbers of males 101 div. by survey estimate males numbers >101 at fishtime" << endl;
-        //  for (int i=styr;i<endyr;i++) obs_tmp(i) = obsSrvLegalNum_n(i-(styr-1));
-        //  R_out <<elem_div(modTotLglNum_TCFM_y(styr,endyr-1),obs_tmp(styr,endyr-1)*mfexp(-M_msx(MATURE,NEW_SHELL,  MALE)*(7/12))) << endl;
-        //  for (int i=styr;i<endyr;i++) obs_tmp(i) = obsSrvLegalBio_n(i-(styr-1));
-        
-        //  R_out << "$estimated total catch biomass of males >101 div. by survey estimate male biomass >101 at fishtime" << endl;
-        //  R_out <<elem_div(modTotLglBio_TCFM_y(styr,endyr-1),obs_tmp(styr,endyr-1)*mfexp(-M_msx(MATURE,NEW_SHELL,  MALE)*(7/12)) ) << endl;
-        
-        //  R_out << "$estimated total catch biomass div. by survey estimate male mature biomass at fishtime" << endl;
-        //  R_out <<elem_div(predTotBioMortTCFM(styr,endyr-1),((obsSrvMatBio_xy(2))(styr,endyr-1))*mfexp(-M_msx(MATURE,NEW_SHELL,  MALE)*(7/12))) << endl;
+        for (int i=styr;i<=(endyr-1);i++) R_out <<predRetBioMortTCFM_y(i)/bio_males_gt101(i) <<" "; R_out << endl;
         
         adstring ftype;
         if (optFM==1) ftype="capture"; else ftype="mortality";
@@ -6115,6 +6110,43 @@ FUNCTION void myWriteModPopInfoToR(ostream& os)
 // ==========================================================================
 FUNCTION void myWriteModFshInfoToR(ostream& os)
     cout<<"starting myWriteModFshInfoToR"<<endl;
+
+    dvector zsTMB_TCFM_y(styr,endyr-1);
+    dvector zsDMB_TCFF_y(styr,endyr-1);
+    dmatrix zsDMB_SCF_xy(1,nSXs,styr,endyr-1);
+    dmatrix zsDMB_RKF_xy(1,nSXs,styr,endyr-1);
+    dvector zsDMB_GTF_y(styr,endyr-1);
+    
+    zsTMB_TCFM_y.initialize();
+    zsDMB_TCFF_y.initialize();
+    zsDMB_SCF_xy.initialize();
+    zsDMB_RKF_xy.initialize();
+    zsDMB_GTF_y.initialize();
+    cout<<"TCF"<<endl;
+    for (int n=1;n<=nObsDscTCF;n++){
+        int y = yrsObsDscTCF_n(n);
+        cout<<n<<tb<<y<<endl;
+        zsTMB_TCFM_y(y) = value(zsTotMortBio_TCFM_n(n));
+        zsDMB_TCFF_y(y) = value(zsDscMortBio_TCFF_n(n));
+    }
+    cout<<"SCF"<<endl;
+    for (int n=1;n<=nObsDscSCF;n++){
+        int y = yrsObsDscSCF(n);
+        cout<<n<<tb<<y<<endl;
+        for (int x=1;x<=nSXs;x++) zsDMB_SCF_xy(x,y) = value(zsDscMortBio_SCF_xn(x,n));
+    }
+    cout<<"RKF"<<endl;
+    for (int n=1;n<=nObsDscRKF;n++){
+        int y = yrsObsDscRKF(n);
+        cout<<n<<tb<<y<<endl;
+        for (int x=1;x<=nSXs;x++) zsDMB_RKF_xy(x,y) = value(zsDscMortBio_RKF_xn(x,n));
+    }
+    cout<<"GTF"<<endl;
+    for (int n=1;n<=nObsDscGTF;n++){
+        int y = yrsObsDscGTF(n);
+        cout<<n<<tb<<y<<endl;
+        zsDMB_GTF_y(y) = value(zsDscMortBio_GTF_n(n));
+    }
     
     os<<"fsh=list("<<endl;
         os<<"TCFR=list("<<endl;
@@ -6122,7 +6154,37 @@ FUNCTION void myWriteModFshInfoToR(ostream& os)
                 os<<"zscr="; wts::writeToR(os,value(zsRetMortBio_TCFR_y),dmYm1); os<<cc<<endl;
                 os<<"like="<<lkRetMortBio_TCFR<<endl;
             os<<")"; os<<endl;
-        os<<")"; os<<endl;
+        os<<")"; os<<cc<<endl;
+        os<<"TCFM=list("<<endl;
+            os<<"fits=list("<<endl;
+                os<<"zscr="; wts::writeToR(os,zsTMB_TCFM_y,dmYm1); os<<cc<<endl;
+                os<<"like="<<lkTotMortBio_TCFM<<endl;
+            os<<")"; os<<endl;
+        os<<")"; os<<cc<<endl;
+        os<<"TCFF=list("<<endl;
+            os<<"fits=list("<<endl;
+                os<<"zscr="; wts::writeToR(os,zsDMB_TCFF_y,dmYm1); os<<cc<<endl;
+                os<<"like="<<lkDscMortBio_TCFF<<endl;
+            os<<")"; os<<endl;
+        os<<")"; os<<cc<<endl;
+        os<<"SCF=list("<<endl;
+            os<<"fits=list("<<endl;
+                os<<"zscr="; wts::writeToR(os,zsDMB_SCF_xy,dmX,dmYm1);        os<<cc<<endl;
+                os<<"like="; wts::writeToR(os,value(lkDscMortBio_SCF_x),dmX); os<<endl;
+            os<<")"; os<<endl;
+        os<<")"; os<<cc<<endl;
+        os<<"RKF=list("<<endl;
+            os<<"fits=list("<<endl;
+                os<<"zscr="; wts::writeToR(os,zsDMB_RKF_xy,dmX,dmYm1);        os<<cc<<endl;
+                os<<"like="; wts::writeToR(os,value(lkDscMortBio_RKF_x),dmX); os<<endl;
+            os<<")"; os<<endl;
+        os<<")"; os<<cc<<endl;
+        os<<"GTF=list("<<endl;
+            os<<"fits=list("<<endl;
+                os<<"zscr="; wts::writeToR(os,zsDMB_GTF_y,dmYm1); os<<cc<<endl;
+                os<<"like="<<lkDscMortBio_GTF<<endl;
+            os<<")"; os<<endl;
+        os<<")"; os<<cc<<endl;
     os<<")";
     
     cout<<"finished myWriteModFshInfoToR"<<endl;
@@ -6136,7 +6198,7 @@ FUNCTION void myWriteModSrvInfoToR(ostream& os)
     for (int x=1;x<=nSXs;x++){
         for (int n=1;n<=nObsSrvBio;n++){
             int y = yrsObsSrvBio_n(n);
-            zsc(x,y) = value(zsSrvMatBio_xy(x,n));
+            zsc(x,y) = value(zsSrvMatBio_xn(x,n));
         }
     }
     
@@ -6214,7 +6276,7 @@ REPORT_SECTION
         cout<<pow(red,(current_phase()-phs)/max(1.0,1.0*(max_number_phases-phs)))<<endl;
      }
     if (last_phase()) {
-        ofstream os("TCSAM_WTS."+str(current_phase())+".R", ios::trunc);    
+        ofstream os("TCSAM_WTS.final.R", ios::trunc);    
         myWriteToR(os);
         os.close();
 
