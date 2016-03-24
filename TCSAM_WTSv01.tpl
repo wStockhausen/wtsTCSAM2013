@@ -56,7 +56,8 @@
 //--20160323: 1. Changed TCSAM_WTS.oldstyle.R to TCSAM_OLDSTYLE.R.
 //            2. Added optTCFMfit to model control file to set option to fit 
 //                  total (0) or discard (1) mortality for TCF males
-//
+//--20160324: 1. Added recruitment estimation info to control file.
+//            2. Incremented versions to 20160324
 //IMPORTANT: 2013-09 assessment model had RKC params for 1992+ discard mortality TURNED OFF. 
 //           THE ESTIMATION PHASE FOR RKC DISCARD MORTALITY IS NOW SET IN THE CONTROLLER FILE!
 //
@@ -80,8 +81,8 @@ GLOBALS_SECTION
     #include "FisheryData.hpp"
     #include "ModelData.hpp"
     
-    adstring version = "20160323";//model version
-    int verModelControlFile = 20160323;//model control file version
+    adstring version = "20160324";//model version
+    int verModelControlFile = 20160324;//model control file version
     
     double zLegal = 128;//current (2015/16) legal size
     int iZLegal = 0;    //index into size bins for legal size
@@ -777,7 +778,7 @@ DATA_SECTION
     !!CheckFile<<"--------------------------------------"<<endl;
     !!CheckFile<<"Reading control file ''"<<ptrMC->fnCtl<<"'"<<endl;
     
-    init_number inpVerMCF   //input version number for control file
+    init_int inpVerMCF   //input version number for control file
  LOCAL_CALCS
     CheckFile<<"Model ControlFile version = "<<inpVerMCF<<endl;
     if (inpVerMCF!=verModelControlFile){
@@ -955,12 +956,31 @@ DATA_SECTION
     CheckFile<<"optPrNatZ_GTF = "<<optPrNatZ_GTF<<endl;
  END_CALCS
             
-    //new 20160316: set year to start estimating "current" recruitment
-    init_int optRecYr; //year to start estimating "current" recruitment
+    //new 20160324: set info for estimating "historic" recruitment
+    init_int    phsMnLnRecHist;  //phase to start estimating "historic" ln-scale mean recruitment (pMnLnRecHist)
+    init_int    phsRecDevsHist;  //phase to start estimating "historic" rec devs (pRecDevsHist)
+    init_number inpMnLnRecHist;  //initial value for "historic" ln-scale mean recruitment (pMnLnRecHist)
+    init_int    mnYrRecDevsHist; //year to start estimating "historic" rec devs
  LOCAL_CALCS
-    if (optRecYr==0) optRecYr = 1974;
-    CheckFile<<"#---Start year for 'current' recruitment"<<endl;
-    CheckFile<<"optRecYr = "<<optRecYr<<endl;
+    if (mnYrRecDevsHist<=0) mnYrRecDevsHist = mnYr;
+    CheckFile<<"#---'Historic' recruitment info"<<endl;
+    CheckFile<<"phsMnLnRecHist  = "<<phsMnLnRecHist <<tb<<"#---initial phase to estimate 'historic' mean ln-scale recruitment"<<endl;
+    CheckFile<<"phsRecDevsHist  = "<<phsRecDevsHist <<tb<<"#---initial phase to estimate 'historic' recruitment deviations"<<endl;
+    CheckFile<<"inpMnLnRecHist  = "<<inpMnLnRecHist <<tb<<"#---initial value for 'historic' mean ln-scale recruitment"<<endl;
+    CheckFile<<"mnYrRecDevsHist = "<<mnYrRecDevsHist<<tb<<"#---Start year for 'historic' recruitment deviations"<<endl;
+ END_CALCS
+            
+    //new 20160324: set info for estimating "current" recruitment
+    init_int    phsMnLnRec;  //phase to start estimating "current" ln-scale mean recruitment (pMnLnRec)
+    init_int    phsRecDevs;  //phase to start estimating "current" rec devs (pRecDevs)
+    init_number inpMnLnRec;  //initial value for "current" ln-scale mean recruitment (pMnLnRec)
+    init_int    mnYrRecCurr; //year to start estimating "current" recruitment
+ LOCAL_CALCS
+    CheckFile<<"#---'Current' recruitment info"<<endl;
+    CheckFile<<"phsMnLnRec  = "<<phsMnLnRec <<tb<<"#---initial phase to estimate 'current' mean ln-scale recruitment"<<endl;
+    CheckFile<<"phsRecDevs  = "<<phsRecDevs <<tb<<"#---initial phase to estimate 'current' recruitment deviations"<<endl;
+    CheckFile<<"inpMnLnRec  = "<<inpMnLnRec <<tb<<"#---initial value for 'current' mean ln-scale recruitment"<<endl;
+    CheckFile<<"mnYrRecCurr = "<<mnYrRecCurr<<tb<<"#---Start year for 'current' recruitment"<<endl;
  END_CALCS
             
     //new 20160323: options for fitting male mortality in TCF
@@ -973,7 +993,6 @@ DATA_SECTION
     //Finished reading control file
     !!CheckFile<<"Finished reading control file."<<endl;
     !!CheckFile<<"--------------------------------------"<<endl;
-    
     // the rest are working variables 
     
     matrix obsDscBioMortTCF(1,nSXs,1,nObsDscTCF)   // observed discard MORTALITY in TCF (1000's tons)
@@ -1135,11 +1154,11 @@ PARAMETER_SECTION
     init_bounded_number moltp_ammat(.0025,3.0,phase_moltingp)    // logistic molting prob for mature males
     init_bounded_number moltp_bmmat(1,120,phase_moltingp)        // logistic molting prob for mature males
     
-    init_number pMnLnRec(1)                                  // Mean log-scale recruitment 1974+ (males, females are equal)
-    init_bounded_dev_vector pRecDevs(optRecYr,endyr,-15,15,1)    // Deviations about mean recruitment 1974+ (IMPORTANT CHANGE: used to be "endyr-1")
-    init_number pMnLnRecEarly(1)                             // Mean log-scale recruitment in early phase (pre- optRecYr)
-    init_bounded_dev_vector pRecDevsEarly(styr,optRecYr-1,-15,15,1)// Deviations about logscale mean recruitment in early phase (pre- optRecYr)
-    vector rec_y(styr,endyr)                                 //arithmetic-scale recruitments (1000's ??)
+    init_number pMnLnRec(phsMnLnRec)                                                         // Mean ln-scale "current" recruitment 1974+ (males, females are equal)
+    init_bounded_dev_vector pRecDevs(mnYrRecCurr,endyr,-15,15,phsRecDevs)                    // "current" recruitment devs
+    init_number pMnLnRecHist(phsMnLnRecHist)                                                 // Mean ln-scale "historic" recruitment
+    init_bounded_dev_vector pRecDevsHist(mnYrRecDevsHist,mnYrRecCurr-1,-15,15,phsRecDevsHist)// "historic" ln-scale recruitment deviations
+    vector rec_y(styr,endyr)                                                                 //arithmetic-scale recruitments (1000's ??)
     
     //20150601: changed ...Fm... to ...F_... because of ambiguity as to whether
     //they represent fishing mortality (original model) of capture (gmacs) rates
@@ -1557,12 +1576,12 @@ PARAMETER_SECTION
     vector tmpp4(1,nZBs)
     number like_mat
     
-    sdreport_vector sdrSpBioF(optRecYr,endyr)                                // Sd_report stuff
-    sdreport_vector sdrSpBioM(optRecYr,endyr)                       //male spawning biomass (1000's t)
-    sdreport_vector sdrLegalMales(optRecYr,endyr)
-    sdreport_vector sdrRecEarly(styr,optRecYr-1)
-    sdreport_vector sdrRecF(optRecYr,endyr)  //was endyr-1
-    sdreport_vector sdrRecM(optRecYr,endyr)  //was endyr-1
+    sdreport_vector sdrSpBioF(mnYrRecCurr,endyr)                                // Sd_report stuff
+    sdreport_vector sdrSpBioM(mnYrRecCurr,endyr)                       //male spawning biomass (1000's t)
+    sdreport_vector sdrLegalMales(mnYrRecCurr,endyr)
+    sdreport_vector sdrRecEarly(styr,mnYrRecCurr-1)
+    sdreport_vector sdrRecF(mnYrRecCurr,endyr)  //was endyr-1
+    sdreport_vector sdrRecM(mnYrRecCurr,endyr)  //was endyr-1
     sdreport_number sdrDepletion
     
     sdreport_matrix sdrNatMortImm(1,nSXs,styr,endyr);//natural mortality by year on immatures
@@ -1597,12 +1616,16 @@ PARAMETER_SECTION
 //========================================================================
 PRELIMINARY_CALCS_SECTION
 
-    if (!usePin){
-        //set initial values from control file inputs 
+    if (!usePin){//set initial values from control file inputs 
+        //natural mortality multipliers
         Mmult_imat = Mmult_imat_in;
         Mmultm = Mmultm_in;
         Mmultf = Mmultf_in;
         mat_big = mat_big_in;
+        
+        //recruitment
+        pMnLnRecHist = inpMnLnRecHist;
+        pMnLnRec     = inpMnLnRec;
     }
     if (jitter) jitterParameters(ptrMC->jitFrac);
  
@@ -2070,8 +2093,8 @@ FUNCTION void writeParameters(ofstream& os,int toR, int willBeActive)           
     
     wts::writeParameter(os,pMnLnRec,toR,willBeActive);      
     wts::writeParameter(os,pRecDevs,toR,willBeActive);      
-    wts::writeParameter(os,pMnLnRecEarly,toR,willBeActive); 
-    wts::writeParameter(os,pRecDevsEarly,toR,willBeActive); 
+    wts::writeParameter(os,pMnLnRecHist,toR,willBeActive); 
+    wts::writeParameter(os,pRecDevsHist,toR,willBeActive); 
     
     wts::writeParameter(os,pAvgLnF_TCF,toR,willBeActive);   
     wts::writeParameter(os,pF_DevsTCF,toR,willBeActive);    
@@ -2214,10 +2237,10 @@ FUNCTION void jitterParameters(double fac)   //wts: new 2014-05-10
     moltp_ammat = wts::jitterParameter(moltp_ammat,fac,rng);    // logistic molting prob for mature males
     moltp_ammat = wts::jitterParameter(moltp_bmmat,fac,rng);    // logistic molting prob for mature males
     
-    pMnLnRec = wts::jitterParameter(pMnLnRec,fac,rng);         // Mean log-scale recruitment optRecYr+ (males, females are equal)
-    pRecDevs = wts::jitterParameter(pRecDevs,0.1*fac,rng);     // Deviations about mean recruitment optRecYr+ (IMPORTANT CHANGE: used to be "endyr-1")
-    pMnLnRecEarly = wts::jitterParameter(pMnLnRecEarly,fac,rng);    // Mean log-scale recruitment in early phase (pre-optRecYr)
-    pRecDevsEarly = wts::jitterParameter(pRecDevsEarly,0.1*fac,rng);// Deviations about logscale mean recruitment in early phase (pre-optRecYr)
+    pMnLnRec = wts::jitterParameter(pMnLnRec,fac,rng);         // Mean log-scale recruitment mnYrRecCurr+ (males, females are equal)
+    pRecDevs = wts::jitterParameter(pRecDevs,0.1*fac,rng);     // Deviations about mean recruitment mnYrRecCurr+ (IMPORTANT CHANGE: used to be "endyr-1")
+    pMnLnRecHist = wts::jitterParameter(pMnLnRecHist,fac,rng);    // Mean log-scale recruitment in early phase (pre-mnYrRecCurr)
+    pRecDevsHist = wts::jitterParameter(pRecDevsHist,0.1*fac,rng);// Deviations about logscale mean recruitment in early phase (pre-mnYrRecCurr)
     
     pAvgLnF_TCF = wts::jitterParameter(pAvgLnF_TCF,fac,rng);           //log-scale mean directed fishing mortality
     pF_DevsTCF  = wts::jitterParameter(pF_DevsTCF,0.1*fac,rng);//log-scale directed fishing mortality devs IMPORTANT CHANGE: USED TO BE "1966,endyr-12"
@@ -2936,6 +2959,7 @@ FUNCTION get_numbers_at_len                                    //wts: revised
     dvar_matrix tmpo(1,2,styr,endyr);
     dvariable tmpi,Surv1,Surv2,Surv3,Surv4,Surv5,Surv6;
     
+    rec_y.initialize();
     natlength.initialize();
     natlength_inew.initialize();
     natlength_iold.initialize();
@@ -2947,9 +2971,9 @@ FUNCTION get_numbers_at_len                                    //wts: revised
     natlength_mat.initialize();
     
     //nAtZ_msxy.initialize();
-    
-    rec_y(styr,optRecYr-1) = mfexp(pMnLnRecEarly+pRecDevsEarly);
-    rec_y(optRecYr,endyr)  = mfexp(pMnLnRec+pRecDevs);
+    rec_y(styr,mnYrRecCurr-1)            = mfexp(pMnLnRecHist);
+    rec_y(mnYrRecDevsHist,mnYrRecCurr-1) = mfexp(pMnLnRecHist+pRecDevsHist);
+    rec_y(mnYrRecCurr,endyr)             = mfexp(pMnLnRec+pRecDevs);
 //    cout<<"1"<<endl;
     
     //numbers at length from styr to endyr
@@ -3364,7 +3388,7 @@ FUNCTION evaluate_the_objective_function    //wts: revising
         //recruitment likelihood - norm2 is sum of square values   
         penal_rec = 1.0*like_wght_recf*norm2(pRecDevs); //+ like_wght_rec*norm2(rec_devm);
         //   first difference on recruitment in period-1     
-        penal_rec += 1.0*norm2(first_difference(pRecDevsEarly));
+        penal_rec += 1.0*norm2(first_difference(pRecDevsHist));
         
         f += penal_rec; objfOut(1) = penal_rec; likeOut(1) = penal_rec; wgtsOut(1) = 1;
         
@@ -4152,9 +4176,9 @@ FUNCTION Misc_output
         //cout<<"0"<<endl;
         sdrLegalMales = numLegalMales_y(sdrLegalMales.indexmin(),sdrLegalMales.indexmax());
         //cout<<"1"<<endl;
-        sdrRecEarly = rec_y(styr,optRecYr-1);
-        sdrRecF     = rec_y(optRecYr,endyr);//was endyr-1
-        sdrRecM     = rec_y(optRecYr,endyr);//was endyr-1
+        sdrRecEarly = rec_y(styr,mnYrRecCurr-1);
+        sdrRecF     = rec_y(mnYrRecCurr,endyr);//was endyr-1
+        sdrRecM     = rec_y(mnYrRecCurr,endyr);//was endyr-1
         //cout<<"2"<<endl;
         sdrMMB      = mspbio_matetime(styr+1,endyr-1);
         //cout<<"3"<<endl;
@@ -6026,12 +6050,12 @@ FUNCTION void myWriteParamsToR(ostream& os)
             os<<"b="<<moltp_bmmat; 
         os<<")"<<cc;
         os<<"recruitment=list(";
-            strp = "y="+str(optRecYr)+":"+str(endyr);
+            strp = "y="+str(mnYrRecCurr)+":"+str(endyr);
             os<<"pMnLnRec="<<pMnLnRec<<cc;
             os<<"pRecDevs="; wts::writeToR(os,value(pRecDevs),strp);  os<<cc;
-            strp = "y="+str(styr)+":"+str(optRecYr-1);
-            os<<"pMnLnRecEarly="<<pMnLnRecEarly<<cc;
-            os<<"pRecDevsEarly="; wts::writeToR(os,value(pRecDevsEarly),strp); 
+            strp = "y="+str(styr)+":"+str(mnYrRecCurr-1);
+            os<<"pMnLnRecHist="<<pMnLnRecHist<<cc;
+            os<<"pRecDevsHist="; wts::writeToR(os,value(pRecDevsHist),strp); 
         os<<")"<<cc;
         os<<"fishery.mortality=list(";
             os<<"tcf=list(";
@@ -6359,7 +6383,7 @@ RUNTIME_SECTION
 // ===============================================================================
 // ===============================================================================
 TOP_OF_MAIN_SECTION
-  arrmblsize = 6000000;
+  arrmblsize = 9000000;
   gradient_structure::set_GRADSTACK_BUFFER_SIZE(4000000); // this may be incorrect in the AUTODIF manual.
   gradient_structure::set_CMPDIF_BUFFER_SIZE(150000000);
   gradient_structure::set_NUM_DEPENDENT_VARIABLES(6000);
