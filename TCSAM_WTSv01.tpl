@@ -58,6 +58,9 @@
 //                  total (0) or discard (1) mortality for TCF males
 //--20160324: 1. Added recruitment estimation info to control file.
 //            2. Incremented versions to 20160324
+//            3. added zLegal (as legalSize), recLag, mnYrRecDevsHist and mnYrRecCurr to R output
+//            4. Modified stock/recruit-related sdreport variables to run styr:(endyr-recLag)
+//
 //IMPORTANT: 2013-09 assessment model had RKC params for 1992+ discard mortality TURNED OFF. 
 //           THE ESTIMATION PHASE FOR RKC DISCARD MORTALITY IS NOW SET IN THE CONTROLLER FILE!
 //
@@ -109,7 +112,7 @@ GLOBALS_SECTION
     //strings
     adstring fnConfigFile;//configuration file
     
-    int reclag = 5;       //default lag from fertilization to recruitment (yrs)
+    int recLag = 5;       //default lag from fertilization to recruitment (yrs)
     
     double convLBStoG   = 0.00220462262;//conversion from lbs to g
     double convLBStoMT  = 2204.62262;   //conversion from lbs to mt
@@ -226,8 +229,8 @@ DATA_SECTION
     }
     //recruitment lag
     if ((on=option_match(ad_comm::argc,ad_comm::argv,"-lag"))>-1) {
-        reclag=atoi(ad_comm::argv[on+1]);
-        echo<<"#assumed lag for recruitment changed to: "<<reclag<<endl;
+        recLag=atoi(ad_comm::argv[on+1]);
+        echo<<"#assumed lag for recruitment changed to: "<<recLag<<endl;
     }
     //configFile
     fnConfigFile = "TCSAM2013_ModelConfig.dat";//default model config filename
@@ -990,6 +993,34 @@ DATA_SECTION
     CheckFile<<"optTCFMfit = "<<optTCFMfit<<endl;
  END_CALCS
  
+    //new 20160324: options for fitting probability of molt to maturity
+    init_int phsPrM2M  ///< initial estimation phase for maturity parameters
+    init_int optPrM2M  ///< option for parameterizing prM2M, the probability of molt to maturity
+    number lbPrM2M     ///< lower bound on PrM2M parameters (if optPrM2M==0)
+    number ubPrM2M     ///< lower bound on PrM2M parameters (if optPrM2M==0)
+ LOCAL_CALCS
+    CheckFile<<"#---Options for fitting pr(molt to maturity)"<<endl;
+    CheckFile<<"phsPrM2M = "<<phsPrM2M<<endl;
+    CheckFile<<"optPrM2M = "<<optPrM2M<<endl;
+    if (optPrM2M==0) {
+        CheckFile<<"ln-scale parameterization selected for pPrM2MF's"<<endl;
+        lbPrM2M = -15.0;
+        ubPrM2M =   0.0;
+    }
+    if (optPrM2M==1){
+        CheckFile<<"logit-scale parameterization selected for pPrM2MF's"<<endl;
+        lbPrM2M = -15.0;
+        ubPrM2M =  15.0;
+    }
+ END_CALCS
+ 
+    //new 20160324: options for extrapolating 
+    //fishery mortality/capture rate from effort
+//    init_int phsQFshEff_TCF  ///< initial estimation phase for TCF effort extrapolation
+//    init_int phsQFshEff_SCF  ///< initial estimation phase for SCF effort extrapolation
+//    init_int phsQFshEff_RKF  ///< initial estimation phase for RKF effort extrapolation
+//    init_int phsQFshEff_GTF  ///< initial estimation phase for GTF effort extrapolation
+         
     //Finished reading control file
     !!CheckFile<<"Finished reading control file."<<endl;
     !!CheckFile<<"--------------------------------------"<<endl;
@@ -1084,8 +1115,8 @@ INITIALIZATION_SECTION
     pAvgLnF_RKF -5.25       //to initialize same as TCSAM_WTS for 2013-09
     log_avg_sel50_mn  4.87  //this is 130.3 mm
 //    pF_DevsTCF 0.00001                           //wts: dev.s should be mean 0!
-    matestf -1.0
-    matestm -1.0
+    pPrM2MF -1.0
+    pPrM2MM -1.0
     mat_big  1.0      //<-NEW by wts!!
     //  selGTFF_slpA 0.05
     //  selGTFF_z50A 85.0
@@ -1138,11 +1169,11 @@ PARAMETER_SECTION
     init_bounded_number bf1(0.6,1.2,8)                       // Female growth-increment
     init_bounded_number am1(0.3,0.6,8)                       // Male growth-increment
     init_bounded_number bm1(0.7,1.2,8)                       // Male growth-increment
-    
-    init_bounded_vector growth_beta(1,nSXs,0.75000,0.75001,-2)  // Growth beta                                //this is NOT estimated (why?)
-    init_bounded_number Mmult_imat(0.2,2.0,phsM)                   // natural mortality multiplier for females and males
-    init_bounded_number Mmultm(0.1,1.9,phsM)                       // natural mortality multiplier for mature new and old shell male
-    init_bounded_number Mmultf(0.1,1.9,phsM)                       // natural mortality multiplier for mature new and old shell female
+    init_bounded_vector growth_beta(1,nSXs,0.75000,0.75001,-2)  // Growth beta:  NOT estimated
+
+    init_bounded_number Mmult_imat(0.2,2.0,phsM)                // natural mortality multiplier for immature females and males
+    init_bounded_number Mmultm(0.1,1.9,phsM)                    // natural mortality multiplier for mature males
+    init_bounded_number Mmultf(0.1,1.9,phsM)                    // natural mortality multiplier for mature females
     init_bounded_vector mat_big(1,nSXs,0.1,10.0,phs_mat_big)    // mult. on 1980-1980 M for mature males and females                     
     init_bounded_number alpha1_rec(11.49,11.51,-8)              // Parameters related to fraction recruiting  //this is NOT estimated (why?)
     init_bounded_number beta_rec(3.99,4.01,-8)                  // Parameters related to fraction recruiting  //this is NOT estimated (why?)
@@ -1300,8 +1331,8 @@ PARAMETER_SECTION
     init_bounded_number srv3_seldiff(0.0,100.0,survsel1_phase)
     init_bounded_number srv3_sel50(0.0,69.0,survsel_phase)    
     
-    init_bounded_vector matestf(1,16,-15.0,0.0,5)
-    init_bounded_vector matestm(1,nZBs,-15.0,0.0,5)
+    init_bounded_vector pPrM2MF(1,16,lbPrM2M,ubPrM2M,phsPrM2M)
+    init_bounded_vector pPrM2MM(1,nZBs,lbPrM2M,ubPrM2M,phsPrM2M)
     
     init_bounded_number srv2_qFem(0.5,1.001,survsel1_phase)
     init_bounded_number srv2_seldiff_f(0.0,100.0,survsel1_phase)
@@ -1561,7 +1592,7 @@ PARAMETER_SECTION
     vector mspbio_fishtime(styr,endyr)
     vector fspbio_fishtime(styr,endyr)
     
-    matrix maturity_est(1,nSXs,1,nZBs)                              // Maturity-at-length
+    matrix modPrM2M(1,nSXs,1,nZBs)                              // Maturity-at-length
     
     // Outputs (not in the likelihood function)
     vector num_males_gt101(styr,endyr)
@@ -1589,10 +1620,10 @@ PARAMETER_SECTION
     sdreport_matrix sdrNatMortOS(1,nSXs,styr,endyr);
     
       
-    sdreport_vector sdrMMB(styr+1,endyr-1);          //MMB (= 0 in styr, so skip it) at fertilization time
-    sdreport_vector sdrLnRecMMB(styr+1,endyr-reclag);//ln(rec[yr+reclag-1]/MMB[yr])  at fertilization
-    sdreport_vector sdrLnRec(styr+1,endyr-reclag);   //rec[yr+reclag-1] at fertilization
-    sdreport_vector sdrRec(styr+1,endyr-reclag);     //rec[yr+reclag-1] at fertilization
+    sdreport_vector sdrMMB(styr,endyr-1);          //MMB at fertilization time
+    sdreport_vector sdrLnRecMMB(styr,endyr-recLag);//ln(rec[yr+recLag]/MMB[yr])  at fertilization
+    sdreport_vector sdrLnRec(styr,endyr-recLag);   //rec[yr+recLag] at fertilization
+    sdreport_vector sdrRec(styr,endyr-recLag);     //rec[yr+recLag] at fertilization
     
     objective_function_value f
     
@@ -1616,6 +1647,18 @@ PARAMETER_SECTION
 //========================================================================
 PRELIMINARY_CALCS_SECTION
 
+    //set initial probabilities for molt to maturity (20160324))
+    //need to do this BEFORE setting initial parameter values
+    modPrM2M(FEMALE) = 1.0;
+    modPrM2M(FEMALE)(1,16) = obsAvgMatNS_xz(FEMALE)(1,16);
+    modPrM2M(MALE)         = obsAvgMatNS_xz(  MALE);
+    if (maturity_switch > 0) {
+        // use logistic maturity curve for new shell males instead of fractions by year
+        // this would be for initial population not probability of moving to mature
+//        obsAvgMatNS_xz(MALE) = obsPrMatureM_z;
+        modPrM2M(MALE) = obsPrMatureM_z;
+    }
+    
     if (!usePin){//set initial values from control file inputs 
         //natural mortality multipliers
         Mmult_imat = Mmult_imat_in;
@@ -1626,14 +1669,21 @@ PRELIMINARY_CALCS_SECTION
         //recruitment
         pMnLnRecHist = inpMnLnRecHist;
         pMnLnRec     = inpMnLnRec;
+        
+        //set molt to maturity parameters based on initial (input) ogives
+        if (optPrM2M==0){
+            //2015 approach: do nothing and use default initialization
+        } else if (optPrM2M==1){
+            //2015 approach: parameters are logit-scale
+            pPrM2MF = log(elem_div(modPrM2M(FEMALE)(1,16),1.0-modPrM2M(FEMALE)(1,16)));
+            pPrM2MM = log(elem_div(modPrM2M(  MALE)      ,1.0-modPrM2M(  MALE)      ));
+        }
+        CheckFile<<"#--Maturity parameters"<<endl;
+        CheckFile<<"pPrM2MF = "<<pPrM2MF<<endl;
+        CheckFile<<"pPrM2MM = "<<pPrM2MM<<endl;
     }
     if (jitter) jitterParameters(ptrMC->jitFrac);
  
-    // use logistic maturity curve for new shell males instead of fractions by year if switch>0
-    // this would be for initial population not probability of moving to mature
-    if (maturity_switch > 0) {
-        obsAvgMatNS_xz(MALE) = obsPrMatureM_z;
-    }
 //     CheckFile<<"catch_disc(1) "<<catch_disc(1)<<endl;
 //     CheckFile<<"catch_disc(2) "<<catch_disc(2)<<endl;
     CheckFile<<"catch ret numbers "<<endl<<obsRetCatchNum<<endl;
@@ -1909,7 +1959,7 @@ PRELIMINARY_CALCS_SECTION
     get_growth1();//only option now
     //  cout<<"done growth"<<endl;
     // Set maturity
-    get_maturity();
+    get_maturity(); //should do nothing because parameter estimation not yet active
     
     //run population mode with initial parameter values
     runPopMod();
@@ -2191,8 +2241,8 @@ FUNCTION void writeParameters(ofstream& os,int toR, int willBeActive)           
     wts::writeParameter(os,srv3_seldiff,toR,willBeActive); 
     wts::writeParameter(os,srv3_sel50,toR,willBeActive);   
 
-    wts::writeParameter(os,matestf,toR,willBeActive); 
-    wts::writeParameter(os,matestm,toR,willBeActive); 
+    wts::writeParameter(os,pPrM2MF,toR,willBeActive); 
+    wts::writeParameter(os,pPrM2MM,toR,willBeActive); 
     
     wts::writeParameter(os,srv2_qFem,toR,willBeActive);      
     wts::writeParameter(os,srv2_seldiff_f,toR,willBeActive); 
@@ -2359,12 +2409,12 @@ FUNCTION void jitterParameters(double fac)   //wts: new 2014-05-10
     srv3_seldiff = wts::jitterParameter(srv3_seldiff,fac,rng);
     srv3_sel50   = wts::jitterParameter(srv3_sel50,fac,rng);
     
-    matestf = wts::jitterParameter(matestf,fac,rng);
-    matestm = wts::jitterParameter(matestm,fac,rng);
+//    pPrM2MF = wts::jitterParameter(pPrM2MF,fac,rng);
+//    pPrM2MM = wts::jitterParameter(pPrM2MM,fac,rng);
     
     srv2_qFem      = wts::jitterParameter(srv2_qFem,fac,rng);
     srv2_seldiff_f = wts::jitterParameter(srv2_seldiff_f,fac,rng);    
-    srv2_sel50_f = wts::jitterParameter(srv2_sel50_f,fac,rng);
+    srv2_sel50_f   = wts::jitterParameter(srv2_sel50_f,fac,rng);
     
     srv2a_qFem      = wts::jitterParameter(srv2a_qFem,fac,rng);
     srv2a_seldiff_f = wts::jitterParameter(srv2a_seldiff_f,fac,rng);
@@ -2418,17 +2468,27 @@ FUNCTION WriteMCMC                                     //wts: checked
 // --------------------------------------------------------------------------
 // --------------------------------------------------------------------------
 FUNCTION get_maturity                                  //wts: revised
-    if(active(matestm)){
-        maturity_est(FEMALE)       = 1.0;
-        maturity_est(FEMALE)(1,16) = mfexp(matestf);//females> length_bins(16) assumed mature
-        maturity_est(MALE)         = mfexp(matestm);
-    } else{    
-        maturity_est(FEMALE) = obsAvgMatNS_xz(FEMALE);
-        maturity_est(MALE)   = obsAvgMatNS_xz(MALE);
+    //prMoltToMaturity(female|size)
+    if(active(pPrM2MF)){
+        //prM2M(females> length_bins(16)) assumed = 1
+        if (optPrM2M==0){
+            modPrM2M(FEMALE)(1,16) = mfexp(pPrM2MF);
+        } else {
+            modPrM2M(FEMALE)(1,16) = 1.0/(1.0+mfexp(-pPrM2MF));
+        }
     }
-//     CheckFile<<"maturity_est"<<endl;
-//     CheckFile<<maturity_est(1)<<endl;
-//     CheckFile<<maturity_est(2)<<endl;
+
+    //prMoltToMaturity(female|size)
+    if(active(pPrM2MM)){
+        if (optPrM2M==0){
+            modPrM2M(MALE) = mfexp(pPrM2MM);
+        } else {
+            modPrM2M(MALE) = 1.0/(1.0+mfexp(-pPrM2MM));
+        }
+    }
+//     CheckFile<<"modPrM2M"<<endl;
+//     CheckFile<<modPrM2M(1)<<endl;
+//     CheckFile<<modPrM2M(2)<<endl;
     
 // --------------------------------------------------------------------------
 // --------------------------------------------------------------------------
@@ -3050,8 +3110,8 @@ FUNCTION get_numbers_at_len                                    //wts: revised
             
             // this is for estimating the fraction of new shell that move to old shell to fit
             // the survey data that is split by immature and mature
-            natlength_mnew(sex,yr+1) += elem_prod(    maturity_est(sex),natlength_new(sex,yr+1));//add new shell that become mature
-            natlength_inew(sex,yr+1)  = elem_prod(1.0-maturity_est(sex),natlength_new(sex,yr+1));//new shell that stay immature
+            natlength_mnew(sex,yr+1) += elem_prod(    modPrM2M(sex),natlength_new(sex,yr+1));//add new shell that become mature
+            natlength_inew(sex,yr+1)  = elem_prod(1.0-modPrM2M(sex),natlength_new(sex,yr+1));//new shell that stay immature
             //     cout<<" to 2 "<<endl;
             // add in recruits for next year
             // put all recruits in new shell immature
@@ -3459,13 +3519,13 @@ FUNCTION evaluate_the_objective_function    //wts: revising
         f += bm_penal; objfOut(11) = bm_penal; likeOut(11) = bm_penal; wgtsOut(11) = 1;
     }
     
-    if(active(matestf)) {
-        like_mat = norm2(first_difference(first_difference(matestf)));
+    if(active(pPrM2MF)) {
+        like_mat = norm2(first_difference(first_difference(pPrM2MF)));
         f += 1.0*like_mat; objfOut(12)= 1.0*like_mat; likeOut(12) = like_mat; wgtsOut(12) = 1;
     }
         
-    if(active(matestm)) {
-        like_mat = norm2(first_difference(first_difference(matestm)));//wts: why different weights? 1.0 vs. 0.5?
+    if(active(pPrM2MM)) {
+        like_mat = norm2(first_difference(first_difference(pPrM2MM)));//wts: why different weights? 1.0 vs. 0.5?
         f += 0.5*like_mat; objfOut(13)= 0.5*like_mat; likeOut(13) = like_mat; wgtsOut(13) = 0.5;
     }
     
@@ -4180,12 +4240,14 @@ FUNCTION Misc_output
         sdrRecF     = rec_y(mnYrRecCurr,endyr);//was endyr-1
         sdrRecM     = rec_y(mnYrRecCurr,endyr);//was endyr-1
         //cout<<"2"<<endl;
-        sdrMMB      = mspbio_matetime(styr+1,endyr-1);
+        sdrMMB      = mspbio_matetime(styr,endyr-1);
         //cout<<"3"<<endl;
-        for (int i=(styr+1);i<=(endyr-reclag);i++) {
-            sdrRec(i)      = rec_y(i+reclag-1);
-            sdrLnRec(i)    = log(rec_y(i+reclag-1));
-            sdrLnRecMMB(i) = log(rec_y(i+reclag-1))-log(sdrMMB(i));
+        for (int i=styr;i<=(endyr-recLag);i++) {
+            sdrRec(i)      = rec_y(i+recLag);
+            sdrLnRec(i)    = log(rec_y(i+recLag));
+            if (sdrMMB(i)>0.0){
+                sdrLnRecMMB(i) = log(rec_y(i+recLag))-log(sdrMMB(i));
+            }
         }
     }
 //    cout<<"done"<<endl;
@@ -4645,9 +4707,9 @@ FUNCTION void writeReport(ostream& report)
   report << "bm1: 'males'" << endl;
   report << bm1 << endl;
   report<<"Predicted probability of maturing females: '27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'"<<endl;
-  report<<maturity_est(1)<<endl;
+  report<<modPrM2M(1)<<endl;
   report<<"Predicted probability of maturing males: '27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'"<<endl;
-  report<<maturity_est(2)<<endl;
+  report<<modPrM2M(2)<<endl;
   report<<"molting probs female: '27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'"<<endl;
   report<<moltp(1)<<endl;
   report<<"molting probs male:'27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'"<< endl;
@@ -4918,8 +4980,8 @@ FUNCTION void writeReport(ostream& report)
   report <<"#selectivity redk males"<< endl;
   report <<selRKF(3,2)<<endl; 
   report<<"#maturity curve new shell female male"<<endl;
-  report<<maturity_est(1)<<endl;
-  report<<maturity_est(2)<<endl;
+  report<<modPrM2M(1)<<endl;
+  report<<modPrM2M(2)<<endl;
   report<<"#maturity curve old shell female male"<<endl;
   report<<obsAvgMatOS_xz<<endl;
   report<<"#molting probability immature female male"<<endl;
@@ -5105,8 +5167,8 @@ FUNCTION void writeMyProjectionFile(ofstream& os)
       os<<"#tmZtoZ_xzz: size transition matrix"<<endl;
       os<<len_len<<endl;      
       os<<"#prMatNS(nSXs,nZs): maturity curve new shell female male"<<endl;
-      os<<maturity_est(FEMALE)<<endl;
-      os<<maturity_est(MALE)<<endl;
+      os<<modPrM2M(FEMALE)<<endl;
+      os<<modPrM2M(MALE)<<endl;
       os<<"#prMoltImm(nSXs,nZs): molting probability immature female male"<<endl;
       os<<moltp<<endl;
       os<<"#prMoltMat(nSXs,nZs): molting probability mature female male"<<endl;
@@ -5144,6 +5206,7 @@ FUNCTION void writeToR(ofstream& R_out)
         R_out<<"$pltyr"<<endl<<1969<<endl;
         R_out<<"$length.bins"<<endl<<length_bins<<endl;
         
+        R_out<<"$legalSize"<<endl<<zLegal<<endl;
         R_out<<"$optFM"<<endl<<optFM<<endl;
         
         R_out<<"$years.survey.abundance"                   <<endl<<ptrMDS->pTSD->yrsAbund<<endl;
@@ -5513,8 +5576,8 @@ FUNCTION void writeToR(ofstream& R_out)
         R_out << bf1 << endl;
         R_out << "$bm1" << endl;
         R_out << bm1 << endl;
-        R_out << "$Predicted.probability.of.maturing.females"<<endl<<maturity_est(FEMALE)<<endl;
-        R_out << "$Predicted.probability.of.maturing.males"  <<endl<<maturity_est(MALE)<<endl;
+        R_out << "$Predicted.probability.of.maturing.females"<<endl<<modPrM2M(FEMALE)<<endl;
+        R_out << "$Predicted.probability.of.maturing.males"  <<endl<<modPrM2M(MALE)<<endl;
         R_out << "$molting.probs.female"<<endl<<moltp(FEMALE)<<endl;
         R_out << "$molting.probs.male"  <<endl<<moltp(MALE)<<endl;
         R_out << "$Molting.probability.mature.males"<<endl<<moltp_mat(MALE)<<endl;
@@ -5917,8 +5980,9 @@ FUNCTION void writeToR(ofstream& R_out)
                 R_out << wt <<" "; 
             }  R_out<< endl;
        }
-        
-        
+        R_out << "$recLag"<<endl<<recLag<<endl;
+        R_out << "$mnYrRecDevsHist"<<endl<<mnYrRecDevsHist<<endl;
+        R_out << "$mnYrRecCurr"<<endl<<mnYrRecCurr<<endl;
         R_out << "$estimated.number.of.recruits.female" << endl;
         R_out << rec_y <<endl;          //was endyr-1
         R_out<< "$estimated.number.of.recruits.male" << endl;
@@ -6053,7 +6117,7 @@ FUNCTION void myWriteParamsToR(ostream& os)
             strp = "y="+str(mnYrRecCurr)+":"+str(endyr);
             os<<"pMnLnRec="<<pMnLnRec<<cc;
             os<<"pRecDevs="; wts::writeToR(os,value(pRecDevs),strp);  os<<cc;
-            strp = "y="+str(styr)+":"+str(mnYrRecCurr-1);
+            strp = "y="+str(mnYrRecDevsHist)+":"+str(mnYrRecCurr-1);
             os<<"pMnLnRecHist="<<pMnLnRecHist<<cc;
             os<<"pRecDevsHist="; wts::writeToR(os,value(pRecDevsHist),strp); 
         os<<")"<<cc;
@@ -6161,6 +6225,8 @@ FUNCTION void myWriteModPopInfoToR(ostream& os)
     }
     
     os<<"mod.pop=list("<<endl;
+        os<<"mnYr="<<mnYr<<cc<<"mxYr="<<mxYr<<cc<<"recLag="<<recLag<<cc;
+        os<<"mnYrRecDevsHist="<<mnYrRecDevsHist<<cc<<"mnYrRecCurr="<<mnYrRecCurr;   os<<cc<<endl;
         os<<"rec="; wts::writeToR(os,value(rec_y),dmY);                             os<<cc<<endl;
         os<<"MMB="; wts::writeToR(os,value(mspbio_matetime),dmYm1);                 os<<cc<<endl;
         os<<"nAtZ="<<endl; wts::writeToR(os,nAtZ,dmX,dmS,dmM,dmY,dmZ); os<<endl;
@@ -6183,10 +6249,10 @@ FUNCTION void myWriteModFshInfoToR(ostream& os)
     zsDMB_SCF_xy.initialize();
     zsDMB_RKF_xy.initialize();
     zsDMB_GTF_y.initialize();
-    cout<<"TCF"<<endl;
+    //cout<<"TCF"<<endl;
     for (int n=1;n<=nObsDscTCF;n++){
         int y = yrsObsDscTCF_n(n);
-        cout<<n<<tb<<y<<endl;
+        //cout<<n<<tb<<y<<endl;
         if (optTCFMfit==0){
             zsTMB_TCFM_y(y) = value(zsTotMortBio_TCFM_n(n));
         } else {
@@ -6194,26 +6260,27 @@ FUNCTION void myWriteModFshInfoToR(ostream& os)
         }
         zsDMB_TCFF_y(y) = value(zsDscMortBio_TCFF_n(n));
     }
-    cout<<"SCF"<<endl;
+    //cout<<"SCF"<<endl;
     for (int n=1;n<=nObsDscSCF;n++){
         int y = yrsObsDscSCF(n);
-        cout<<n<<tb<<y<<endl;
+        //cout<<n<<tb<<y<<endl;
         for (int x=1;x<=nSXs;x++) zsDMB_SCF_xy(x,y) = value(zsDscMortBio_SCF_xn(x,n));
     }
-    cout<<"RKF"<<endl;
+    //cout<<"RKF"<<endl;
     for (int n=1;n<=nObsDscRKF;n++){
         int y = yrsObsDscRKF(n);
-        cout<<n<<tb<<y<<endl;
+        //cout<<n<<tb<<y<<endl;
         for (int x=1;x<=nSXs;x++) zsDMB_RKF_xy(x,y) = value(zsDscMortBio_RKF_xn(x,n));
     }
-    cout<<"GTF"<<endl;
+    //cout<<"GTF"<<endl;
     for (int n=1;n<=nObsDscGTF;n++){
         int y = yrsObsDscGTF(n);
-        cout<<n<<tb<<y<<endl;
+        //cout<<n<<tb<<y<<endl;
         zsDMB_GTF_y(y) = value(zsDscMortBio_GTF_n(n));
     }
     
     os<<"fsh=list("<<endl;
+        os<<"legalSize="<<zLegal<<cc<<endl;
         os<<"TCFR=list("<<endl;
             os<<"fits=list("<<endl;
                 os<<"zscr="; wts::writeToR(os,value(zsRetMortBio_TCFR_y),dmYm1); os<<cc<<endl;
