@@ -60,6 +60,12 @@
 //            2. Incremented versions to 20160324
 //            3. added zLegal (as legalSize), recLag, mnYrRecDevsHist and mnYrRecCurr to R output
 //            4. Modified stock/recruit-related sdreport variables to run styr:(endyr-recLag)
+//            5. Added option to reparameterize prob of molt to maturity based on logit-scale
+//                  parameters, as well as to set estimation phase, in the control file.
+//            6. Renamed M multipliers.
+//            7. Added option to ESTIMATE the scaling factor from effort to fishing mortality
+//                  used to extrapolate effort to fishing mortality in years where (by)catch data
+//                  is unavailable but effort data is.
 //
 //IMPORTANT: 2013-09 assessment model had RKC params for 1992+ discard mortality TURNED OFF. 
 //           THE ESTIMATION PHASE FOR RKC DISCARD MORTALITY IS NOW SET IN THE CONTROLLER FILE!
@@ -795,45 +801,45 @@ DATA_SECTION
  END_CALCS
     init_number multQ                 // Q  mult by pop biomass to get survey biomass
     init_int phsM                     // phase to turn on ordinary M component estimation
-    init_vector M_in(1,nSXs)          // base value for natural mortality by sex
-    init_vector M_matn_in(1,nSXs)     // base value for natural mortality mature new shell by sex
-    init_vector M_mato_in(1,nSXs)     // base value for natural mortality mature old shell by sex
+    init_vector inpM_Imm(1,nSXs)       // base value for natural mortality on immature crab by sex
+    init_vector inpM_MatNS(1,nSXs)     // base value for natural mortality on mature new shell crab by sex
+    init_vector inpM_MatOS(1,nSXs)     // base value for natural mortality on mature old shell crab by sex
     3darray baseM_msx(1,nMSs,1,nSCs,1,nSXs) //convenience array for all base M's
-    init_number Mmult_imat_in         // initial value for natural mortality multiplier
-    init_number Mmultm_in             // initial value for natural mortality multiplier
-    init_number Mmultf_in             // initial value for natural mortality multiplier
+    init_number inpMfac_Imm           // initial value for natural mortality multiplier on immature crab
+    init_number inpMfac_MatM          // initial value for natural mortality multiplier on mature males
+    init_number inpMfac_MatF          // initial value for natural mortality multiplier on mature females
     3darray inpMfac_msx(1,nMSs,1,nSCs,1,nSXs) //convenience array for all initial M multipliers
-    init_vector mat_big_in(1,nSXs)    // natural mortality multiplier by sex during "kill 'em" period
-    init_int phase_moltingp           // phase to estimate molting prob for mature males
+    init_vector inpMfac_Big(1,nSXs)    // natural mortality multiplier on mature crabby sex during "kill 'em" period
+    init_int phsPrMolt_MatureMale           // phase to estimate molting prob for mature males
     init_int phase_fishsel            // phase to estimate dome shape parameters for fishery selectivities
     init_int survsel_phase            // switch for which survey selectivty to use for 1989 to present - positive estimated negative fixed at somerton and otto
     init_int survsel1_phase           // switch for fixing all survey selectivities to somerton and otto - <0 fix, >0 estimate
     init_int phase_logistic_sel       // phase to estimate selectivities using logistic function
     init_vector sel_som(1,5)          // parameters for somerton-otto selectivity curve
  LOCAL_CALCS
-    baseM_msx(IMMATURE,NEW_SHELL,FEMALE) = M_in(FEMALE);
-    baseM_msx(IMMATURE,NEW_SHELL,  MALE) = M_in(  MALE);
-    baseM_msx(IMMATURE,OLD_SHELL,FEMALE) = M_in(FEMALE);
-    baseM_msx(IMMATURE,OLD_SHELL,  MALE) = M_in(  MALE);
-    baseM_msx(  MATURE,NEW_SHELL,FEMALE) = M_matn_in(FEMALE);
-    baseM_msx(  MATURE,NEW_SHELL,  MALE) = M_matn_in(  MALE);
-    baseM_msx(  MATURE,OLD_SHELL,FEMALE) = M_mato_in(FEMALE);
-    baseM_msx(  MATURE,OLD_SHELL,  MALE) = M_mato_in(  MALE);
-    CheckFile<<"multQ              = "<<multQ<<endl;
-    CheckFile<<"phsM               = "<<phsM<<endl;
-    CheckFile<<"M_in               = "<<M_in<<endl;
-    CheckFile<<"M_matn_in          = "<<M_matn_in<<endl;
-    CheckFile<<"M_mato_in          = "<<M_mato_in<<endl;
-    CheckFile<<"Mmult_imat_in      = "<<Mmult_imat_in<<endl;
-    CheckFile<<"Mmultm_in          = "<<Mmultm_in<<endl;
-    CheckFile<<"Mmultf_in          = "<<Mmultf_in<<endl;
-    CheckFile<<"mat_big_in         = "<<mat_big_in<<endl;
-    CheckFile<<"phase_moltingp     = "<<phase_moltingp<<endl;
-    CheckFile<<"phase_fishsel      = "<<phase_fishsel<<endl;
-    CheckFile<<"survsel_phase      = "<<survsel_phase<<endl;
-    CheckFile<<"survsel1_phase     = "<<survsel1_phase<<endl;
-    CheckFile<<"phase_logistic_sel = "<<phase_logistic_sel<<endl;
-    CheckFile<<"sel_som            = "<<sel_som<<endl;
+    baseM_msx(IMMATURE,NEW_SHELL,FEMALE) = inpM_Imm(FEMALE);
+    baseM_msx(IMMATURE,NEW_SHELL,  MALE) = inpM_Imm(  MALE);
+    baseM_msx(IMMATURE,OLD_SHELL,FEMALE) = inpM_Imm(FEMALE);
+    baseM_msx(IMMATURE,OLD_SHELL,  MALE) = inpM_Imm(  MALE);
+    baseM_msx(  MATURE,NEW_SHELL,FEMALE) = inpM_MatNS(FEMALE);
+    baseM_msx(  MATURE,NEW_SHELL,  MALE) = inpM_MatNS(  MALE);
+    baseM_msx(  MATURE,OLD_SHELL,FEMALE) = inpM_MatOS(FEMALE);
+    baseM_msx(  MATURE,OLD_SHELL,  MALE) = inpM_MatOS(  MALE);
+    CheckFile<<"multQ                = "<<multQ<<endl;
+    CheckFile<<"phsM                 = "<<phsM<<endl;
+    CheckFile<<"inpM_Imm             = "<<inpM_Imm<<endl;
+    CheckFile<<"inpM_MatNS           = "<<inpM_MatNS<<endl;
+    CheckFile<<"inpM_MatOS           = "<<inpM_MatOS<<endl;
+    CheckFile<<"inpMfac_Imm          = "<<inpMfac_Imm<<endl;
+    CheckFile<<"inpMfac_MatM         = "<<inpMfac_MatM<<endl;
+    CheckFile<<"inpMfac_MatF         = "<<inpMfac_MatF<<endl;
+    CheckFile<<"inpMfac_Big          = "<<inpMfac_Big<<endl;
+    CheckFile<<"phsPrMolt_MatureMale = "<<phsPrMolt_MatureMale<<endl;
+    CheckFile<<"phase_fishsel        = "<<phase_fishsel<<endl;
+    CheckFile<<"survsel_phase        = "<<survsel_phase<<endl;
+    CheckFile<<"survsel1_phase       = "<<survsel1_phase<<endl;
+    CheckFile<<"phase_logistic_sel   = "<<phase_logistic_sel<<endl;
+    CheckFile<<"sel_som              = "<<sel_som<<endl;
  END_CALCS
             
     init_vector wt_like(1,8)              // weights for selectivity likelihoods 1 fishery female, 2 survey female, 3 fishery male, 4 survey male
@@ -857,7 +863,7 @@ DATA_SECTION
     
     init_number hm_pot                                                // fraction of pot discards that die (.5)
     init_number hm_trawl                                               // fraction of trawl discards that die(.8)
-    !!CheckFile<<"hm_pot  = "<<hm_pot<<endl;
+    !!CheckFile<<"hm_pot   = "<<hm_pot<<endl;
     !!CheckFile<<"hm_trawl = "<<hm_trawl<<endl;
     
     init_number mate_ratio                                            // mating ratio (USED)
@@ -1017,9 +1023,16 @@ DATA_SECTION
     //new 20160324: options for extrapolating 
     //fishery mortality/capture rate from effort
 //    init_int phsQFshEff_TCF  ///< initial estimation phase for TCF effort extrapolation
-//    init_int phsQFshEff_SCF  ///< initial estimation phase for SCF effort extrapolation
-//    init_int phsQFshEff_RKF  ///< initial estimation phase for RKF effort extrapolation
+    init_int phsQFshEff_SCF  ///< initial estimation phase for SCF effort extrapolation
+    init_int phsQFshEff_RKF  ///< initial estimation phase for RKF effort extrapolation
 //    init_int phsQFshEff_GTF  ///< initial estimation phase for GTF effort extrapolation
+ LOCAL_CALCS
+    CheckFile<<"#---Options for extrapolating effort to fishing mortality"<<endl;
+//    CheckFile<<"phsQFshEff_TCF = "<<phsQFshEff_TCF<<endl;
+    CheckFile<<"phsQFshEff_SCF = "<<phsQFshEff_SCF<<endl;
+    CheckFile<<"phsQFshEff_RKF = "<<phsQFshEff_RKF<<endl;
+//    CheckFile<<"phsQFshEff_GTF = "<<phsQFshEff_GTF<<endl;
+ END_CALCS
          
     //Finished reading control file
     !!CheckFile<<"Finished reading control file."<<endl;
@@ -1182,8 +1195,8 @@ PARAMETER_SECTION
     init_bounded_number moltp_bf(130.,300.,-6)                   // female                                    //this is NOT estimated (why?)
     init_bounded_number moltp_am(0.04,3.0,-5)                    // paramters for logistic function molting   //this is NOT estimated (why?)
     init_bounded_number moltp_bm(130.0,300.0,-5)                 // immature males                            //this is NOT estimated (why?)
-    init_bounded_number moltp_ammat(.0025,3.0,phase_moltingp)    // logistic molting prob for mature males
-    init_bounded_number moltp_bmmat(1,120,phase_moltingp)        // logistic molting prob for mature males
+    init_bounded_number moltp_ammat(.0025,3.0,phsPrMolt_MatureMale)    // logistic molting prob for mature males
+    init_bounded_number moltp_bmmat(1,120,phsPrMolt_MatureMale)        // logistic molting prob for mature males
     
     init_number pMnLnRec(phsMnLnRec)                                                         // Mean ln-scale "current" recruitment 1974+ (males, females are equal)
     init_bounded_dev_vector pRecDevs(mnYrRecCurr,endyr,-15,15,phsRecDevs)                    // "current" recruitment devs
@@ -1354,6 +1367,10 @@ PARAMETER_SECTION
     init_bounded_number pAvgLnF_RKFF(-5.0,5.0,phsRKFF)  // female offset to ln-scale mean fishing mortality in BBRKC fishery
     init_bounded_number pAvgLnF_GTFF(-5.0,5.0,phsGTFF)  // female offset to ln-scale mean fishing mortality in groundfish trawl fisheries
 
+//    init_bounded_number pQFshEff_TCF(-5.0,5.0,phsQFshEff_TCF)  ///< TCF effort extrapolation parameter
+    init_bounded_number pQFshEff_SCF(-5.0,5.0,phsQFshEff_SCF)  ///< SCF effort extrapolation parameter
+    init_bounded_number pQFshEff_RKF(-5.0,5.0,phsQFshEff_RKF)  ///< RKF effort extrapolation parameter
+//    init_bounded_number pQFshEff_GTF(-5.0,5.0,phsQFshEff_GTF)  ///< GTF effort extrapolation parameter
     ////end of estimated parameters///////////////
     
     3darray retFcn(1,nSCs,styr,endyr-1,1,nZBs)    // Retention curve for males caught in directed fishery    (IMPORTANT CHANGE: used to be "endyr")
@@ -1441,8 +1458,8 @@ PARAMETER_SECTION
     matrix fGTF_xy(1,nSXs,styr,endyr-1)    //groundfish fisheries
     
     //ratios for extrapolating effort to fishing mortality
-    number brSCF  //snow crab fishery
-    number brRKF  //BBRKC fishery
+    number qSCF  //snow crab fishery
+    number qRKF  //BBRKC fishery
                       
     //wts: 20150601: fc's are CAPTURE (NOT mortality) rates (ONLY calculated if using gmacs calculations)
     3darray fcTCFM_syz(1,nSCs,styr,endyr-1,1,nZBs)     // male capture rate in directed fishery                             
@@ -1628,13 +1645,13 @@ PARAMETER_SECTION
     objective_function_value f
     
  LOCAL_CALCS
-    CheckFile << "Phase: Moulting probabilities:       " << phase_moltingp << endl;
+    CheckFile << "Phase: Moulting probabilities:       " << phsPrMolt_MatureMale << endl;
     CheckFile << "Phase: Logistic selectivity pattern: " << phase_logistic_sel << endl;
     CheckFile << "Phase: Dome-shaped selectivity:      " << phase_fishsel << endl;
     CheckFile << "Phase: Survey selectivity #1         " << survsel1_phase << endl;
     CheckFile << "Phase: Survey selectivity #2         " << survsel_phase << endl;
     CheckFile << "Maturity switch:                     " << maturity_switch << endl;
-    cout << "Phase: Moulting probabilities:       " << phase_moltingp     << endl;
+    cout << "Phase: Moulting probabilities:       " << phsPrMolt_MatureMale     << endl;
     cout << "Phase: Logistic selectivity pattern: " << phase_logistic_sel << endl;
     cout << "Phase: Dome-shaped selectivity:      " << phase_fishsel      << endl;
     cout << "Phase: Survey selectivity #1         " << survsel1_phase     << endl;
@@ -1661,10 +1678,10 @@ PRELIMINARY_CALCS_SECTION
     
     if (!usePin){//set initial values from control file inputs 
         //natural mortality multipliers
-        Mmult_imat = Mmult_imat_in;
-        Mmultm = Mmultm_in;
-        Mmultf = Mmultf_in;
-        mat_big = mat_big_in;
+        Mmult_imat = inpMfac_Imm;
+        Mmultm = inpMfac_MatM;
+        Mmultf = inpMfac_MatF;
+        mat_big = inpMfac_Big;
         
         //recruitment
         pMnLnRecHist = inpMnLnRecHist;
@@ -2553,7 +2570,7 @@ FUNCTION get_moltingp                         //wts: revised
     moltp_mat(FEMALE)=0.0;
     
     // molting probability for mature males can be zero (or estimated)
-    if(phase_moltingp > 0){
+    if(phsPrMolt_MatureMale > 0){
         moltp_mat(MALE) = 1.0-(1.0/(1.0+mfexp(-1.*moltp_ammat*(length_bins-moltp_bmmat))));
     } else {
         moltp_mat(MALE) = 0.0;
@@ -2821,32 +2838,42 @@ FUNCTION get_mortality
     // fmortdf=mfexp(log_avg_fmortdf+fmortdf_dev); using overall fmTCFM_syz for females as well as males in directed fishery
     //Fs in snow and BBRKC fishery are scalars need to multiply in projections by retained snow crab/average snow catch * fmTCFM_syz to get fmTCFM_syz.
     //20150601: ratio is now either mortality rate/effort OR fishing capture rate/effort
-    dvar_vector f_SCF1 = mfexp(pAvgLnF_SCF+pF_DevsSCF);
-    brSCF = mean(f_SCF1)/(mean(effSCF_y(1992,endyr-1)));
-    if (debug) cout<<" brSCF = "<<brSCF<<endl; 
+    //20160325: scaling factor can now be related to a model parameter
+    if (active(pQFshEff_SCF)){
+        qSCF = mfexp(pQFshEff_SCF);
+    } else {
+        dvar_vector f_SCF1 = mfexp(pAvgLnF_SCF+pF_DevsSCF);
+        qSCF = mean(f_SCF1)/(mean(effSCF_y(1992,endyr-1)));
+    }
+    if (debug) cout<<" qSCF = "<<qSCF<<endl; 
     if (debug) cout<<"2"<<endl;
     
     fSCF_xy.initialize();
     fSCF_xy(MALE)(styr,1977)= 0.01;
-    for(int iy=1978;iy<=1991;iy++) fSCF_xy(MALE)(iy) = brSCF*effSCF_y(iy);
-    fSCF_xy(MALE)(1992,endyr-1) = f_SCF1;
+    for(int iy=1978;iy<=1991;iy++) fSCF_xy(MALE)(iy) = qSCF*effSCF_y(iy);
+    fSCF_xy(MALE)(1992,endyr-1) = mfexp(pAvgLnF_SCF+pF_DevsSCF);
     fSCF_xy(FEMALE) = fSCF_xy(MALE)*mfexp(pAvgLnF_SCFF);
     if (debug) cout<<"3"<<endl;
     
     // need to have the devs 1992 to present
     //20150601: ratio is now either mortality rate/effort OR fishing capture rate/effort
-    dvar_vector f_RKF1(1,nObsDscRKF);   //was nObsDscRKF-1
-    f_RKF1 = mfexp(pAvgLnF_RKF+pF_DevsRKF);
-    brRKF = mean(1-exp(-f_RKF1))/(mean(effRKF_y(yrsObsDscRKF)));
+    //20160325: scaling factor can now be related to a model parameter
+    if (active(pQFshEff_RKF)){
+        qRKF = mfexp(pQFshEff_RKF);
+    } else {
+        dvar_vector f_RKF1(1,nObsDscRKF);   //was nObsDscRKF-1
+        f_RKF1 = mfexp(pAvgLnF_RKF+pF_DevsRKF);
+        qRKF = mean(1-exp(-f_RKF1))/(mean(effRKF_y(yrsObsDscRKF)));
+    }
 //    cout<<"4a"<<endl;
     fRKF_xy.initialize();
-    fRKF_xy(MALE)(styr,1952)= 0.02; //brRKF*mean(rkccatch(1969,1973));
+    fRKF_xy(MALE)(styr,1952)= 0.02; //qRKF*mean(rkccatch(1969,1973));
 //    cout<<"4a"<<endl;
-    for (int iy=1953;iy<=1965;iy++) fRKF_xy(MALE)(iy) = -log(1-brRKF*effRKF_y(iy));//WTS: used to be rkceffortjap(iy)
+    for (int iy=1953;iy<=1965;iy++) fRKF_xy(MALE)(iy) = -log(1-qRKF*effRKF_y(iy));//WTS: used to be rkceffortjap(iy)
 //    cout<<"4a"<<endl;
-    for (int iy=1966;iy<=1972;iy++) fRKF_xy(MALE)(iy) = -log(1-brRKF*effRKF_y(iy));//WTS: used to be effRKF_y(iy)+rkceffortjap(iy)
+    for (int iy=1966;iy<=1972;iy++) fRKF_xy(MALE)(iy) = -log(1-qRKF*effRKF_y(iy));//WTS: used to be effRKF_y(iy)+rkceffortjap(iy)
 //    cout<<"4b"<<endl;
-    for (int iy=1973;iy<=1991;iy++) fRKF_xy(MALE)(iy) = -log(1-brRKF*effRKF_y(iy));
+    for (int iy=1973;iy<=1991;iy++) fRKF_xy(MALE)(iy) = -log(1-qRKF*effRKF_y(iy));
 //    cout<<"4c"<<endl;
     for (int iy=1953;iy<=1991;iy++) if(fRKF_xy(MALE)(iy)< 0.01) fRKF_xy(MALE)(iy) = 0.01;       
 //    cout<<"4d"<<endl;
@@ -6398,7 +6425,10 @@ FUNCTION void writeLikelihoodComponents(ostream& os, int toR)
 // ==========================================================================
 // ==========================================================================
 REPORT_SECTION
-    cout<<"starting REPORT_SECTION"<<endl;
+    cout<<"starting REPORT_SECTION for phase "<<current_phase()<<endl;
+    
+    cout<<"qSCF = "<<qSCF<<endl;
+    cout<<"qRKF = "<<qRKF<<endl;
     
     if (active(log_sel50_dev_3)) { 
         double llw = 0.0;
