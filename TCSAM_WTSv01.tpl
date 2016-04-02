@@ -66,6 +66,7 @@
 //            7. Added option to ESTIMATE the scaling factor from effort to fishing mortality
 //                  used to extrapolate effort to fishing mortality in years where (by)catch data
 //                  is unavailable but effort data is.
+//--20160401: 1. Fixed array size problems in writeToR when gmacs fishing mortality option selected.
 //
 //IMPORTANT: 2013-09 assessment model had RKC params for 1992+ discard mortality TURNED OFF. 
 //           THE ESTIMATION PHASE FOR RKC DISCARD MORTALITY IS NOW SET IN THE CONTROLLER FILE!
@@ -1882,7 +1883,7 @@ PRELIMINARY_CALCS_SECTION
     obsSrvMatNum_sxy.initialize();
     for (int m=1;m<=2;m++) { //maturity status
         for (int s=1;s<=2;s++) { //s condition
-            for (int x=1;x<=2;x++) {          //x
+            for (int x=1;x<=2;x++) { //x
                 for (int i=1; i <= nObsZCsSrv; i++) {
                     obsSrvNum_xyz(x,yrsObsZCsSrv_n(i)) += obsPrNatZ_Srv_msxnz(m,s,x,i)*obsSrvNum_y(yrsObsZCsSrv_n(i));
                     obsSrvBio_xy(x,yrsObsZCsSrv_n(i))  += obsPrNatZ_Srv_msxnz(m,s,x,i)*obsSrvNum_y(yrsObsZCsSrv_n(i))*wt_xmz(x,m);
@@ -1908,11 +1909,11 @@ PRELIMINARY_CALCS_SECTION
             }
         }
     }
-    CheckFile<<"obsSrvNum_xyz"   <<endl<<obsSrvNum_xyz    <<endl;
-    CheckFile<<"obsSrvBio_y"  <<endl<<obsSrvBio_y  <<endl;
-    CheckFile<<"obsSrvBio_xy" <<endl<<obsSrvBio_xy <<endl;
-    CheckFile<<"obsSrvMatBio_xy"<<endl<<obsSrvMatBio_xy<<endl;
-    CheckFile<<"obsSrvMatNum_sxy" <<endl<<obsSrvMatNum_sxy <<endl;
+    CheckFile<<"obsSrvNum_xyz"   <<endl<<obsSrvNum_xyz   <<endl;
+    CheckFile<<"obsSrvBio_y"     <<endl<<obsSrvBio_y     <<endl;
+    CheckFile<<"obsSrvBio_xy"    <<endl<<obsSrvBio_xy    <<endl;
+    CheckFile<<"obsSrvMatBio_xy" <<endl<<obsSrvMatBio_xy <<endl;
+    CheckFile<<"obsSrvMatNum_sxy"<<endl<<obsSrvMatNum_sxy<<endl;
     
     // Number of large males
     obsSrvLegalNum_n.initialize();
@@ -1958,6 +1959,9 @@ PRELIMINARY_CALCS_SECTION
     ofstream initReptToR("TCSAM_WTS.init.R");
     myWriteToR(initReptToR);
     initReptToR.close();
+    ofstream initReptToR1("TCSAM_OLDSTYLE.init.R");
+    writeToR(initReptToR1);
+    initReptToR1.close();
     
     if (option_match(ad_comm::argc,ad_comm::argv,"-mceval")>-1) {
         openMCMCFile();
@@ -5664,6 +5668,7 @@ FUNCTION void writeToR(ofstream& R_out)
             
             //total numbers-at-size captured
             for (int yr=styr;yr<=(endyr-1);yr++) {
+                //cout<<"yr = "<<yr<<endl;
                 //numbers of males captured in TCF
                 ratio1 = elem_prod(elem_div(fcTCFM_syz(NEW_SHELL,yr),fmTOT_xsyz(MALE,NEW_SHELL,yr)),1.0-S_xsyz(MALE,NEW_SHELL,yr));
                 cpN_fyxmsz(iTCF,yr,MALE,IMMATURE,NEW_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,MALE,IMMATURE,NEW_SHELL));
@@ -5673,6 +5678,7 @@ FUNCTION void writeToR(ofstream& R_out)
                 cpN_fyxmsz(iTCF,yr,MALE,MATURE,NEW_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,MALE,  MATURE,NEW_SHELL));
                 ratio1 = elem_prod(elem_div(fcTCFM_syz(OLD_SHELL,yr),fmTOT_xsyz(MALE,OLD_SHELL,yr)),1.0-S_xsyz(MALE,OLD_SHELL,yr));
                 cpN_fyxmsz(iTCF,yr,MALE,MATURE,OLD_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,MALE,  MATURE,OLD_SHELL));
+                //cout<<"--TCF: males"<<endl;
                 //numbers of females captured in TCF
                 ratio1 = elem_prod(elem_div(fmTCFF_yz(yr),fmTOT_xsyz(FEMALE,NEW_SHELL,yr)),1.0-S_xsyz(FEMALE,NEW_SHELL,yr));
                 cpN_fyxmsz(iTCF,yr,FEMALE,IMMATURE,NEW_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,FEMALE,IMMATURE,NEW_SHELL));
@@ -5682,6 +5688,7 @@ FUNCTION void writeToR(ofstream& R_out)
                 cpN_fyxmsz(iTCF,yr,FEMALE,MATURE,NEW_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,FEMALE,  MATURE,NEW_SHELL));
                 ratio1 = elem_prod(elem_div(fcTCFF_yz(yr),fmTOT_xsyz(FEMALE,OLD_SHELL,yr)),1.0-S_xsyz(FEMALE,OLD_SHELL,yr));
                 cpN_fyxmsz(iTCF,yr,FEMALE,MATURE,OLD_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,FEMALE,  MATURE,OLD_SHELL));
+                //cout<<"--TCF: females"<<endl;
 
                 //numbers of males captured in SCF
                 ratio1 = elem_prod(elem_div(fcSCF_xyz(MALE,yr),fmTOT_xsyz(MALE,NEW_SHELL,yr)),1.0-S_xsyz(MALE,NEW_SHELL,yr));
@@ -5692,6 +5699,7 @@ FUNCTION void writeToR(ofstream& R_out)
                 cpN_fyxmsz(iSCF,yr,MALE,MATURE,NEW_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,MALE,  MATURE,NEW_SHELL));
                 ratio1 = elem_prod(elem_div(fcSCF_xyz(MALE,yr),fmTOT_xsyz(MALE,OLD_SHELL,yr)),1.0-S_xsyz(MALE,OLD_SHELL,yr));
                 cpN_fyxmsz(iSCF,yr,MALE,MATURE,OLD_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,MALE,  MATURE,OLD_SHELL));
+                //cout<<"--SCF: males"<<endl;
                 //numbers of females captured in SCF
                 ratio1 = elem_prod(elem_div(fcSCF_xyz(FEMALE,yr),fmTOT_xsyz(FEMALE,NEW_SHELL,yr)),1.0-S_xsyz(FEMALE,NEW_SHELL,yr));
                 cpN_fyxmsz(iSCF,yr,FEMALE,IMMATURE,NEW_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,FEMALE,IMMATURE,NEW_SHELL));
@@ -5701,44 +5709,49 @@ FUNCTION void writeToR(ofstream& R_out)
                 cpN_fyxmsz(iSCF,yr,FEMALE,MATURE,NEW_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,FEMALE,  MATURE,NEW_SHELL));
                 ratio1 = elem_prod(elem_div(fcSCF_xyz(FEMALE,yr),fmTOT_xsyz(FEMALE,OLD_SHELL,yr)),1.0-S_xsyz(FEMALE,OLD_SHELL,yr));
                 cpN_fyxmsz(iSCF,yr,FEMALE,MATURE,OLD_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,FEMALE,  MATURE,OLD_SHELL));
+                //cout<<"--SCF: females"<<endl;
 
                 //numbers of males captured in RKF
                 ratio1 = elem_prod(elem_div(fcRKF_xyz(MALE,yr),fmTOT_xsyz(MALE,NEW_SHELL,yr)),1.0-S_xsyz(MALE,NEW_SHELL,yr));
-                cpN_fyxmsz(iRKF,yr,MALE,IMMATURE,NEW_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,MALE,IMMATURE,NEW_SHELL)(MALE,yr));
+                cpN_fyxmsz(iRKF,yr,MALE,IMMATURE,NEW_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,MALE,IMMATURE,NEW_SHELL));
                 ratio1 = elem_prod(elem_div(fcRKF_xyz(MALE,yr),fmTOT_xsyz(MALE,OLD_SHELL,yr)),1.0-S_xsyz(MALE,OLD_SHELL,yr));
-                cpN_fyxmsz(iRKF,yr,MALE,IMMATURE,OLD_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,MALE,IMMATURE,OLD_SHELL)(MALE,yr));
+                cpN_fyxmsz(iRKF,yr,MALE,IMMATURE,OLD_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,MALE,IMMATURE,OLD_SHELL));
                 ratio1 = elem_prod(elem_div(fcRKF_xyz(MALE,yr),fmTOT_xsyz(MALE,NEW_SHELL,yr)),1.0-S_xsyz(MALE,NEW_SHELL,yr));
-                cpN_fyxmsz(iRKF,yr,MALE,MATURE,NEW_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,MALE,  MATURE,NEW_SHELL)(MALE,yr));
+                cpN_fyxmsz(iRKF,yr,MALE,MATURE,NEW_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,MALE,  MATURE,NEW_SHELL));
                 ratio1 = elem_prod(elem_div(fcRKF_xyz(MALE,yr),fmTOT_xsyz(MALE,OLD_SHELL,yr)),1.0-S_xsyz(MALE,OLD_SHELL,yr));
-                cpN_fyxmsz(iRKF,yr,MALE,MATURE,OLD_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,MALE,  MATURE,OLD_SHELL)(MALE,yr));
+                cpN_fyxmsz(iRKF,yr,MALE,MATURE,OLD_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,MALE,  MATURE,OLD_SHELL));
+                //cout<<"--RKF: males"<<endl;
                 //numbers of females captured in RKF
                 ratio1 = elem_prod(elem_div(fcRKF_xyz(FEMALE,yr),fmTOT_xsyz(FEMALE,NEW_SHELL,yr)),1.0-S_xsyz(FEMALE,NEW_SHELL,yr));
-                cpN_fyxmsz(iRKF,yr,FEMALE,IMMATURE,NEW_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,FEMALE,IMMATURE,NEW_SHELL)(FEMALE,yr));
+                cpN_fyxmsz(iRKF,yr,FEMALE,IMMATURE,NEW_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,FEMALE,IMMATURE,NEW_SHELL));
                 ratio1 = elem_prod(elem_div(fcRKF_xyz(FEMALE,yr),fmTOT_xsyz(FEMALE,OLD_SHELL,yr)),1.0-S_xsyz(FEMALE,OLD_SHELL,yr));
-                cpN_fyxmsz(iRKF,yr,FEMALE,IMMATURE,OLD_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,FEMALE,IMMATURE,OLD_SHELL)(FEMALE,yr));
+                cpN_fyxmsz(iRKF,yr,FEMALE,IMMATURE,OLD_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,FEMALE,IMMATURE,OLD_SHELL));
                 ratio1 = elem_prod(elem_div(fcRKF_xyz(FEMALE,yr),fmTOT_xsyz(FEMALE,NEW_SHELL,yr)),1.0-S_xsyz(FEMALE,NEW_SHELL,yr));
-                cpN_fyxmsz(iRKF,yr,FEMALE,MATURE,NEW_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,FEMALE,  MATURE,NEW_SHELL)(FEMALE,yr));
+                cpN_fyxmsz(iRKF,yr,FEMALE,MATURE,NEW_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,FEMALE,  MATURE,NEW_SHELL));
                 ratio1 = elem_prod(elem_div(fcRKF_xyz(FEMALE,yr),fmTOT_xsyz(FEMALE,OLD_SHELL,yr)),1.0-S_xsyz(FEMALE,OLD_SHELL,yr));
-                cpN_fyxmsz(iRKF,yr,FEMALE,MATURE,OLD_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,FEMALE,  MATURE,OLD_SHELL)(FEMALE,yr));
+                cpN_fyxmsz(iRKF,yr,FEMALE,MATURE,OLD_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,FEMALE,  MATURE,OLD_SHELL));
+                //cout<<"--RKF: females"<<endl;
 
                 //numbers of males captured in GTF
                 ratio1 = elem_prod(elem_div(fcGTF_xyz(MALE,yr),fmTOT_xsyz(MALE,NEW_SHELL,yr)),1.0-S_xsyz(MALE,NEW_SHELL,yr));
-                cpN_fyxmsz(iGTF,yr,MALE,IMMATURE,NEW_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,MALE,IMMATURE,NEW_SHELL)(MALE,yr));
+                cpN_fyxmsz(iGTF,yr,MALE,IMMATURE,NEW_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,MALE,IMMATURE,NEW_SHELL));
                 ratio1 = elem_prod(elem_div(fcGTF_xyz(MALE,yr),fmTOT_xsyz(MALE,OLD_SHELL,yr)),1.0-S_xsyz(MALE,OLD_SHELL,yr));
-                cpN_fyxmsz(iGTF,yr,MALE,IMMATURE,OLD_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,MALE,IMMATURE,OLD_SHELL)(MALE,yr));
+                cpN_fyxmsz(iGTF,yr,MALE,IMMATURE,OLD_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,MALE,IMMATURE,OLD_SHELL));
                 ratio1 = elem_prod(elem_div(fcGTF_xyz(MALE,yr),fmTOT_xsyz(MALE,NEW_SHELL,yr)),1.0-S_xsyz(MALE,NEW_SHELL,yr));
-                cpN_fyxmsz(iGTF,yr,MALE,MATURE,NEW_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,MALE,  MATURE,NEW_SHELL)(MALE,yr));
+                cpN_fyxmsz(iGTF,yr,MALE,MATURE,NEW_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,MALE,  MATURE,NEW_SHELL));
                 ratio1 = elem_prod(elem_div(fcGTF_xyz(MALE,yr),fmTOT_xsyz(MALE,OLD_SHELL,yr)),1.0-S_xsyz(MALE,OLD_SHELL,yr));
-                cpN_fyxmsz(iGTF,yr,MALE,MATURE,OLD_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,MALE,  MATURE,OLD_SHELL)(MALE,yr));
+                cpN_fyxmsz(iGTF,yr,MALE,MATURE,OLD_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,MALE,  MATURE,OLD_SHELL));
+                //cout<<"--GTF: males"<<endl;
                 //numbers of females captured in GTF
                 ratio1 = elem_prod(elem_div(fcGTF_xyz(FEMALE,yr),fmTOT_xsyz(FEMALE,NEW_SHELL,yr)),1.0-S_xsyz(FEMALE,NEW_SHELL,yr));
-                cpN_fyxmsz(iGTF,yr,FEMALE,IMMATURE,NEW_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,FEMALE,IMMATURE,NEW_SHELL)(FEMALE,yr));
+                cpN_fyxmsz(iGTF,yr,FEMALE,IMMATURE,NEW_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,FEMALE,IMMATURE,NEW_SHELL));
                 ratio1 = elem_prod(elem_div(fcGTF_xyz(FEMALE,yr),fmTOT_xsyz(FEMALE,OLD_SHELL,yr)),1.0-S_xsyz(FEMALE,OLD_SHELL,yr));
-                cpN_fyxmsz(iGTF,yr,FEMALE,IMMATURE,OLD_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,FEMALE,IMMATURE,OLD_SHELL)(FEMALE,yr));
+                cpN_fyxmsz(iGTF,yr,FEMALE,IMMATURE,OLD_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,FEMALE,IMMATURE,OLD_SHELL));
                 ratio1 = elem_prod(elem_div(fcGTF_xyz(FEMALE,yr),fmTOT_xsyz(FEMALE,NEW_SHELL,yr)),1.0-S_xsyz(FEMALE,NEW_SHELL,yr));
-                cpN_fyxmsz(iGTF,yr,FEMALE,MATURE,NEW_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,FEMALE,  MATURE,NEW_SHELL)(FEMALE,yr));
+                cpN_fyxmsz(iGTF,yr,FEMALE,MATURE,NEW_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,FEMALE,  MATURE,NEW_SHELL));
                 ratio1 = elem_prod(elem_div(fcGTF_xyz(FEMALE,yr),fmTOT_xsyz(FEMALE,OLD_SHELL,yr)),1.0-S_xsyz(FEMALE,OLD_SHELL,yr));
-                cpN_fyxmsz(iGTF,yr,FEMALE,MATURE,OLD_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,FEMALE,  MATURE,OLD_SHELL)(FEMALE,yr));
+                cpN_fyxmsz(iGTF,yr,FEMALE,MATURE,OLD_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,FEMALE,  MATURE,OLD_SHELL));
+                //cout<<"--GTF: females"<<endl;
             }//yr
 
             //write out fishery captures for TCF
