@@ -54,25 +54,29 @@ void ModelConfiguration::write(const adstring & fn) {
 ***************************************************************/
 void ModelConfiguration::read(cifstream & is) {
     if (debug) std::cout<<"ModelConfiguration::read(cifstream & is)"<<std::endl;
+    adstring parent = wts::getParentFolder(is);
+    cout<<"Model configuration file is '"<<is.get_file_name()<<"'"<<endl;
+    cout<<"Parent folder is '"<<parent<<endl;
+    
     is>>cfgName;
     if (debug) std::cout<<cfgName<<std::endl;
     is>>asmtYr;//assessment year (can be < maxYr)
     is>>mnYr; //min model year
     is>>mxYr; //max model year
     is>>jitFrac; //jitter fraction
-    is>>nZBins;
+    is>>nZBs;
     if (debug){
         std::cout<<asmtYr<<tb<<"#assessment year"<<std::endl;
         std::cout<<mnYr <<tb<<"#model min year"<<std::endl;
         std::cout<<mxYr <<tb<<"#model max year"<<std::endl;
         std::cout<<jitFrac<<tb<<"#jitter fraction"<<std::endl;
-        std::cout<<nZBins<<tb<<"#number of size bins"<<std::endl;
+        std::cout<<nZBs<<tb<<"#number of size bins"<<std::endl;
     }
-    zBins.allocate(1,nZBins); 
-    zBinCutPts.allocate(1,nZBins+1); 
-    onesZBins.allocate(1,nZBins); onesZBins = 1.0;
+    zBins.allocate(1,nZBs); 
+    zBinCutPts.allocate(1,nZBs+1); 
+    onesZBins.allocate(1,nZBs); onesZBins = 1.0;
     is>>zBinCutPts;
-    for (int z=1;z<=nZBins;z++) zBins(z) = 0.5*(zBinCutPts(z)+zBinCutPts(z+1));
+    for (int z=1;z<=nZBs;z++) zBins(z) = 0.5*(zBinCutPts(z)+zBinCutPts(z+1));
     if (debug){
         std::cout<<"#size bins (mm CW)"<<std::endl;
         std::cout<<zBins<<std::endl;
@@ -92,8 +96,11 @@ void ModelConfiguration::read(cifstream & is) {
     is>>str; runOpMod   = ModelConsts::getBooleanType(str);//run population model?
     is>>str; fitToPriors = ModelConsts::getBooleanType(str);//fit priors?
     
-    is>>fnMPC;
+    is>>fnCtl;
     is>>fnMDS;
+    fnCtl = wts::concatenateFilePaths(parent,fnCtl);
+    fnMDS = wts::concatenateFilePaths(parent,fnMDS);
+    
     if (debug){
         std::cout<<ModelConsts::getBooleanType(inclTSD)    <<"   #include trawl survey data?"<<std::endl;
         std::cout<<ModelConsts::getBooleanType(inclTCF)    <<"   #include directed tanner crab fishery?"<<std::endl;
@@ -102,8 +109,10 @@ void ModelConfiguration::read(cifstream & is) {
         std::cout<<ModelConsts::getBooleanType(inclGTF)    <<"   #include groundfish trawl fishery?"<<std::endl;
         std::cout<<ModelConsts::getBooleanType(runOpMod)   <<"   #run operating model?"<<std::endl;
         std::cout<<ModelConsts::getBooleanType(fitToPriors)<<"   #fit to priors?"<<std::endl;
-        std::cout<<fnMPC<<"   #model parameters configuration file"<<std::endl;
+    }
+        std::cout<<fnCtl<<"   #model control file"<<std::endl;
         std::cout<<fnMDS<<"   #model datasets file"<<std::endl;
+    if (debug){
         std::cout<<"enter 1 to continue : ";
         std::cin>>debug;
         if (debug<0) exit(1);
@@ -124,7 +133,7 @@ void ModelConfiguration::write(std::ostream & os) {
     os<<asmtYr<<tb<<"#Assessment year"<<std::endl;
     os<<mnYr<<tb<<mxYr<<tb<<"#Min, max model years"<<std::endl;
     os<<jitFrac<<tb<<"#jitter fraction"<<std::endl;
-    os<<nZBins<<tb<<"#Number of model size classes"<<std::endl;
+    os<<nZBs<<tb<<"#Number of model size classes"<<std::endl;
     os<<"#size bin cut points"<<std::endl;
     os<<zBinCutPts <<std::endl;
     
@@ -137,7 +146,7 @@ void ModelConfiguration::write(std::ostream & os) {
     os<<ModelConsts::getBooleanType(runOpMod)<<tb<<"#run operating model?"<<std::endl;
     os<<ModelConsts::getBooleanType(fitToPriors)<<tb<<"#fit priors?"<<std::endl;
     
-    os<<fnMPC<<tb<<"#Model parameters configuration file"<<std::endl;
+    os<<fnCtl<<tb<<"#Model parameters configuration file"<<std::endl;
     os<<fnMDS<<tb<<"#Model datasets file"<<std::endl;
 
     if (debug) std::cout<<"#end ModelConfiguration::write(ostream)"<<std::endl;
@@ -152,7 +161,7 @@ void ModelConfiguration::writeToR(std::ostream& os, char* nm, int indent) {
     indent++;
     for (int n=0;n<indent;n++) os<<tb;
         os<<"configName='"<<cfgName<<"', mnYr="<<mnYr<<", mxYr="<<mxYr<<", assYr="<<asmtYr<<cc<<"jitFrac="<<jitFrac<<cc<<std::endl;
-        os<<"nZBins="<<nZBins<<cc;
+        os<<"nZBins="<<nZBs<<cc;
         os<<"zBins=";      wts::writeToR(os,zBins);     os<<cc<<std::endl;
         os<<"zBinCutPts="; wts::writeToR(os,zBinCutPts);os<<cc<<std::endl;
 //        writeVector(os,zBinCutPts,"zBinCutpts"); os<<cc<<std::endl;
@@ -166,7 +175,7 @@ void ModelConfiguration::writeToR(std::ostream& os, char* nm, int indent) {
         os<<"fitToPriors="<<fitToPriors<<"),";
         os<<std::endl;
     for (int n=0;n<indent;n++) os<<tb;
-        os<<"fnMPC='"<<fnMPC<<"', fnMDS='"<<fnMDS<<"')"<<std::endl;
+        os<<"fnMPC='"<<fnCtl<<"', fnMDS='"<<fnMDS<<"')"<<std::endl;
     indent--;
     for (int n=0;n<indent;n++) os<<tb;
         os<<")";

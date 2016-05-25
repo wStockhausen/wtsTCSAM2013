@@ -19,7 +19,7 @@
         int asmtYr; //assessment year
         int mnYr;  //min model year
         int mxYr;  //max model year
-        int nZBins;//number of size bins 
+        int nZBs;//number of size bins 
         
         double jitFrac;//jitter fraction
 
@@ -35,7 +35,7 @@
         dvector zBinCutPts;//size bin cutpoints (CW in mm)
         dvector onesZBins; //vector of 1's
 
-        adstring fnMPC; //model parameters configuration file name
+        adstring fnCtl; //model parameters configuration file name
         adstring fnMDS; //model datasets file name
 
     public:

@@ -181,9 +181,9 @@ void RetainedFisheryData::writeToR(std::ostream& os, char* nm, int indent) {
         //retained catch NatZ
         {indent++;   
             for (int n=0;n<indent;n++) os<<tb;
-            adstring s = qt+STR_NEW_SHELL+qt +cc+ qt+STR_OLD_SHELL+qt +cc+ qt+STR_ALL_SHELL+qt;
-            adstring y = wts::to_qcsv(yrsNatZ);
-            adstring z = wts::to_qcsv(zBins);        
+            adstring s = "s=c("+qt+STR_NEW_SHELL+qt +cc+ qt+STR_OLD_SHELL+qt +cc+ qt+STR_ALL_SHELL+qt+")";
+            adstring y = "y=c("+wts::to_qcsv(yrsNatZ)+")";
+            adstring z = "z=c("+wts::to_qcsv(zBins)+")";        
             os<<"nAtZ=list(units="<<qt<<unitsNatZ<<qt<<cc<<endl; 
             for (int n=0;n<indent;n++) os<<tb;
             os<<"years="; wts::writeToR(os,yrsNatZ); os<<cc<<endl;
@@ -363,13 +363,16 @@ void DiscardFisheryData::write(std::ostream & os){
 ***************************************************************/
 void DiscardFisheryData::writeToR(std::ostream& os, char* nm, int indent) {
     if (debug) cout<<"DiscardFisheryData::writing to R"<<endl;
+    adstring x = "x=c("+qt+STR_FEMALE+qt+cc+qt+STR_MALE+qt+")";
+    adstring m = "m=c("+qt+STR_IMMATURE+qt +cc+ qt+STR_MATURE+qt+")";
+    adstring s = "s=c("+qt+STR_IMMATURE+qt+cc+qt+STR_MATURE+qt+")";
+    adstring z = "z=c("+wts::to_qcsv(zBins)+")";
     for (int n=0;n<indent;n++) os<<tb;
         os<<nm<<"=list(name="<<qt<<fishery<<qt<<cc<<endl;
         //discarded catch
         indent++;
         {   for (int n=0;n<indent;n++) os<<tb;
-            adstring x = qt+STR_FEMALE+qt +cc+ qt+STR_MALE+qt;
-            adstring y  = wts::to_qcsv(yrsCatch);
+            adstring y  = "y=c("+wts::to_qcsv(yrsCatch)+")";
             os<<"catch=list("<<endl;
             indent++; 
                 for (int n=0;n<indent;n++) os<<tb;
@@ -383,7 +386,7 @@ void DiscardFisheryData::writeToR(std::ostream& os, char* nm, int indent) {
         //effort
         indent++;
         {   for (int n=0;n<indent;n++) os<<tb;
-            adstring y  = wts::to_qcsv(yrsCatch);
+            adstring y  = "y=c("+wts::to_qcsv(yrsEffort)+")";
             os<<"effort=list("<<endl;
             indent++; 
                 for (int n=0;n<indent;n++) os<<tb;
@@ -399,10 +402,9 @@ void DiscardFisheryData::writeToR(std::ostream& os, char* nm, int indent) {
         //discarded catch nAtZ
         {indent++;   
             for (int n=0;n<indent;n++) os<<tb;
-            adstring x = qt+STR_FEMALE+qt +cc+ qt+STR_MALE+qt +cc+ qt+STR_ALL_SEXES+qt;
-            adstring s = qt+STR_NEW_SHELL+qt +cc+ qt+STR_OLD_SHELL+qt +cc+ qt+STR_ALL_SHELL+qt;
-            adstring y = wts::to_qcsv(yrsNatZ);
-            adstring z = wts::to_qcsv(zBins);        
+            adstring x = "x=c("+qt+STR_FEMALE+qt +cc+ qt+STR_MALE+qt +cc+ qt+STR_ALL_SEXES+qt+")";
+            adstring s = "s=c("+qt+STR_NEW_SHELL+qt +cc+ qt+STR_OLD_SHELL+qt +cc+ qt+STR_ALL_SHELL+qt+")";
+            adstring y = "y=c("+wts::to_qcsv(yrsNatZ)+")";
             os<<"nAtZ=list(units="<<qt<<unitsNatZ<<qt<<cc<<endl; 
             for (int n=0;n<indent;n++) os<<tb;
             os<<"years="; wts::writeToR(os,yrsNatZ); os<<cc<<endl;
@@ -582,10 +584,10 @@ void GroundfishTrawlFisheryData::writeToR(std::ostream& os, char* nm, int indent
         //discarded catch nAtZ
         {indent++;   
             for (int n=0;n<indent;n++) os<<tb;
-            adstring x = qt+STR_FEMALE+qt +cc+ qt+STR_MALE+qt +cc+ qt+STR_ALL_SEXES+qt;
-            adstring s = qt+STR_NEW_SHELL+qt +cc+ qt+STR_OLD_SHELL+qt +cc+ qt+STR_ALL_SHELL+qt;
-            adstring y = wts::to_qcsv(yrsNatZ);
-            adstring z = wts::to_qcsv(zBins);        
+            adstring x = "x=c("+qt+STR_FEMALE+qt +cc+ qt+STR_MALE+qt +cc+ qt+STR_ALL_SEXES+qt+")";
+            adstring s = "s=c("+qt+STR_NEW_SHELL+qt +cc+ qt+STR_OLD_SHELL+qt +cc+ qt+STR_ALL_SHELL+qt+")";
+            adstring y = "y=c("+wts::to_qcsv(yrsNatZ)+")";
+            adstring z = "z=c("+wts::to_qcsv(zBins)+")";        
             os<<"nAtZ=list(units="<<qt<<unitsNatZ<<qt<<cc<<endl; 
             for (int n=0;n<indent;n++) os<<tb;
             os<<"years="; wts::writeToR(os,yrsNatZ); os<<cc<<endl;

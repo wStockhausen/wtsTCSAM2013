@@ -25,12 +25,13 @@ CND_PACKAGE_PATH_Release-Win=dist/Release-Win/MinGW64-Windows/package/tcsam2013.
 # Debug-Mac configuration
 CND_PLATFORM_Debug-Mac=CLang-MacOSX
 CND_ARTIFACT_DIR_Debug-Mac=dist/Debug-Mac/CLang-MacOSX
-CND_ARTIFACT_NAME_Debug-Mac=tcsam2013
-CND_ARTIFACT_PATH_Debug-Mac=dist/Debug-Mac/CLang-MacOSX/tcsam2013
+CND_ARTIFACT_NAME_Debug-Mac=tcsam2013alta
+CND_ARTIFACT_PATH_Debug-Mac=dist/Debug-Mac/CLang-MacOSX/tcsam2013alta
 CND_PACKAGE_DIR_Debug-Mac=dist/Debug-Mac/CLang-MacOSX/package
-CND_PACKAGE_NAME_Debug-Mac=tcsam2013.tar
-CND_PACKAGE_PATH_Debug-Mac=dist/Debug-Mac/CLang-MacOSX/package/tcsam2013.tar
+CND_PACKAGE_NAME_Debug-Mac=tcsam2013alta.tar
+CND_PACKAGE_PATH_Debug-Mac=dist/Debug-Mac/CLang-MacOSX/package/tcsam2013alta.tar
 # Release-Mac configuration
+<<<<<<< HEAD
 CND_PLATFORM_Release-Mac=MinGW64-Windows
 CND_ARTIFACT_DIR_Release-Mac=dist/Release-Mac/MinGW64-Windows
 CND_ARTIFACT_NAME_Release-Mac=tcsam2013
@@ -38,6 +39,15 @@ CND_ARTIFACT_PATH_Release-Mac=dist/Release-Mac/MinGW64-Windows/tcsam2013
 CND_PACKAGE_DIR_Release-Mac=dist/Release-Mac/MinGW64-Windows/package
 CND_PACKAGE_NAME_Release-Mac=tcsam2013.tar
 CND_PACKAGE_PATH_Release-Mac=dist/Release-Mac/MinGW64-Windows/package/tcsam2013.tar
+=======
+CND_PLATFORM_Release-Mac=CLang-MacOSX
+CND_ARTIFACT_DIR_Release-Mac=dist/Release-Mac/CLang-MacOSX
+CND_ARTIFACT_NAME_Release-Mac=tcsam2013alta
+CND_ARTIFACT_PATH_Release-Mac=dist/Release-Mac/CLang-MacOSX/tcsam2013alta
+CND_PACKAGE_DIR_Release-Mac=dist/Release-Mac/CLang-MacOSX/package
+CND_PACKAGE_NAME_Release-Mac=tcsam2013alta.tar
+CND_PACKAGE_PATH_Release-Mac=dist/Release-Mac/CLang-MacOSX/package/tcsam2013alta.tar
+>>>>>>> dev20160316
 #
 # include compiler specific variables
 #

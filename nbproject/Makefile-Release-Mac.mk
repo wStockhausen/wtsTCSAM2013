@@ -14,15 +14,20 @@ GREP=grep
 NM=nm
 CCADMIN=CCadmin
 RANLIB=ranlib
-CC=gcc
-CCC=g++
-CXX=g++
+CC=clang
+CCC=clang++
+CXX=clang++
 FC=gfortran
 AS=as
 
 # Macros
+<<<<<<< HEAD
 CND_PLATFORM=MinGW64-Windows
 CND_DLIB_EXT=dll
+=======
+CND_PLATFORM=CLang-MacOSX
+CND_DLIB_EXT=dylib
+>>>>>>> dev20160316
 CND_CONF=Release-Mac
 CND_DISTDIR=dist
 CND_BUILDDIR=build
@@ -60,11 +65,17 @@ LDLIBSOPTIONS=
 
 # Build Targets
 .build-conf: ${BUILD_SUBPROJECTS}
+<<<<<<< HEAD
 	"${MAKE}"  -f nbproject/Makefile-${CND_CONF}.mk ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/tcsam2013.exe
 
 ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/tcsam2013.exe: ${OBJECTFILES}
+=======
+	"${MAKE}"  -f nbproject/Makefile-${CND_CONF}.mk ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/tcsam2013alta
+
+${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/tcsam2013alta: ${OBJECTFILES}
+>>>>>>> dev20160316
 	${MKDIR} -p ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}
-	${LINK.cc} -o ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/tcsam2013 ${OBJECTFILES} ${LDLIBSOPTIONS}
+	${LINK.cc} -o ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/tcsam2013alta ${OBJECTFILES} ${LDLIBSOPTIONS}
 
 ${OBJECTDIR}/FisheryData.o: FisheryData.cpp 
 	${MKDIR} -p ${OBJECTDIR}
@@ -97,7 +108,11 @@ ${OBJECTDIR}/TCSAM_WTSv01.o: TCSAM_WTSv01.cpp
 # Clean Targets
 .clean-conf: ${CLEAN_SUBPROJECTS}
 	${RM} -r ${CND_BUILDDIR}/${CND_CONF}
+<<<<<<< HEAD
 	${RM} ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/tcsam2013.exe
+=======
+	${RM} ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/tcsam2013alta
+>>>>>>> dev20160316
 
 # Subprojects
 .clean-subprojects:

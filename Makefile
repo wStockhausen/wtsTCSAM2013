@@ -45,10 +45,17 @@
 
 
 # Environment 
+<<<<<<< HEAD
 PLATFORM=WIN
 ADMB_HOME_WIN=C:/Programs/ADMB64
 ADMB_HOME_MAC=/Users/WilliamStockhausen/Programs/admb/build/dist
 ADMB_HOME=${ADMB_HOME_WIN}
+=======
+PLATFORM=MAC
+ADMB_HOME_WIN=C:/Programs/admb/build/dist
+ADMB_HOME_MAC=/Users/WilliamStockhausen/Programs/admb/build/dist
+ADMB_HOME=${ADMB_HOME_${PLATFORM}}
+>>>>>>> dev20160316
 TPL=TCSAM_WTSv01
 MKDIR=mkdir
 CP=cp
