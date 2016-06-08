@@ -181,3 +181,17 @@ dvector ModelConsts::convertToStdDev(dvector sclVal, dvector mnVal, int sclFlg){
     return sdv;
 }
 
+/**
+ * Format sex, maturity, or shell condition-type string for output to R
+ * @param s - sex, maturity, or shell condition-type string
+ * @return - formatted version (lower case, all "_"s replaced with spaces
+ */
+adstring ModelConsts::formatForR(const adstring& s){
+    adstring tmp; tmp = s; tmp.to_lower();
+    int p = tmp.pos('_');
+    while (p>0){
+        tmp(p)=' ';
+        p = tmp.pos('_');
+    }
+    return tmp;
+}

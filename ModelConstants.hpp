@@ -67,6 +67,13 @@
         static int getShellType(adstring s);
         static adstring getShellType(int i);
         
+        /**
+         * Format sex, maturity, or shell condition-type string for output to R
+         * @param s - sex, maturity, or shell condition-type string
+         * @return - formatted version (lower case, all "_"s replaced with spaces
+         */
+        static adstring formatForR(const adstring& s);
+        
         //Stock-recruit function types
         static const adstring STR_CONSTANT;
         static const adstring STR_BEVHOLT;
