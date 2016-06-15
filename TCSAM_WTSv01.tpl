@@ -79,15 +79,23 @@
 //--20160609: 1. Corrected legal abundance/biomass calculations
 //            2. Corrected sample size calculations
 //--20160614: 1. Removed old report in favor of output to R
+//--20160615: 1. Revised recruitment parameters and rec_y to refer to total recruitment, 
+//                 not recruitment by sex (new rec_y = 2 * old rec_y).
+////            2. Revised rec_y and associated sdr variables to run styr to endyr-1,
+////                 so rec_y(y) enters population at start of y+1 (as in Jack's original approach).
+////                 This will allow direct comparisons with TCSAM2015 when starting population from 0.
 //
 //IMPORTANT: 2013-09 assessment model had RKC params for 1992+ discard mortality TURNED OFF. 
 //           THE ESTIMATION PHASE FOR RKC DISCARD MORTALITY IS NOW SET IN THE CONTROLLER FILE!
 //
+//  Output units (except where explicitly noted):
+//                  MILLIONS for abundance
+//                  1000's t for biomass
 //
 //********
 //to run mcmc 
-//scmysr2003bayes -nox -mcmc 1000000 -mcsave 200
-// then have to run  scmysr2003bayes -mceval to get output
+//tcsam2013alta -nox -mcmc 1000000 -mcsave 200
+// then have to run  tcsam2013alta -mceval to get output
 //whatever is in sd report file will have a distribution and output will go to eval.csv
 //for whatever have written to post later in program in the mcmc function part
 //
@@ -1202,18 +1210,18 @@ INITIALIZATION_SECTION
 // =======================================================================
 PARAMETER_SECTION
     
-    init_bounded_number pGrAF1(0.4,0.7,7)                       // Female growth-increment
-    init_bounded_number pGrBF1(0.6,1.2,7)                       // Female growth-increment
-    init_bounded_number pGrAM1(0.3,0.6,7)                       // Male growth-increment
-    init_bounded_number pGrBM1(0.7,1.2,7)                       // Male growth-increment
+    init_bounded_number pGrAF1(0.4,0.7,7)                     // Female growth-increment
+    init_bounded_number pGrBF1(0.6,1.2,7)                     // Female growth-increment
+    init_bounded_number pGrAM1(0.3,0.6,7)                     // Male growth-increment
+    init_bounded_number pGrBM1(0.7,1.2,7)                     // Male growth-increment
     init_bounded_vector pGrBeta_x(1,nSXs,0.75000,0.75001,-2)  // Growth beta:  NOT estimated
 
     init_bounded_number pMfac_Imm(0.2,2.0,phsM)                // natural mortality multiplier for immature females and males
-    init_bounded_number pMfac_MatM(0.1,1.9,phsM)                    // natural mortality multiplier for mature males
-    init_bounded_number pMfac_MatF(0.1,1.9,phsM)                    // natural mortality multiplier for mature females
-    init_bounded_vector pMfac_Big(1,nSXs,0.1,10.0,phsBigM)    // mult. on 1980-1980 M for mature males and females                     
+    init_bounded_number pMfac_MatM(0.1,1.9,phsM)               // natural mortality multiplier for mature males
+    init_bounded_number pMfac_MatF(0.1,1.9,phsM)               // natural mortality multiplier for mature females
+    init_bounded_vector pMfac_Big(1,nSXs,0.1,10.0,phsBigM)     // mult. on 1980-1984 M for mature males and females                     
     init_bounded_number pRecAlpha(11.49,11.51,-8)              // Parameters related to fraction recruiting  //this is NOT estimated (why?)
-    init_bounded_number pRecBeta(3.99,4.01,-8)                  // Parameters related to fraction recruiting  //this is NOT estimated (why?)
+    init_bounded_number pRecBeta(3.99,4.01,-8)                 // Parameters related to fraction recruiting  //this is NOT estimated (why?)
     
     init_bounded_number pPrMoltFA(0.04,3.0,-6)                       // parameter for immature female logistic prMolt   //this is NOT estimated (why?)
     init_bounded_number pPrMoltFB(130.,300.,-6)                      // parameter for immature female logistic prMolt   //this is NOT estimated (why?)
@@ -1222,11 +1230,11 @@ PARAMETER_SECTION
     init_bounded_number pPrMoltMatMA(.0025,3.0,phsPrMolt_MatureMale) // logistic parameter for molting prob for mature males
     init_bounded_number pPrMoltMatMB(1,120,phsPrMolt_MatureMale)     // logistic parameter for molting prob for mature males
     
-    init_number pMnLnRec(phsMnLnRec)                                                         // Mean ln-scale "current" recruitment 1974+ (males, females are equal)
-    init_bounded_dev_vector pRecDevs(mnYrRecCurr,endyr,-15,15,phsRecDevs)                    // "current" recruitment devs
-    init_number pMnLnRecHist(phsMnLnRecHist)                                                 // Mean ln-scale "historic" recruitment
-    init_bounded_dev_vector pRecDevsHist(mnYrRecDevsHist,mnYrRecCurr-1,-15,15,phsRecDevsHist)// "historic" ln-scale recruitment deviations
-    vector rec_y(styr,endyr)                                                                 //arithmetic-scale recruitments (1000's ??)
+    init_number pMnLnRec(phsMnLnRec)                                                         // Mean ln-scale total "current" recruitment
+    init_bounded_dev_vector pRecDevs(mnYrRecCurr,endyr,-15,15,phsRecDevs)                    // "current" ln-scale total recruitment devs
+    init_number pMnLnRecHist(phsMnLnRecHist)                                                 // Mean ln-scale total "historic" recruitment
+    init_bounded_dev_vector pRecDevsHist(mnYrRecDevsHist,mnYrRecCurr-1,-15,15,phsRecDevsHist)// "historic" ln-scale total recruitment devs
+    vector rec_y(styr,endyr)                                                                 //arithmetic-scale total recruitment (millions)
     
     //20150601: changed ...Fm... to ...F_... because of ambiguity as to whether
     //they represent fishing mortality (original model) of capture (gmacs) rates
@@ -3058,7 +3066,7 @@ FUNCTION get_numbers_at_len                                    //wts: revised
     
     for (int x=1;x<=nSXs;x++) {  
         //initialize modNum_yxmsz in styr with recruitment in new shell, immature
-        modNum_yxmsz(styr,x,IMMATURE,NEW_SHELL) += rec_y(styr)*prRec_z;  
+        modNum_yxmsz(styr,x,IMMATURE,NEW_SHELL) += 0.5*rec_y(styr)*prRec_z;  
         for (int yr=styr;yr<endyr;yr++) {
             Surv1 = mfexp(-M_msx(IMMATURE,NEW_SHELL,x));
             Surv2 = mfexp(-mdptFshs_y(yr)*M_msx(IMMATURE,NEW_SHELL,x));
@@ -3094,7 +3102,7 @@ FUNCTION get_numbers_at_len                                    //wts: revised
             //     cout<<" to 2 "<<endl;
             // add in recruits for next year
             // put all recruits in new shell immature
-            modNum_yxmsz(yr+1,x,IMMATURE,NEW_SHELL) += rec_y(yr+1)*prRec_z;
+            modNum_yxmsz(yr+1,x,IMMATURE,NEW_SHELL) += 0.5*rec_y(yr+1)*prRec_z;
             natlength_new(x,yr+1)   = modNum_yxmsz(yr+1,x,IMMATURE,NEW_SHELL) + modNum_yxmsz(yr+1,x,  MATURE,NEW_SHELL);
             natlength_old(x,yr+1)   = modNum_yxmsz(yr+1,x,  MATURE,OLD_SHELL) + modNum_yxmsz(yr+1,x,IMMATURE,OLD_SHELL);
             natlength_mat(x,yr+1)   = modNum_yxmsz(yr+1,x,  MATURE,NEW_SHELL) + modNum_yxmsz(yr+1,x,  MATURE,OLD_SHELL);
@@ -3221,8 +3229,8 @@ FUNCTION get_numbers_at_len                                    //wts: revised
         sdrSpBioF   = fspbio(sdrSpBioF.indexmin(),sdrSpBioF.indexmax());
         sdrSpBioM   = mspbio(sdrSpBioM.indexmin(),sdrSpBioM.indexmax());
         sdrRecEarly   = rec_y(sdrRecEarly.indexmin(),sdrRecEarly.indexmax());
-        sdrRecF       = rec_y(sdrRecF.indexmin(),sdrRecF.indexmax());//was "endyr-1"
-        sdrRecM       = rec_y(sdrRecM.indexmin(),sdrRecM.indexmax());//was "endyr-1"
+        sdrRecF       = 0.5*rec_y(sdrRecF.indexmin(),sdrRecF.indexmax());//was "endyr-1"
+        sdrRecM       = 0.5*rec_y(sdrRecM.indexmin(),sdrRecM.indexmax());//was "endyr-1"
     }
     //  cout<<" to end of number at len "<<endl;
     //  cout<<"done"<<endl;
@@ -4180,8 +4188,8 @@ FUNCTION Misc_output
         sdrPopNumLegal = modPopNumLegal_y(sdrPopNumLegal.indexmin(),sdrPopNumLegal.indexmax());
         //cout<<"1"<<endl;
         sdrRecEarly = rec_y(styr,mnYrRecCurr-1);
-        sdrRecF     = rec_y(mnYrRecCurr,endyr);//was endyr-1
-        sdrRecM     = rec_y(mnYrRecCurr,endyr);//was endyr-1
+        sdrRecF     = 0.5*rec_y(mnYrRecCurr,endyr);//was endyr-1
+        sdrRecM     = 0.5*rec_y(mnYrRecCurr,endyr);//was endyr-1
         //cout<<"2"<<endl;
         sdrMMB      = modSpBioMateTime_xy(MALE)(styr,endyr-1);
         //cout<<"3"<<endl;
@@ -4213,7 +4221,7 @@ FUNCTION void writeMyProjectionFile(ofstream& os)
       os<<"#reference point calculations"<<endl;
       os<<"#---------------------------"<<endl;
       os<<0.35<<tb<<tb<<"#target SBPR reduction ratio (e.g. 0.35)"<<endl;
-      os<<2*mean(rec_y(1982,endyr))*1000<<tb<<tb<<"#total average recruitment for BXX/Bmsy calculation (1000's of recruits)"<<endl;
+      os<<mean(rec_y(1982,endyr))*1000<<tb<<tb<<"#total average recruitment for BXX/Bmsy calculation (1000's of recruits)"<<endl;
       os<<modSpBioMateTime_xy(   MALE,endyr-1)<<tb<<tb<<"#'current' spawning biomass (MMB, 1000's t) "<<endl;
       os<<"???"<<tb<<tb<<"#cv of 'current' spawning biomass"<<endl;
       os<<1    <<tb<<tb<<"#harvest strategy"<<endl;
@@ -4233,8 +4241,8 @@ FUNCTION void writeMyProjectionFile(ofstream& os)
       os<<1982  <<tb<<tb<<"#mMnYrForRecAvg: min assessment model year for averaging recruitment to estimate BXX, Bmsy"<<endl;
       os<<endyr <<tb<<tb<<"#mMxYrForRecAvg: max assessment model year for averaging recruitment to estimate BXX, Bmsy"<<endl;
       os <<"#asmtModRec(nSXs,mMnYr,mMxYr): unlagged recruitments female, male start year to endyr from model (1000's)" << endl;//was endyr-1
-      os << rec_y*1000 <<endl;//females; was endyr-1
-      os << rec_y*1000 <<endl;//  males; was endyr-1     
+      os << 0.5*rec_y*1000 <<endl;//females; was endyr-1
+      os << 0.5*rec_y*1000 <<endl;//  males; was endyr-1     
       os<<"#asmtModSpB(mMnYr,mMxYr-1): male spawning biomass at matetime (1000's t) for str year to endyr-1 for spawner recruit curve to estimate recruitments"<<endl;
       os<<modSpBioMateTime_xy(   MALE)(styr,endyr-1)<<endl;
       os<<"#---------------------------"<<endl;
@@ -4399,7 +4407,7 @@ FUNCTION void writeToR_OLD(ofstream& R_out)
         mrt = M_msx(MATURE,OLD_SHELL,  MALE); if (mort_switch==1) mrt(lyr_mort,uyr_mort) *= pMfac_Big(  MALE);
         REP2R2(mod.M.MOM,mrt);
         //--recruitment
-        REP2R2(mod.R,2*rec_y);    //total recruitment (millions))
+        REP2R2(mod.R,rec_y);    //total recruitment (millions))
         REP2R2(mod.prR_z,prRec_z);//recruitment size distribution
         
         
