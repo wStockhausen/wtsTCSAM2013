@@ -71,9 +71,14 @@
 //                  TCSAM2013.params.XXX.init.csv and TCSAM2013.params.XXX.final.csv,
 //                  where XXX = 'active' and 'all'.
 //--20160608: 1. Revised output to "old" R file.
-//            2. Converted all internal calculations and output to units of:
+//            2. Converted all internal calculations and most output to units of:
 //                  MILLIONS for abundance
 //                  1000's t for biomass
+//                Note that this changes the estimated ln-scale mean recruitment by Log(1000)
+//                Units for the Projection Model file remain as before.
+//--20160609: 1. Corrected legal abundance/biomass calculations
+//            2. Corrected sample size calculations
+//--20160614: 1. Removed old report in favor of output to R
 //
 //IMPORTANT: 2013-09 assessment model had RKC params for 1992+ discard mortality TURNED OFF. 
 //           THE ESTIMATION PHASE FOR RKC DISCARD MORTALITY IS NOW SET IN THE CONTROLLER FILE!
@@ -1109,8 +1114,8 @@ DATA_SECTION
     3darray obsPrNatZ_SCF_xnz(1,nSXs,1,nObsZCsSCF,1,nZBs)  
     3darray obsPrNatZ_RKF_xnz(1,nSXs,1,nObsZCsRKF,1,nZBs)    
     
-    vector obsSrvLegalNum_n(1,nObsZCsSrv)                // Legal male numbers, in survey
-    vector obsSrvLegalBio_n(1,nObsZCsSrv)                // Legal male biomass, in survey
+    vector obsSrvNumLegal_n(1,nObsZCsSrv)            // Legal male numbers, in survey
+    vector obsSrvBioLegal_n(1,nObsZCsSrv)            // Legal male biomass, in survey
     
     3darray obsSrvNum_xyz(1,nSXs,styr,endyr,1,nZBs)  // Survey numbers, by sex
     vector obsSrvNum_y(styr,endyr)                   // Total survey numbers, all years
@@ -1403,15 +1408,10 @@ PARAMETER_SECTION
     matrix selSrv2(1,nSXs,1,nZBs)  // Survey selectivity 2
     matrix selSrv2a(1,nSXs,1,nZBs) // Survey selectivity 2a
     matrix selSrv3(1,nSXs,1,nZBs)  // Survey selectivity 3
-    
-    vector modPopNum_y(styr,endyr)   // Total population numbers on July 1, endyr (output)
-    number popn_snowm         // Total population numbers (output)
-    number popn_snowf         // Total population numbers (output)
-    number popn_rkm           // Total population numbers (output)
-    number popn_rkf           // Total population numbers (output)
-    
+        
     3darray M_msx(1,nMSs,1,nSCs,1,nSXs);//natural mortality rates
     
+    vector modPopNum_y(styr,endyr)   // Total population numbers on July 1, endyr (output)
     vector modPopBio_y(styr,endyr) // Predicted biomass (determines sdrDepletion) 
     
     vector fspbio(styr,endyr)                       // Predicted female spawning biomass on July 1
@@ -1423,8 +1423,8 @@ PARAMETER_SECTION
     3darray modSrvImmNum_xsy(1,nSXs,1,nSCs,styr,endyr) // Predicted survey numbers for immature crab by sex, shell condition (output)
     3darray modSrvMatNum_xsy(1,nSXs,1,nSCs,styr,endyr) // Predicted survey numbers for mature crab by sex, shell condition (output)
     
-    vector numLegalMales_y(styr,endyr)              // Number of legal males at time of survey 
-    vector bioLegalMales_y(styr,endyr)              // Biomass of legal males in survey (output)          
+    vector modPopNumLegal_y(styr,endyr)              // Number of legal males at time of survey 
+    vector modPopBioLegal_y(styr,endyr)              // Biomass of legal males in survey (output)          
     
     matrix modSrvNum_xy(1,nSXs,styr,endyr)             // Survey abundance, by sex          
     matrix modSrvBio_xy(1,nSXs,styr,endyr)             // Survey biomass, by sex      
@@ -1452,7 +1452,7 @@ PARAMETER_SECTION
     3darray natlength_mat(1,nSXs,styr,endyr,1,nZBs)           // Mature numbers by sex, length, and year
     3darray natl_new_fishtime(1,nSXs,styr,endyr,1,nZBs)           // Numbers-at-length (new shell)
     3darray natl_old_fishtime(1,nSXs,styr,endyr,1,nZBs)           // Numbers-at-length (old shell)    
-    5darray modNFT_yxmsz(styr,endyr,1,nSXs,1,nMSs,1,nSCs,1,nZBs)  // Numbers-at-length at fishing time          
+    5darray modFT_PopNum_yxmsz(styr,endyr,1,nSXs,1,nMSs,1,nSCs,1,nZBs)  // Numbers-at-length at fishing time          
     
     3darray prGr_xzz(1,nSXs,1,nZBs,1,nZBs)                    // length to length growth array
     matrix prMoltImm_xz(1,nSXs,1,nZBs)                               // molting probabilities for female, male by length bin 
@@ -1539,10 +1539,13 @@ PARAMETER_SECTION
     matrix predDscBioMortGTF_xy(1,nSXs,styr,endyr-1)                  ///< Trawl catch mortality (in biomass and by sex)
     
     //changed endyr to endyr-1   
-    matrix effnTCF_ret_sy(1,nSCs,styr,endyr-1)           // Effective sample sizes
-    matrix effnTCF_tot_sy(1,nSCs,styr,endyr-1)           // Effective sample sizes
+    vector effnTCF_ret_y(styr,endyr-1)            // Effective sample sizes
+    matrix effnTCF_tot_xy(1,nSXs,styr,endyr-1)    // Effective sample sizes
+    matrix effnSCF_tot_xy(1,nSXs,styr,endyr-1)    // Effective sample sizes
+    matrix effnRKF_tot_xy(1,nSXs,styr,endyr-1)    // Effective sample sizes
+    vector effnGTF_tot_y(styr,endyr-1)            // Effective sample sizes
     
-    4darray effnSrv_msxy(1,nMSs,1,nSCs,1,nSXs,styr,endyr) // Survey effective sample sizes
+    3darray effnSrv_mxy(1,nMSs,1,nSXs,styr,endyr) // Effective sample sizes
     
     // Offsets
     vector offset(1,NUM_LEN_LIKE)  //<-these are constants. should be in DATA_SECTION!!
@@ -1603,14 +1606,14 @@ PARAMETER_SECTION
     matrix modPrM2M(1,nSXs,1,nZBs)                              // Maturity-at-length
     
     // Outputs (not in the likelihood function)
-    vector modNumLegalMales_y(styr,endyr)
-    vector modBioLegalMales_y(styr,endyr)
-    vector modTotLglBio_TCFM_y(styr,endyr-1)     //(IMPORTANT CHANGE: used to be "endyr")
-    vector modTotLglNum_TCFM_y(styr,endyr-1)  //(IMPORTANT CHANGE: used to be "endyr")
+    vector modFT_PopNumLegal_y(styr,endyr)
+    vector modFT_PopBioLegal_y(styr,endyr)
+    vector modTotBioMortLegal_TCFM_y(styr,endyr-1)     //(IMPORTANT CHANGE: used to be "endyr")
+    vector modTotNumMortLegal_TCFM_y(styr,endyr-1)  //(IMPORTANT CHANGE: used to be "endyr")
     
     sdreport_vector sdrSpBioF(mnYrRecCurr,endyr)                                // Sd_report stuff
     sdreport_vector sdrSpBioM(mnYrRecCurr,endyr)                       //male spawning biomass (1000's t)
-    sdreport_vector sdrLegalMales(mnYrRecCurr,endyr)
+    sdreport_vector sdrPopNumLegal(mnYrRecCurr,endyr)
     sdreport_vector sdrRecEarly(styr,mnYrRecCurr-1)
     sdreport_vector sdrRecF(mnYrRecCurr,endyr)  //was endyr-1
     sdreport_vector sdrRecM(mnYrRecCurr,endyr)  //was endyr-1
@@ -1917,21 +1920,21 @@ PRELIMINARY_CALCS_SECTION
     CheckFile<<"obsSrvMatBio_xy" <<endl<<obsSrvMatBio_xy <<endl;
     
     // Number of large males
-    obsSrvLegalNum_n.initialize();
-    obsSrvLegalBio_n.initialize();
+    obsSrvNumLegal_n.initialize();
+    obsSrvBioLegal_n.initialize();
     for(int i=1;i<=nObsZCsSrv;i++) {
 //        // take 1/2 of the 100-104 bin, 
-//        obsSrvLegalNum_n(i) = 0.5*obsSrvNum_xyz(MALE,yrsObsZCsSrv_n(i),23);            //<--hardwired index
-//        obsSrvLegalBio_n(i) = obsSrvLegalNum_n(i)*wt_xmz(MALE,  MATURE)(23);                            //<--hardwired index
+//        obsSrvNumLegal_n(i) = 0.5*obsSrvNum_xyz(MALE,yrsObsZCsSrv_n(i),23);            //<--hardwired index
+//        obsSrvBioLegal_n(i) = obsSrvNumLegal_n(i)*wt_xmz(MALE,  MATURE)(23);                            //<--hardwired index
 //        for(int j=24;j<=nZBs;j++) {                                          //<--hardwired index
-//            obsSrvLegalNum_n(i) += obsSrvNum_xyz(MALE,yrsObsZCsSrv_n(i),j);
-//            obsSrvLegalBio_n(i) += obsSrvNum_xyz(MALE,yrsObsZCsSrv_n(i),j)*wt_xmz(MALE,  MATURE)(j);
+//            obsSrvNumLegal_n(i) += obsSrvNum_xyz(MALE,yrsObsZCsSrv_n(i),j);
+//            obsSrvBioLegal_n(i) += obsSrvNum_xyz(MALE,yrsObsZCsSrv_n(i),j)*wt_xmz(MALE,  MATURE)(j);
 //        }
-        obsSrvLegalNum_n(i) += sum(obsSrvNum_xyz(MALE,yrsObsZCsSrv_n(i))(iZLegal,nZBs));
-        obsSrvLegalBio_n(i) += obsSrvNum_xyz(MALE,yrsObsZCsSrv_n(i))(iZLegal,nZBs)*wt_xmz(MALE,  MATURE)(iZLegal,nZBs);
+        obsSrvNumLegal_n(i) += sum(obsSrvNum_xyz(MALE,yrsObsZCsSrv_n(i))(iZLegal,nZBs));
+        obsSrvBioLegal_n(i) += obsSrvNum_xyz(MALE,yrsObsZCsSrv_n(i))(iZLegal,nZBs)*wt_xmz(MALE,  MATURE)(iZLegal,nZBs);
     }
-    CheckFile<<"obsSrvLegalNum_n (millions)"<<endl<<obsSrvLegalNum_n<<endl;
-    CheckFile<<"obsSrvLegalBio_n (1000's t)"<<endl<<obsSrvLegalBio_n<<endl;
+    CheckFile<<"obsSrvNumLegal_n (millions)"<<endl<<obsSrvNumLegal_n<<endl;
+    CheckFile<<"obsSrvBioLegal_n (1000's t)"<<endl<<obsSrvBioLegal_n<<endl;
     
     //mean effort in bycatch fisheries over years with bycatch data
     mnEff_SCF = mean(effSCF_y(yrsObsDscSCF));
@@ -1954,9 +1957,6 @@ PRELIMINARY_CALCS_SECTION
     evaluate_the_objective_function();
     
     //write reports for initial model configuration
-    ofstream initRept("TCSAM2013.init.rep");
-    writeReport(initRept);
-    initRept.close();
     ofstream initReptToR("TCSAM2013.NEWSTYLE.init.R");
     writeToR_NEW(initReptToR);
     initReptToR.close();
@@ -1997,7 +1997,6 @@ PROCEDURE_SECTION                                          //wts: revised
 //    cout<<"evaluate_the_objective_function "<<endl;
     
 //    Misc_output();          //for testing
-//    writeReport(CheckFile); //for testing
 //    writeToR_OLD(R_out);             //for testing
     
     if((call_no==1)||(call_no/1000)*1000==call_no) {
@@ -3109,32 +3108,32 @@ FUNCTION get_numbers_at_len                                    //wts: revised
     for (int yr=styr;yr<endyr;yr++){
         for (int x=1;x<=nSXs;x++) {
             if (mort_switch2) {//correct way of applying this; wts: new 2013-08-28
-                modNFT_yxmsz(yr,x,IMMATURE,NEW_SHELL) = mfexp(-mdptFshs_y(yr)*M_msx(IMMATURE,NEW_SHELL,x))*modNum_yxmsz(yr,x,IMMATURE,NEW_SHELL);
-                modNFT_yxmsz(yr,x,IMMATURE,OLD_SHELL) = mfexp(-mdptFshs_y(yr)*M_msx(IMMATURE,OLD_SHELL,x))*modNum_yxmsz(yr,x,IMMATURE,OLD_SHELL);
+                modFT_PopNum_yxmsz(yr,x,IMMATURE,NEW_SHELL) = mfexp(-mdptFshs_y(yr)*M_msx(IMMATURE,NEW_SHELL,x))*modNum_yxmsz(yr,x,IMMATURE,NEW_SHELL);
+                modFT_PopNum_yxmsz(yr,x,IMMATURE,OLD_SHELL) = mfexp(-mdptFshs_y(yr)*M_msx(IMMATURE,OLD_SHELL,x))*modNum_yxmsz(yr,x,IMMATURE,OLD_SHELL);
                 if(lyr_mort<=yr && yr<=uyr_mort && mort_switch==1) {
-                    modNFT_yxmsz(yr,x,  MATURE,NEW_SHELL) = mfexp(-mdptFshs_y(yr)*M_msx(MATURE,NEW_SHELL,x)*pMfac_Big(x))*modNum_yxmsz(yr,x,MATURE,NEW_SHELL);
-                    modNFT_yxmsz(yr,x,  MATURE,OLD_SHELL) = mfexp(-mdptFshs_y(yr)*M_msx(MATURE,OLD_SHELL,x)*pMfac_Big(x))*modNum_yxmsz(yr,x,MATURE,OLD_SHELL);
+                    modFT_PopNum_yxmsz(yr,x,  MATURE,NEW_SHELL) = mfexp(-mdptFshs_y(yr)*M_msx(MATURE,NEW_SHELL,x)*pMfac_Big(x))*modNum_yxmsz(yr,x,MATURE,NEW_SHELL);
+                    modFT_PopNum_yxmsz(yr,x,  MATURE,OLD_SHELL) = mfexp(-mdptFshs_y(yr)*M_msx(MATURE,OLD_SHELL,x)*pMfac_Big(x))*modNum_yxmsz(yr,x,MATURE,OLD_SHELL);
                 } else {  
-                    modNFT_yxmsz(yr,x,  MATURE,NEW_SHELL) = mfexp(-mdptFshs_y(yr)*M_msx(MATURE,NEW_SHELL,x))*modNum_yxmsz(yr,x,MATURE,NEW_SHELL);
-                    modNFT_yxmsz(yr,x,  MATURE,OLD_SHELL) = mfexp(-mdptFshs_y(yr)*M_msx(MATURE,OLD_SHELL,x))*modNum_yxmsz(yr,x,MATURE,OLD_SHELL);
+                    modFT_PopNum_yxmsz(yr,x,  MATURE,NEW_SHELL) = mfexp(-mdptFshs_y(yr)*M_msx(MATURE,NEW_SHELL,x))*modNum_yxmsz(yr,x,MATURE,NEW_SHELL);
+                    modFT_PopNum_yxmsz(yr,x,  MATURE,OLD_SHELL) = mfexp(-mdptFshs_y(yr)*M_msx(MATURE,OLD_SHELL,x))*modNum_yxmsz(yr,x,MATURE,OLD_SHELL);
                 }
-                natl_new_fishtime(x,yr)  = modNFT_yxmsz(yr,x,IMMATURE,NEW_SHELL)+modNFT_yxmsz(yr,x,  MATURE,NEW_SHELL); 
-                natl_old_fishtime(x,yr)  = modNFT_yxmsz(yr,x,IMMATURE,OLD_SHELL)+modNFT_yxmsz(yr,x,  MATURE,OLD_SHELL);
+                natl_new_fishtime(x,yr)  = modFT_PopNum_yxmsz(yr,x,IMMATURE,NEW_SHELL)+modFT_PopNum_yxmsz(yr,x,  MATURE,NEW_SHELL); 
+                natl_old_fishtime(x,yr)  = modFT_PopNum_yxmsz(yr,x,IMMATURE,OLD_SHELL)+modFT_PopNum_yxmsz(yr,x,  MATURE,OLD_SHELL);
             } else { //2012 way of doing it               
                 if(lyr_mort<=yr && yr<=uyr_mort && mort_switch==1) {
-                    modNFT_yxmsz(yr,x,IMMATURE,NEW_SHELL) = mfexp(-mdptFshs_y(yr)*M_msx(IMMATURE,NEW_SHELL,x))*modNum_yxmsz(yr,x,IMMATURE,NEW_SHELL);
-                    modNFT_yxmsz(yr,x,IMMATURE,OLD_SHELL) = mfexp(-mdptFshs_y(yr)*M_msx(IMMATURE,OLD_SHELL,x))*modNum_yxmsz(yr,x,IMMATURE,OLD_SHELL);
-                    modNFT_yxmsz(yr,x,  MATURE,NEW_SHELL) = mfexp(-mdptFshs_y(yr)*M_msx(MATURE,NEW_SHELL,x)*pMfac_Big(x))*modNum_yxmsz(yr,x,MATURE,NEW_SHELL);
-                    modNFT_yxmsz(yr,x,  MATURE,OLD_SHELL) = mfexp(-mdptFshs_y(yr)*M_msx(MATURE,OLD_SHELL,x)*pMfac_Big(x))*modNum_yxmsz(yr,x,MATURE,OLD_SHELL);
-                    natl_new_fishtime(x,yr)  = modNFT_yxmsz(yr,x,IMMATURE,NEW_SHELL)+modNFT_yxmsz(yr,x,  MATURE,NEW_SHELL); 
-                    natl_old_fishtime(x,yr)  = modNFT_yxmsz(yr,x,IMMATURE,OLD_SHELL)+modNFT_yxmsz(yr,x,  MATURE,OLD_SHELL);
+                    modFT_PopNum_yxmsz(yr,x,IMMATURE,NEW_SHELL) = mfexp(-mdptFshs_y(yr)*M_msx(IMMATURE,NEW_SHELL,x))*modNum_yxmsz(yr,x,IMMATURE,NEW_SHELL);
+                    modFT_PopNum_yxmsz(yr,x,IMMATURE,OLD_SHELL) = mfexp(-mdptFshs_y(yr)*M_msx(IMMATURE,OLD_SHELL,x))*modNum_yxmsz(yr,x,IMMATURE,OLD_SHELL);
+                    modFT_PopNum_yxmsz(yr,x,  MATURE,NEW_SHELL) = mfexp(-mdptFshs_y(yr)*M_msx(MATURE,NEW_SHELL,x)*pMfac_Big(x))*modNum_yxmsz(yr,x,MATURE,NEW_SHELL);
+                    modFT_PopNum_yxmsz(yr,x,  MATURE,OLD_SHELL) = mfexp(-mdptFshs_y(yr)*M_msx(MATURE,OLD_SHELL,x)*pMfac_Big(x))*modNum_yxmsz(yr,x,MATURE,OLD_SHELL);
+                    natl_new_fishtime(x,yr)  = modFT_PopNum_yxmsz(yr,x,IMMATURE,NEW_SHELL)+modFT_PopNum_yxmsz(yr,x,  MATURE,NEW_SHELL); 
+                    natl_old_fishtime(x,yr)  = modFT_PopNum_yxmsz(yr,x,IMMATURE,OLD_SHELL)+modFT_PopNum_yxmsz(yr,x,  MATURE,OLD_SHELL);
                 }
-                modNFT_yxmsz(yr,x,IMMATURE,NEW_SHELL) = mfexp(-mdptFshs_y(yr)*M_msx(IMMATURE,NEW_SHELL,x))*modNum_yxmsz(yr,x,IMMATURE,NEW_SHELL);
-                modNFT_yxmsz(yr,x,IMMATURE,OLD_SHELL) = mfexp(-mdptFshs_y(yr)*M_msx(IMMATURE,OLD_SHELL,x))*modNum_yxmsz(yr,x,IMMATURE,OLD_SHELL);
-                modNFT_yxmsz(yr,x,  MATURE,NEW_SHELL) = mfexp(-mdptFshs_y(yr)*M_msx(MATURE,NEW_SHELL,x))*modNum_yxmsz(yr,x,  MATURE,NEW_SHELL);
-                modNFT_yxmsz(yr,x,  MATURE,OLD_SHELL) = mfexp(-mdptFshs_y(yr)*M_msx(MATURE,OLD_SHELL,x))*modNum_yxmsz(yr,x,  MATURE,OLD_SHELL);
-                natl_new_fishtime(x,yr)  = modNFT_yxmsz(yr,x,IMMATURE,NEW_SHELL)+modNFT_yxmsz(yr,x,  MATURE,NEW_SHELL); 
-                natl_old_fishtime(x,yr)  = modNFT_yxmsz(yr,x,IMMATURE,OLD_SHELL)+modNFT_yxmsz(yr,x,  MATURE,OLD_SHELL);
+                modFT_PopNum_yxmsz(yr,x,IMMATURE,NEW_SHELL) = mfexp(-mdptFshs_y(yr)*M_msx(IMMATURE,NEW_SHELL,x))*modNum_yxmsz(yr,x,IMMATURE,NEW_SHELL);
+                modFT_PopNum_yxmsz(yr,x,IMMATURE,OLD_SHELL) = mfexp(-mdptFshs_y(yr)*M_msx(IMMATURE,OLD_SHELL,x))*modNum_yxmsz(yr,x,IMMATURE,OLD_SHELL);
+                modFT_PopNum_yxmsz(yr,x,  MATURE,NEW_SHELL) = mfexp(-mdptFshs_y(yr)*M_msx(MATURE,NEW_SHELL,x))*modNum_yxmsz(yr,x,  MATURE,NEW_SHELL);
+                modFT_PopNum_yxmsz(yr,x,  MATURE,OLD_SHELL) = mfexp(-mdptFshs_y(yr)*M_msx(MATURE,OLD_SHELL,x))*modNum_yxmsz(yr,x,  MATURE,OLD_SHELL);
+                natl_new_fishtime(x,yr)  = modFT_PopNum_yxmsz(yr,x,IMMATURE,NEW_SHELL)+modFT_PopNum_yxmsz(yr,x,  MATURE,NEW_SHELL); 
+                natl_old_fishtime(x,yr)  = modFT_PopNum_yxmsz(yr,x,IMMATURE,OLD_SHELL)+modFT_PopNum_yxmsz(yr,x,  MATURE,OLD_SHELL);
             }//mort_switch2
         }//x
     }//yr
@@ -3142,12 +3141,12 @@ FUNCTION get_numbers_at_len                                    //wts: revised
     //assume mdptFshs_y(endyr) = mdptFshs_y(endyr-1)
     {   int yr = endyr;    //don't worry about mort_switch here
         for (int x=1;x<=nSXs;x++) {
-            modNFT_yxmsz(yr,x,IMMATURE,NEW_SHELL) = mfexp(-mdptFshs_y(yr-1)*M_msx(IMMATURE,NEW_SHELL,x))*modNum_yxmsz(yr,x,IMMATURE,NEW_SHELL);
-            modNFT_yxmsz(yr,x,IMMATURE,OLD_SHELL) = mfexp(-mdptFshs_y(yr-1)*M_msx(IMMATURE,OLD_SHELL,x))*modNum_yxmsz(yr,x,IMMATURE,OLD_SHELL);
-            modNFT_yxmsz(yr,x,  MATURE,NEW_SHELL) = mfexp(-mdptFshs_y(yr-1)*M_msx(MATURE,NEW_SHELL,x))*modNum_yxmsz(yr,x,  MATURE,NEW_SHELL);
-            modNFT_yxmsz(yr,x,  MATURE,OLD_SHELL) = mfexp(-mdptFshs_y(yr-1)*M_msx(MATURE,OLD_SHELL,x))*modNum_yxmsz(yr,x,  MATURE,OLD_SHELL);
-            natl_new_fishtime(x,yr)  = modNFT_yxmsz(yr,x,IMMATURE,NEW_SHELL)+modNFT_yxmsz(yr,x,  MATURE,NEW_SHELL); 
-            natl_old_fishtime(x,yr)  = modNFT_yxmsz(yr,x,IMMATURE,OLD_SHELL)+modNFT_yxmsz(yr,x,  MATURE,OLD_SHELL);
+            modFT_PopNum_yxmsz(yr,x,IMMATURE,NEW_SHELL) = mfexp(-mdptFshs_y(yr-1)*M_msx(IMMATURE,NEW_SHELL,x))*modNum_yxmsz(yr,x,IMMATURE,NEW_SHELL);
+            modFT_PopNum_yxmsz(yr,x,IMMATURE,OLD_SHELL) = mfexp(-mdptFshs_y(yr-1)*M_msx(IMMATURE,OLD_SHELL,x))*modNum_yxmsz(yr,x,IMMATURE,OLD_SHELL);
+            modFT_PopNum_yxmsz(yr,x,  MATURE,NEW_SHELL) = mfexp(-mdptFshs_y(yr-1)*M_msx(MATURE,NEW_SHELL,x))*modNum_yxmsz(yr,x,  MATURE,NEW_SHELL);
+            modFT_PopNum_yxmsz(yr,x,  MATURE,OLD_SHELL) = mfexp(-mdptFshs_y(yr-1)*M_msx(MATURE,OLD_SHELL,x))*modNum_yxmsz(yr,x,  MATURE,OLD_SHELL);
+            natl_new_fishtime(x,yr)  = modFT_PopNum_yxmsz(yr,x,IMMATURE,NEW_SHELL)+modFT_PopNum_yxmsz(yr,x,  MATURE,NEW_SHELL); 
+            natl_old_fishtime(x,yr)  = modFT_PopNum_yxmsz(yr,x,IMMATURE,OLD_SHELL)+modFT_PopNum_yxmsz(yr,x,  MATURE,OLD_SHELL);
         }//x
     }//endyr
 //    cout<<"3a"<<endl;
@@ -3197,33 +3196,34 @@ FUNCTION get_numbers_at_len                                    //wts: revised
                        +(modNum_yxmsz(yr,  MALE,MATURE,NEW_SHELL)+modNum_yxmsz(yr,  MALE,MATURE,OLD_SHELL))*wt_xmz(  MALE,MATURE);
     }//yr  
     //    cout<<" end srv 2"<<endl;
-    sdrDepletion = modPopBio_y(endyr) / modPopBio_y(styr);
-    sdrSpBioF   = fspbio(sdrSpBioF.indexmin(),sdrSpBioF.indexmax());
-    sdrSpBioM   = mspbio(sdrSpBioM.indexmin(),sdrSpBioM.indexmax());
 //    cout<<"5"<<endl;
     
-    // Legal males
-    numLegalMales_y.initialize();
-    modSrvNumLegal_y.initialize();
-    for (int yr=styr;yr<=endyr;yr++) {
-        // Selection pattern//
-        if (yr<1982)             {useSelSrv = selSrv2;}  else
-        if (1982<=yr && yr<1988) {useSelSrv = selSrv2a;} else
-        if (1988<=yr)            {useSelSrv = selSrv3;}        
-        // legal is >=138mm take half the numbers in the 135-139 bin
-        numLegalMales_y(yr)    = 0.5*modNum_xyz(MALE,yr,23);
-        modSrvNumLegal_y(yr) = 0.5*modNum_xyz(MALE,yr,23)*useSelSrv(MALE,23);  //fixed indices; need vector of 0's, 0.5 and 1's to mult here
-        for(int j=24;j<=nZBs;j++) {
-            numLegalMales_y(yr)    += modNum_xyz(MALE,yr,j);
-            modSrvNumLegal_y(yr) += modNum_xyz(MALE,yr,j)*useSelSrv(MALE,j);
-        }
-    }
+//    // Legal males
+//    modPopNumLegal_y.initialize();
+//    modSrvNumLegal_y.initialize();
+//    for (int yr=styr;yr<=endyr;yr++) {
+//        // Selection pattern//
+//        if (yr<1982)             {useSelSrv = selSrv2;}  else
+//        if (1982<=yr && yr<1988) {useSelSrv = selSrv2a;} else
+//        if (1988<=yr)            {useSelSrv = selSrv3;}        
+//        // legal is >=138mm take half the numbers in the 135-139 bin
+//        modPopNumLegal_y(yr)    = 0.5*modNum_xyz(MALE,yr,23);
+//        modSrvNumLegal_y(yr) = 0.5*modNum_xyz(MALE,yr,23)*useSelSrv(MALE,23);  //fixed indices; need vector of 0's, 0.5 and 1's to mult here
+//        for(int j=24;j<=nZBs;j++) {
+//            modPopNumLegal_y(yr) += modNum_xyz(MALE,yr,j);
+//            modSrvNumLegal_y(yr) += modNum_xyz(MALE,yr,j)*useSelSrv(MALE,j);
+//        }
+//    }
     //  cout<<"6"<<endl;
     
-    sdrLegalMales = numLegalMales_y(sdrLegalMales.indexmin(),sdrLegalMales.indexmax());                                       //fixed index
-    sdrRecEarly   = rec_y(sdrRecEarly.indexmin(),sdrRecEarly.indexmax());
-    sdrRecF       = rec_y(sdrRecF.indexmin(),sdrRecF.indexmax());//was "endyr-1"
-    sdrRecM       = rec_y(sdrRecM.indexmin(),sdrRecM.indexmax());//was "endyr-1"
+    if (sd_phase()){
+        sdrDepletion = modPopBio_y(endyr) / modPopBio_y(styr);
+        sdrSpBioF   = fspbio(sdrSpBioF.indexmin(),sdrSpBioF.indexmax());
+        sdrSpBioM   = mspbio(sdrSpBioM.indexmin(),sdrSpBioM.indexmax());
+        sdrRecEarly   = rec_y(sdrRecEarly.indexmin(),sdrRecEarly.indexmax());
+        sdrRecF       = rec_y(sdrRecF.indexmin(),sdrRecF.indexmax());//was "endyr-1"
+        sdrRecM       = rec_y(sdrRecM.indexmin(),sdrRecM.indexmax());//was "endyr-1"
+    }
     //  cout<<" to end of number at len "<<endl;
     //  cout<<"done"<<endl;
 
@@ -3252,10 +3252,10 @@ FUNCTION get_catch_at_len                  //wts: new version
         //total male directed catch mortality
         ratio1 = elem_prod(elem_div(fmTCFM_syz(NEW_SHELL,yr),fmTOT_xsyz(MALE,NEW_SHELL,yr)),1.0-S_xsyz(MALE,NEW_SHELL,yr));
         ratio2 = elem_prod(elem_div(fmTCFM_syz(OLD_SHELL,yr),fmTOT_xsyz(MALE,OLD_SHELL,yr)),1.0-S_xsyz(MALE,OLD_SHELL,yr));
-        tmN_fyxmsz(iTCF,yr,MALE,IMMATURE,NEW_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,MALE,IMMATURE,NEW_SHELL));
-        tmN_fyxmsz(iTCF,yr,MALE,  MATURE,NEW_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,MALE,  MATURE,NEW_SHELL));
-        tmN_fyxmsz(iTCF,yr,MALE,IMMATURE,OLD_SHELL) = elem_prod(ratio2,modNFT_yxmsz(yr,MALE,IMMATURE,OLD_SHELL));
-        tmN_fyxmsz(iTCF,yr,MALE,  MATURE,OLD_SHELL) = elem_prod(ratio2,modNFT_yxmsz(yr,MALE,  MATURE,OLD_SHELL));
+        tmN_fyxmsz(iTCF,yr,MALE,IMMATURE,NEW_SHELL) = elem_prod(ratio1,modFT_PopNum_yxmsz(yr,MALE,IMMATURE,NEW_SHELL));
+        tmN_fyxmsz(iTCF,yr,MALE,  MATURE,NEW_SHELL) = elem_prod(ratio1,modFT_PopNum_yxmsz(yr,MALE,  MATURE,NEW_SHELL));
+        tmN_fyxmsz(iTCF,yr,MALE,IMMATURE,OLD_SHELL) = elem_prod(ratio2,modFT_PopNum_yxmsz(yr,MALE,IMMATURE,OLD_SHELL));
+        tmN_fyxmsz(iTCF,yr,MALE,  MATURE,OLD_SHELL) = elem_prod(ratio2,modFT_PopNum_yxmsz(yr,MALE,  MATURE,OLD_SHELL));
         predTotNumMortTCFM_syz(NEW_SHELL,yr) = tmN_fyxmsz(iTCF,yr,MALE,IMMATURE,NEW_SHELL) + tmN_fyxmsz(iTCF,yr,MALE,MATURE,NEW_SHELL);
         predTotNumMortTCFM_syz(OLD_SHELL,yr) = tmN_fyxmsz(iTCF,yr,MALE,IMMATURE,OLD_SHELL) + tmN_fyxmsz(iTCF,yr,MALE,MATURE,OLD_SHELL);
         predTotNumMortTCFM_yz(yr) = predTotNumMortTCFM_syz(NEW_SHELL,yr)+predTotNumMortTCFM_syz(OLD_SHELL,yr);
@@ -3266,10 +3266,10 @@ FUNCTION get_catch_at_len                  //wts: new version
         //retained male directed catch mortality
         ratio1 = elem_prod(elem_div(fmTCFR_syz(NEW_SHELL,yr),fmTOT_xsyz(MALE,NEW_SHELL,yr)),1.0-S_xsyz(MALE,NEW_SHELL,yr));
         ratio2 = elem_prod(elem_div(fmTCFR_syz(OLD_SHELL,yr),fmTOT_xsyz(MALE,OLD_SHELL,yr)),1.0-S_xsyz(MALE,OLD_SHELL,yr));
-        rmN_ymsz(yr,IMMATURE,NEW_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,MALE,IMMATURE,NEW_SHELL));
-        rmN_ymsz(yr,  MATURE,NEW_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,MALE,  MATURE,NEW_SHELL));
-        rmN_ymsz(yr,IMMATURE,OLD_SHELL) = elem_prod(ratio2,modNFT_yxmsz(yr,MALE,IMMATURE,OLD_SHELL));
-        rmN_ymsz(yr,  MATURE,OLD_SHELL) = elem_prod(ratio2,modNFT_yxmsz(yr,MALE,  MATURE,OLD_SHELL));
+        rmN_ymsz(yr,IMMATURE,NEW_SHELL) = elem_prod(ratio1,modFT_PopNum_yxmsz(yr,MALE,IMMATURE,NEW_SHELL));
+        rmN_ymsz(yr,  MATURE,NEW_SHELL) = elem_prod(ratio1,modFT_PopNum_yxmsz(yr,MALE,  MATURE,NEW_SHELL));
+        rmN_ymsz(yr,IMMATURE,OLD_SHELL) = elem_prod(ratio2,modFT_PopNum_yxmsz(yr,MALE,IMMATURE,OLD_SHELL));
+        rmN_ymsz(yr,  MATURE,OLD_SHELL) = elem_prod(ratio2,modFT_PopNum_yxmsz(yr,MALE,  MATURE,OLD_SHELL));
         predRetNumMortTCFM_syz(NEW_SHELL,yr) = rmN_ymsz(yr,IMMATURE,NEW_SHELL) + rmN_ymsz(yr,MATURE,NEW_SHELL); 
         predRetNumMortTCFM_syz(OLD_SHELL,yr) = rmN_ymsz(yr,IMMATURE,OLD_SHELL) + rmN_ymsz(yr,MATURE,OLD_SHELL);
         predRetNumMortTCFM_yz(yr) = predRetNumMortTCFM_syz(NEW_SHELL,yr)+predRetNumMortTCFM_syz(OLD_SHELL,yr);
@@ -3281,10 +3281,10 @@ FUNCTION get_catch_at_len                  //wts: new version
         //snow crab discard catch male mortality
         ratio1 = elem_prod(elem_div(fmSCF_xyz(MALE,yr),fmTOT_xsyz(MALE,NEW_SHELL,yr)),1.0-S_xsyz(MALE,NEW_SHELL,yr));
         ratio2 = elem_prod(elem_div(fmSCF_xyz(MALE,yr),fmTOT_xsyz(MALE,OLD_SHELL,yr)),1.0-S_xsyz(MALE,OLD_SHELL,yr));
-        tmN_fyxmsz(iSCF,yr,MALE,IMMATURE,NEW_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,MALE,IMMATURE,NEW_SHELL));
-        tmN_fyxmsz(iSCF,yr,MALE,  MATURE,NEW_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,MALE,  MATURE,NEW_SHELL));
-        tmN_fyxmsz(iSCF,yr,MALE,IMMATURE,OLD_SHELL) = elem_prod(ratio2,modNFT_yxmsz(yr,MALE,IMMATURE,OLD_SHELL));
-        tmN_fyxmsz(iSCF,yr,MALE,  MATURE,OLD_SHELL) = elem_prod(ratio2,modNFT_yxmsz(yr,MALE,  MATURE,OLD_SHELL));
+        tmN_fyxmsz(iSCF,yr,MALE,IMMATURE,NEW_SHELL) = elem_prod(ratio1,modFT_PopNum_yxmsz(yr,MALE,IMMATURE,NEW_SHELL));
+        tmN_fyxmsz(iSCF,yr,MALE,  MATURE,NEW_SHELL) = elem_prod(ratio1,modFT_PopNum_yxmsz(yr,MALE,  MATURE,NEW_SHELL));
+        tmN_fyxmsz(iSCF,yr,MALE,IMMATURE,OLD_SHELL) = elem_prod(ratio2,modFT_PopNum_yxmsz(yr,MALE,IMMATURE,OLD_SHELL));
+        tmN_fyxmsz(iSCF,yr,MALE,  MATURE,OLD_SHELL) = elem_prod(ratio2,modFT_PopNum_yxmsz(yr,MALE,  MATURE,OLD_SHELL));
         predDscNumMortSCF_xyz(MALE,yr) = tmN_fyxmsz(iSCF,yr,MALE,IMMATURE,NEW_SHELL) + tmN_fyxmsz(iSCF,yr,MALE,MATURE,NEW_SHELL)
                                         +tmN_fyxmsz(iSCF,yr,MALE,IMMATURE,OLD_SHELL) + tmN_fyxmsz(iSCF,yr,MALE,MATURE,OLD_SHELL);
         predDscBioMortSCF_xy(MALE,yr) = predDscNumMortSCF_xyz(MALE)(yr)*wt_xmz(MALE,  MATURE);
@@ -3292,10 +3292,10 @@ FUNCTION get_catch_at_len                  //wts: new version
         //red king crab discard catch male     
         ratio1 = elem_prod(elem_div(fmRKF_xyz(MALE,yr),fmTOT_xsyz(MALE,NEW_SHELL,yr)),1.0-S_xsyz(MALE,NEW_SHELL,yr));
         ratio2 = elem_prod(elem_div(fmRKF_xyz(MALE,yr),fmTOT_xsyz(MALE,OLD_SHELL,yr)),1.0-S_xsyz(MALE,OLD_SHELL,yr));
-        tmN_fyxmsz(iRKF,yr,MALE,IMMATURE,NEW_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,MALE,IMMATURE,NEW_SHELL));
-        tmN_fyxmsz(iRKF,yr,MALE,  MATURE,NEW_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,MALE,  MATURE,NEW_SHELL));
-        tmN_fyxmsz(iRKF,yr,MALE,IMMATURE,OLD_SHELL) = elem_prod(ratio2,modNFT_yxmsz(yr,MALE,IMMATURE,OLD_SHELL));
-        tmN_fyxmsz(iRKF,yr,MALE,  MATURE,OLD_SHELL) = elem_prod(ratio2,modNFT_yxmsz(yr,MALE,  MATURE,OLD_SHELL));
+        tmN_fyxmsz(iRKF,yr,MALE,IMMATURE,NEW_SHELL) = elem_prod(ratio1,modFT_PopNum_yxmsz(yr,MALE,IMMATURE,NEW_SHELL));
+        tmN_fyxmsz(iRKF,yr,MALE,  MATURE,NEW_SHELL) = elem_prod(ratio1,modFT_PopNum_yxmsz(yr,MALE,  MATURE,NEW_SHELL));
+        tmN_fyxmsz(iRKF,yr,MALE,IMMATURE,OLD_SHELL) = elem_prod(ratio2,modFT_PopNum_yxmsz(yr,MALE,IMMATURE,OLD_SHELL));
+        tmN_fyxmsz(iRKF,yr,MALE,  MATURE,OLD_SHELL) = elem_prod(ratio2,modFT_PopNum_yxmsz(yr,MALE,  MATURE,OLD_SHELL));
         predDscNumMortRKF_xyz(MALE,yr) = tmN_fyxmsz(iRKF,yr,MALE,IMMATURE,NEW_SHELL) + tmN_fyxmsz(iRKF,yr,MALE,MATURE,NEW_SHELL)
                                         +tmN_fyxmsz(iRKF,yr,MALE,IMMATURE,OLD_SHELL) + tmN_fyxmsz(iRKF,yr,MALE,MATURE,OLD_SHELL);
         predDscBioMortRKF_xy(MALE,yr) = predDscNumMortRKF_xyz(MALE)(yr)*wt_xmz(MALE,  MATURE);
@@ -3303,10 +3303,10 @@ FUNCTION get_catch_at_len                  //wts: new version
         //trawl bycatch male (20150601: is this correct?!->rates are indep of shell condition)
         ratio1 = elem_prod(elem_div(fmGTF_xyz(MALE,yr),fmTOT_xsyz(MALE,NEW_SHELL,yr)),1.0-S_xsyz(MALE,NEW_SHELL,yr));
         ratio2 = elem_prod(elem_div(fmGTF_xyz(MALE,yr),fmTOT_xsyz(MALE,OLD_SHELL,yr)),1.0-S_xsyz(MALE,OLD_SHELL,yr));
-        tmN_fyxmsz(iGTF,yr,MALE,IMMATURE,NEW_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,MALE,IMMATURE,NEW_SHELL));
-        tmN_fyxmsz(iGTF,yr,MALE,  MATURE,NEW_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,MALE,  MATURE,NEW_SHELL));
-        tmN_fyxmsz(iGTF,yr,MALE,IMMATURE,OLD_SHELL) = elem_prod(ratio2,modNFT_yxmsz(yr,MALE,IMMATURE,OLD_SHELL));
-        tmN_fyxmsz(iGTF,yr,MALE,  MATURE,OLD_SHELL) = elem_prod(ratio2,modNFT_yxmsz(yr,MALE,  MATURE,OLD_SHELL));
+        tmN_fyxmsz(iGTF,yr,MALE,IMMATURE,NEW_SHELL) = elem_prod(ratio1,modFT_PopNum_yxmsz(yr,MALE,IMMATURE,NEW_SHELL));
+        tmN_fyxmsz(iGTF,yr,MALE,  MATURE,NEW_SHELL) = elem_prod(ratio1,modFT_PopNum_yxmsz(yr,MALE,  MATURE,NEW_SHELL));
+        tmN_fyxmsz(iGTF,yr,MALE,IMMATURE,OLD_SHELL) = elem_prod(ratio2,modFT_PopNum_yxmsz(yr,MALE,IMMATURE,OLD_SHELL));
+        tmN_fyxmsz(iGTF,yr,MALE,  MATURE,OLD_SHELL) = elem_prod(ratio2,modFT_PopNum_yxmsz(yr,MALE,  MATURE,OLD_SHELL));
         predDscNumMortGTF_xyz(MALE,yr) = tmN_fyxmsz(iGTF,yr,MALE,IMMATURE,NEW_SHELL) + tmN_fyxmsz(iGTF,yr,MALE,MATURE,NEW_SHELL) 
                                         +tmN_fyxmsz(iGTF,yr,MALE,IMMATURE,OLD_SHELL) + tmN_fyxmsz(iGTF,yr,MALE,MATURE,OLD_SHELL); 
         predDscBioMortGTF_xy(MALE,yr) = predDscNumMortGTF_xyz(MALE,yr)*wt_xmz(MALE,  MATURE);
@@ -3314,10 +3314,10 @@ FUNCTION get_catch_at_len                  //wts: new version
         //directed tanner discard catch female
         ratio1 = elem_prod(elem_div(fmTCFF_yz(yr),fmTOT_xsyz(FEMALE,NEW_SHELL,yr)),1.0-S_xsyz(FEMALE,NEW_SHELL,yr));
         ratio2 = elem_prod(elem_div(fmTCFF_yz(yr),fmTOT_xsyz(FEMALE,OLD_SHELL,yr)),1.0-S_xsyz(FEMALE,OLD_SHELL,yr));
-        tmN_fyxmsz(iTCF,yr,FEMALE,IMMATURE,NEW_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,FEMALE,IMMATURE,NEW_SHELL));
-        tmN_fyxmsz(iTCF,yr,FEMALE,  MATURE,NEW_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,FEMALE,  MATURE,NEW_SHELL));
-        tmN_fyxmsz(iTCF,yr,FEMALE,IMMATURE,OLD_SHELL) = elem_prod(ratio2,modNFT_yxmsz(yr,FEMALE,IMMATURE,OLD_SHELL));
-        tmN_fyxmsz(iTCF,yr,FEMALE,  MATURE,OLD_SHELL) = elem_prod(ratio2,modNFT_yxmsz(yr,FEMALE,  MATURE,OLD_SHELL));
+        tmN_fyxmsz(iTCF,yr,FEMALE,IMMATURE,NEW_SHELL) = elem_prod(ratio1,modFT_PopNum_yxmsz(yr,FEMALE,IMMATURE,NEW_SHELL));
+        tmN_fyxmsz(iTCF,yr,FEMALE,  MATURE,NEW_SHELL) = elem_prod(ratio1,modFT_PopNum_yxmsz(yr,FEMALE,  MATURE,NEW_SHELL));
+        tmN_fyxmsz(iTCF,yr,FEMALE,IMMATURE,OLD_SHELL) = elem_prod(ratio2,modFT_PopNum_yxmsz(yr,FEMALE,IMMATURE,OLD_SHELL));
+        tmN_fyxmsz(iTCF,yr,FEMALE,  MATURE,OLD_SHELL) = elem_prod(ratio2,modFT_PopNum_yxmsz(yr,FEMALE,  MATURE,OLD_SHELL));
         predDscNumMortTCF_xyz(FEMALE,yr) = tmN_fyxmsz(iTCF,yr,FEMALE,IMMATURE,NEW_SHELL) + tmN_fyxmsz(iTCF,yr,FEMALE,MATURE,NEW_SHELL)
                                           +tmN_fyxmsz(iTCF,yr,FEMALE,IMMATURE,OLD_SHELL) + tmN_fyxmsz(iTCF,yr,FEMALE,MATURE,OLD_SHELL);
         predDscBioMortTCF_xy(FEMALE,yr)  = predDscNumMortTCF_xyz(FEMALE,yr)*wt_xmz(FEMALE,MATURE);//all crab assumed mature
@@ -3325,10 +3325,10 @@ FUNCTION get_catch_at_len                  //wts: new version
         //snow crab discard catch female
         ratio1 = elem_prod(elem_div(fmSCF_xyz(FEMALE,yr),fmTOT_xsyz(FEMALE,NEW_SHELL,yr)),1.0-S_xsyz(FEMALE,NEW_SHELL,yr));
         ratio2 = elem_prod(elem_div(fmSCF_xyz(FEMALE,yr),fmTOT_xsyz(FEMALE,OLD_SHELL,yr)),1.0-S_xsyz(FEMALE,OLD_SHELL,yr));
-        tmN_fyxmsz(iSCF,yr,FEMALE,IMMATURE,NEW_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,FEMALE,IMMATURE,NEW_SHELL));
-        tmN_fyxmsz(iSCF,yr,FEMALE,  MATURE,NEW_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,FEMALE,  MATURE,NEW_SHELL));
-        tmN_fyxmsz(iSCF,yr,FEMALE,IMMATURE,OLD_SHELL) = elem_prod(ratio2,modNFT_yxmsz(yr,FEMALE,IMMATURE,OLD_SHELL));
-        tmN_fyxmsz(iSCF,yr,FEMALE,  MATURE,OLD_SHELL) = elem_prod(ratio2,modNFT_yxmsz(yr,FEMALE,  MATURE,OLD_SHELL));
+        tmN_fyxmsz(iSCF,yr,FEMALE,IMMATURE,NEW_SHELL) = elem_prod(ratio1,modFT_PopNum_yxmsz(yr,FEMALE,IMMATURE,NEW_SHELL));
+        tmN_fyxmsz(iSCF,yr,FEMALE,  MATURE,NEW_SHELL) = elem_prod(ratio1,modFT_PopNum_yxmsz(yr,FEMALE,  MATURE,NEW_SHELL));
+        tmN_fyxmsz(iSCF,yr,FEMALE,IMMATURE,OLD_SHELL) = elem_prod(ratio2,modFT_PopNum_yxmsz(yr,FEMALE,IMMATURE,OLD_SHELL));
+        tmN_fyxmsz(iSCF,yr,FEMALE,  MATURE,OLD_SHELL) = elem_prod(ratio2,modFT_PopNum_yxmsz(yr,FEMALE,  MATURE,OLD_SHELL));
         predDscNumMortSCF_xyz(FEMALE,yr) = tmN_fyxmsz(iSCF,yr,FEMALE,IMMATURE,NEW_SHELL) + tmN_fyxmsz(iSCF,yr,FEMALE,MATURE,NEW_SHELL)
                                           +tmN_fyxmsz(iSCF,yr,FEMALE,IMMATURE,OLD_SHELL) + tmN_fyxmsz(iSCF,yr,FEMALE,MATURE,OLD_SHELL);
         predDscBioMortSCF_xy(FEMALE,yr) = predDscNumMortSCF_xyz(FEMALE)(yr)*wt_xmz(FEMALE,MATURE);
@@ -3336,10 +3336,10 @@ FUNCTION get_catch_at_len                  //wts: new version
         //red king crab discard catch female
         ratio1 = elem_prod(elem_div(fmRKF_xyz(FEMALE,yr),fmTOT_xsyz(FEMALE,NEW_SHELL,yr)),1.0-S_xsyz(FEMALE,NEW_SHELL,yr));
         ratio2 = elem_prod(elem_div(fmRKF_xyz(FEMALE,yr),fmTOT_xsyz(FEMALE,OLD_SHELL,yr)),1.0-S_xsyz(FEMALE,OLD_SHELL,yr));
-        tmN_fyxmsz(iRKF,yr,FEMALE,IMMATURE,NEW_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,FEMALE,IMMATURE,NEW_SHELL));
-        tmN_fyxmsz(iRKF,yr,FEMALE,  MATURE,NEW_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,FEMALE,  MATURE,NEW_SHELL));
-        tmN_fyxmsz(iRKF,yr,FEMALE,IMMATURE,OLD_SHELL) = elem_prod(ratio2,modNFT_yxmsz(yr,FEMALE,IMMATURE,OLD_SHELL));
-        tmN_fyxmsz(iRKF,yr,FEMALE,  MATURE,OLD_SHELL) = elem_prod(ratio2,modNFT_yxmsz(yr,FEMALE,  MATURE,OLD_SHELL));
+        tmN_fyxmsz(iRKF,yr,FEMALE,IMMATURE,NEW_SHELL) = elem_prod(ratio1,modFT_PopNum_yxmsz(yr,FEMALE,IMMATURE,NEW_SHELL));
+        tmN_fyxmsz(iRKF,yr,FEMALE,  MATURE,NEW_SHELL) = elem_prod(ratio1,modFT_PopNum_yxmsz(yr,FEMALE,  MATURE,NEW_SHELL));
+        tmN_fyxmsz(iRKF,yr,FEMALE,IMMATURE,OLD_SHELL) = elem_prod(ratio2,modFT_PopNum_yxmsz(yr,FEMALE,IMMATURE,OLD_SHELL));
+        tmN_fyxmsz(iRKF,yr,FEMALE,  MATURE,OLD_SHELL) = elem_prod(ratio2,modFT_PopNum_yxmsz(yr,FEMALE,  MATURE,OLD_SHELL));
         predDscNumMortRKF_xyz(FEMALE,yr) = tmN_fyxmsz(iRKF,yr,FEMALE,IMMATURE,NEW_SHELL) + tmN_fyxmsz(iRKF,yr,FEMALE,MATURE,NEW_SHELL)
                                           +tmN_fyxmsz(iRKF,yr,FEMALE,IMMATURE,OLD_SHELL) + tmN_fyxmsz(iRKF,yr,FEMALE,MATURE,OLD_SHELL);
         predDscBioMortRKF_xy(FEMALE,yr) = predDscNumMortRKF_xyz(FEMALE,yr)*wt_xmz(FEMALE,MATURE);
@@ -3347,10 +3347,10 @@ FUNCTION get_catch_at_len                  //wts: new version
         //trawl bycatch female (20150601: explicitly calculating ratio 2 rather than assuming ratio2=ratio1)
         ratio1 = elem_prod(elem_div(fmGTF_xyz(FEMALE,yr),fmTOT_xsyz(FEMALE,NEW_SHELL,yr)),1.0-S_xsyz(FEMALE,NEW_SHELL,yr));
         ratio2 = elem_prod(elem_div(fmGTF_xyz(FEMALE,yr),fmTOT_xsyz(FEMALE,OLD_SHELL,yr)),1.0-S_xsyz(FEMALE,OLD_SHELL,yr));
-        tmN_fyxmsz(iGTF,yr,FEMALE,IMMATURE,NEW_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,FEMALE,IMMATURE,NEW_SHELL));
-        tmN_fyxmsz(iGTF,yr,FEMALE,  MATURE,NEW_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,FEMALE,  MATURE,NEW_SHELL));
-        tmN_fyxmsz(iGTF,yr,FEMALE,IMMATURE,OLD_SHELL) = elem_prod(ratio2,modNFT_yxmsz(yr,FEMALE,IMMATURE,OLD_SHELL));
-        tmN_fyxmsz(iGTF,yr,FEMALE,  MATURE,OLD_SHELL) = elem_prod(ratio2,modNFT_yxmsz(yr,FEMALE,  MATURE,OLD_SHELL));
+        tmN_fyxmsz(iGTF,yr,FEMALE,IMMATURE,NEW_SHELL) = elem_prod(ratio1,modFT_PopNum_yxmsz(yr,FEMALE,IMMATURE,NEW_SHELL));
+        tmN_fyxmsz(iGTF,yr,FEMALE,  MATURE,NEW_SHELL) = elem_prod(ratio1,modFT_PopNum_yxmsz(yr,FEMALE,  MATURE,NEW_SHELL));
+        tmN_fyxmsz(iGTF,yr,FEMALE,IMMATURE,OLD_SHELL) = elem_prod(ratio2,modFT_PopNum_yxmsz(yr,FEMALE,IMMATURE,OLD_SHELL));
+        tmN_fyxmsz(iGTF,yr,FEMALE,  MATURE,OLD_SHELL) = elem_prod(ratio2,modFT_PopNum_yxmsz(yr,FEMALE,  MATURE,OLD_SHELL));
         predDscNumMortGTF_xyz(FEMALE,yr) = tmN_fyxmsz(iGTF,yr,FEMALE,IMMATURE,NEW_SHELL) + tmN_fyxmsz(iGTF,yr,FEMALE,MATURE,NEW_SHELL) 
                                           +tmN_fyxmsz(iGTF,yr,FEMALE,IMMATURE,OLD_SHELL) + tmN_fyxmsz(iGTF,yr,FEMALE,MATURE,OLD_SHELL); 
         predDscBioMortGTF_xy(FEMALE,yr) = predDscNumMortGTF_xyz(FEMALE,yr)*wt_xmz(FEMALE,MATURE);//add in females to males for trawl catches
@@ -3888,94 +3888,111 @@ FUNCTION Misc_output
     int debug = 0;
     if (debug) cout<<" to Misc_output()"<<endl;
 
-    dvar_matrix useSelSrv(1,2,1,nZBs);
-    dvar_matrix cv_srv1_nowt(1,2,styr,endyr);
+    dvar_matrix useSelSrv(1,nSXs,1,nZBs);
+    dvar_matrix cv_srv1_nowt(1,nSXs,styr,endyr);
     
-    modTotLglBio_TCFM_y.initialize();
-    modTotLglNum_TCFM_y.initialize();
+    //legal males
+    modFT_PopNumLegal_y.initialize();
+    modFT_PopBioLegal_y.initialize();
+    modTotBioMortLegal_TCFM_y.initialize();
+    modTotNumMortLegal_TCFM_y.initialize();
+    modSrvNumLegal_y.initialize();
+    modSrvBioLegal_y.initialize();
     for (int yr=styr;yr<endyr;yr++) {      //(IMPORTANT CHANGE: used to be "endyr")
-       for (int m=1;m<=nMSs;m++){
-           for (int s=1;s<=nSCs;s++){
-                modTotLglNum_TCFM_y(yr) += sum(tmN_fyxmsz(iTCF,yr,MALE,m,s)(iZLegal,nZBs)); 
-                modTotLglBio_TCFM_y(yr) += tmN_fyxmsz(iTCF,yr,MALE,m,s)(iZLegal,nZBs)*wt_xmz(MALE,m)(iZLegal,nZBs);
+    if (yr<1982)             {useSelSrv = selSrv2;}  else
+    if (1982<=yr && yr<1988) {useSelSrv = selSrv2a;} else
+    if (1988<=yr)            {useSelSrv = selSrv3;}        
+        for (int m=1;m<=nMSs;m++){
+            for (int s=1;s<=nSCs;s++){
+                modPopNumLegal_y(yr) += sum(modNum_yxmsz(yr,MALE,m,s)(iZLegal,nZBs));
+                modPopBioLegal_y(yr) +=     modNum_yxmsz(yr,MALE,m,s)(iZLegal,nZBs)*wt_xmz(MALE,m)(iZLegal,nZBs);
+                modFT_PopNumLegal_y(yr) += sum(modFT_PopNum_yxmsz(yr,MALE,m,s)(iZLegal,nZBs));
+                modFT_PopBioLegal_y(yr) +=     modFT_PopNum_yxmsz(yr,MALE,m,s)(iZLegal,nZBs)*wt_xmz(MALE,m)(iZLegal,nZBs);
+                modTotNumMortLegal_TCFM_y(yr) += sum(tmN_fyxmsz(iTCF,yr,MALE,m,s)(iZLegal,nZBs)); 
+                modTotBioMortLegal_TCFM_y(yr) += tmN_fyxmsz(iTCF,yr,MALE,m,s)(iZLegal,nZBs)*wt_xmz(MALE,m)(iZLegal,nZBs);
+                modSrvNumLegal_y(yr) += modNum_yxmsz(yr,MALE,m,s)(iZLegal,nZBs)*useSelSrv(MALE)(iZLegal,nZBs);
+                modSrvBioLegal_y(yr) += elem_prod(modNum_yxmsz(yr,MALE,m,s),useSelSrv(MALE))(iZLegal,nZBs)*wt_xmz(MALE,m)(iZLegal,nZBs);
+
            }//s
        }//m
     }//yr loop
-//        for (int z=iZLegal;z<=nZBs;z++) {//VECTORIZE THIS!!
-//            modTotLglNum_TCFM_y(yr) +=  fmTCFM_syz(NEW_SHELL,yr,z)/fmTOT_xsyz(MALE,NEW_SHELL,yr,z)*modNFT_yxmsz(yr,MALE,IMMATURE,NEW_SHELL,z)*(1-S_xsyz(MALE,NEW_SHELL,yr,z)) + 
-//                                        fmTCFM_syz(NEW_SHELL,yr,z)/fmTOT_xsyz(MALE,NEW_SHELL,yr,z)*modNFT_yxmsz(yr,MALE,  MATURE,NEW_SHELL,z)*(1-S_xsyz(MALE,NEW_SHELL,yr,z))+ 
-//                                        fmTCFM_syz(OLD_SHELL,yr,z)/fmTOT_xsyz(MALE,OLD_SHELL,yr,z)*modNFT_yxmsz(yr,MALE,IMMATURE,OLD_SHELL,z)*(1-S_xsyz(MALE,OLD_SHELL,yr,z))+
-//                                        fmTCFM_syz(OLD_SHELL,yr,z)/fmTOT_xsyz(MALE,OLD_SHELL,yr,z)*modNFT_yxmsz(yr,MALE,  MATURE,OLD_SHELL,z)*(1-S_xsyz(MALE,OLD_SHELL,yr,z));
-//            modTotLglBio_TCFM_y(yr) += (fmTCFM_syz(NEW_SHELL,yr,z)/fmTOT_xsyz(MALE,NEW_SHELL,yr,z)*modNFT_yxmsz(yr,MALE,IMMATURE,NEW_SHELL,z)*(1-S_xsyz(MALE,NEW_SHELL,yr,z)) + 
-//                                        fmTCFM_syz(NEW_SHELL,yr,z)/fmTOT_xsyz(MALE,NEW_SHELL,yr,z)*modNFT_yxmsz(yr,MALE,  MATURE,NEW_SHELL,z)*(1-S_xsyz(MALE,NEW_SHELL,yr,z))+ 
-//                                        fmTCFM_syz(OLD_SHELL,yr,z)/fmTOT_xsyz(MALE,OLD_SHELL,yr,z)*modNFT_yxmsz(yr,MALE,IMMATURE,OLD_SHELL,z)*(1-S_xsyz(MALE,OLD_SHELL,yr,z))+
-//                                        fmTCFM_syz(OLD_SHELL,yr,z)/fmTOT_xsyz(MALE,OLD_SHELL,yr,z)*modNFT_yxmsz(yr,MALE,  MATURE,OLD_SHELL,z)*(1-S_xsyz(MALE,OLD_SHELL,yr,z)))  
-//                                        * wt_xmz(MALE,  MATURE)(z);
-//            if (z==iZLegal) {  //note this only occurs 1st time through loop
-//                // AEP???
-//                modTotLglBio_TCFM_y(yr) = modTotLglBio_TCFM_y(yr)*0.5;
-//                modTotLglNum_TCFM_y(yr) = modTotLglNum_TCFM_y(yr)*0.5;
-//            }
-//        }//z loop
-//    }//yr loop
-    if (debug) cout<<" to large males "<<endl;
-    modBioLegalMales_y.initialize();
-    modNumLegalMales_y.initialize();
-    for (int yr=styr;yr<=endyr;yr++){
-       for (int m=1;m<=nMSs;m++){
-           for (int s=1;s<=nSCs;s++){
-               modNumLegalMales_y(yr) += sum(modNFT_yxmsz(yr,MALE,m,s)(iZLegal,nZBs));
-               modBioLegalMales_y(yr) +=     modNFT_yxmsz(yr,MALE,m,s)(iZLegal,nZBs)*wt_xmz(MALE,m)(iZLegal,nZBs);
-           }//s
-       }//m
-    }//yr
-//        modNumLegalMales_y(yr)+=  sum( modNFT_yxmsz(yr,MALE,IMMATURE,NEW_SHELL)(iZLegal,nZBs) + modNFT_yxmsz(yr,MALE,IMMATURE,OLD_SHELL)(iZLegal,nZBs) 
-//                                      +modNFT_yxmsz(yr,MALE,  MATURE,NEW_SHELL)(iZLegal,nZBs) + modNFT_yxmsz(yr,MALE,  MATURE,OLD_SHELL)(iZLegal,nZBs));
-//        modBioLegalMales_y(yr)+= (modNFT_yxmsz(yr,MALE,IMMATURE,NEW_SHELL)(iZLegal,nZBs) + modNFT_yxmsz(yr,MALE,IMMATURE,OLD_SHELL)(iZLegal,nZBs) 
-//                                 +modNFT_yxmsz(yr,MALE,  MATURE,NEW_SHELL)(iZLegal,nZBs) + modNFT_yxmsz(yr,MALE,  MATURE,OLD_SHELL)(iZLegal,nZBs))*wt_xmz(MALE,  MATURE)(iZLegal,nZBs);
-//     }//year loop
+    if (sd_phase()){
+        sdrPopNumLegal = modPopNumLegal_y(sdrPopNumLegal.indexmin(),sdrPopNumLegal.indexmax()); 
+    }
+    
     if (debug) cout<<" to eff N "<<endl;
     // Effective N's                    //can these be vectorized?
-    //retained males in directed fishery
-    dvariable num;
+    dvariable num; dvariable den;
+    //retained male size comps in directed fishery
+    effnTCF_ret_y.initialize();
     for (int i=1;i<=nObsRetZCsTCF;i++){
         int yr=yrsObsRetZCsTCF_n(i);
-        num = modPrNatZ_TCFR_syz(NEW_SHELL,yr)*(1-modPrNatZ_TCFR_syz(NEW_SHELL,yr))+
-              modPrNatZ_TCFR_syz(OLD_SHELL,yr)*(1-modPrNatZ_TCFR_syz(OLD_SHELL,yr));
-        for(int s=1;s<=nSCs;s++) effnTCF_ret_sy(s,yr) = num/norm2(modPrNatZ_TCFR_syz(s,yr)-obsPrNatZ_TCFR_sn(s,i));
+        num = (modPrNatZ_TCFR_syz(NEW_SHELL,yr)+modPrNatZ_TCFR_syz(OLD_SHELL,yr))
+                *(1-(modPrNatZ_TCFR_syz(NEW_SHELL,yr)+modPrNatZ_TCFR_syz(OLD_SHELL,yr)));
+        den = norm2((obsPrNatZ_TCFR_sn(NEW_SHELL,i)+obsPrNatZ_TCFR_sn(OLD_SHELL,i))
+                      -(modPrNatZ_TCFR_syz(NEW_SHELL,yr)+modPrNatZ_TCFR_syz(OLD_SHELL,yr)));
+        effnTCF_ret_y(yr) = num/den;
     }//i loop
-    //total males in directed fishery
+    //total catch size comps in directed fishery
+    if (debug) cout<<" to eff N: TCF tot "<<endl;
+    effnTCF_tot_xy.initialize();
     for (int i=1;i<=nObsZCsTCFM;i++) {
         int yr=yrsObsZCsTCFM_n(i);
-        num = modPrNatZ_TCFM_syz(NEW_SHELL,yr)*(1-modPrNatZ_TCFM_syz(NEW_SHELL,yr))+
-              modPrNatZ_TCFM_syz(OLD_SHELL,yr)*(1-modPrNatZ_TCFM_syz(OLD_SHELL,yr));
-        for(int s=1;s<=nSCs;s++) effnTCF_tot_sy(s,yr) = num/norm2(modPrNatZ_TCFM_syz(s,yr)-obsPrNatZ_TCFM_snz(s,i));
+        num = (modPrNatZ_TCFM_syz(NEW_SHELL,yr)+modPrNatZ_TCFM_syz(OLD_SHELL,yr))
+                *(1-(modPrNatZ_TCFM_syz(NEW_SHELL,yr)+modPrNatZ_TCFM_syz(OLD_SHELL,yr)));
+        den = norm2((obsPrNatZ_TCFM_snz(NEW_SHELL,i)+obsPrNatZ_TCFM_snz(NEW_SHELL,i))
+                      -(modPrNatZ_TCFM_syz(NEW_SHELL,yr)+modPrNatZ_TCFM_syz(OLD_SHELL,yr)));
+        effnTCF_tot_xy(  MALE,yr) = num/den;
+        num = modPrNatZ_TCFF_yz(yr)*(1-modPrNatZ_TCFF_yz(yr));
+        den = norm2(obsPrNatZ_TCFF_nz(i)-modPrNatZ_TCFF_yz(yr));
+        effnTCF_tot_xy(FEMALE,yr) = num/den;
     }// i loop
+    //SCF size comps
+    if (debug) cout<<" to eff N: SCF tot "<<endl;
+    effnSCF_tot_xy.initialize();
+    for (int i=1;i<=nObsZCsSCF;i++) {
+        int yr=yrsObsZCsSCF_n(i);
+        for (int x=1;x<=nSXs;x++) {
+            num = modPrNatZ_SCF_xyz(x,yr)*(1-modPrNatZ_SCF_xyz(x,yr));
+            den = norm2(obsPrNatZ_SCF_xnz(x,i)-modPrNatZ_SCF_xyz(x,yr));
+            effnSCF_tot_xy(x,yr) = num/den;
+        }
+    }// i loop
+    //RKF size comps
+    if (debug) cout<<" to eff N: RKF tot "<<endl;
+    effnRKF_tot_xy.initialize();
+    for (int i=1;i<=nObsZCsRKF;i++) {
+        int yr=yrsObsZCsRKF_n(i);
+        for (int x=1;x<=nSXs;x++) {
+            num = modPrNatZ_RKF_xyz(x,yr)*(1-modPrNatZ_RKF_xyz(x,yr));
+            den = norm2(obsPrNatZ_RKF_xnz(x,i)-modPrNatZ_RKF_xyz(x,yr));
+            effnRKF_tot_xy(x,yr) = num/den;
+        }
+    }// i loop
+    //GTF size comps
+    if (debug) cout<<" to eff N: GTF tot "<<endl;
+    effnGTF_tot_y.initialize();
+    for (int i=1;i<=nObsZCsGTF;i++) {
+        int yr=yrsObsZCsGTF_n(i);
+        num = modPrNatZ_GTF_xyz(FEMALE,yr)*(1-modPrNatZ_GTF_xyz(FEMALE,yr))+modPrNatZ_GTF_xyz(MALE,yr)*(1-modPrNatZ_GTF_xyz(MALE,yr));
+        den = norm2(obsPrNatZ_GTF_xnz(FEMALE,i)-modPrNatZ_GTF_xyz(FEMALE,yr))+norm2(obsPrNatZ_GTF_xnz(MALE,i)-modPrNatZ_GTF_xyz(MALE,yr));
+        effnGTF_tot_y(yr) = num/den;
+    }// i loop
+    
+    //survey size comps
+    if (debug) cout<<" to eff N: survey "<<endl;
+    effnSrv_mxy.initialize();
     for (int i=1;i<=nObsZCsSrv;i++) {
         int yr=yrsObsZCsSrv_n(i);
-        num = modSrvPrNatZ_NS_mxyz(IMMATURE,FEMALE,yr)*(1-modSrvPrNatZ_NS_mxyz(IMMATURE,FEMALE,yr))+
-              modSrvPrNatZ_NS_mxyz(IMMATURE,  MALE,yr)*(1-modSrvPrNatZ_NS_mxyz(IMMATURE,  MALE,yr))+
-              modSrvPrNatZ_OS_mxyz(IMMATURE,FEMALE,yr)*(1-modSrvPrNatZ_OS_mxyz(IMMATURE,FEMALE,yr))+
-              modSrvPrNatZ_OS_mxyz(IMMATURE,  MALE,yr)*(1-modSrvPrNatZ_OS_mxyz(IMMATURE,  MALE,yr));//note dot product sums
-        for (int x=1;x<=nSXs;x++)
-            effnSrv_msxy(IMMATURE,NEW_SHELL,x,yr) = num/norm2(modSrvPrNatZ_NS_mxyz(IMMATURE,x,yr)-obsPrNatZ_Srv_msxnz(IMMATURE,NEW_SHELL,x,i));
-            
-        for (int x=1;x<=nSXs;x++)
-            effnSrv_msxy(IMMATURE,OLD_SHELL,x,yr) = 0.0;//no immature, old_shell animals
-
-        num = modSrvPrNatZ_NS_mxyz(  MATURE,FEMALE,yr)*(1-modSrvPrNatZ_NS_mxyz(  MATURE,FEMALE,yr))+
-              modSrvPrNatZ_NS_mxyz(  MATURE,  MALE,yr)*(1-modSrvPrNatZ_NS_mxyz(  MATURE,  MALE,yr))+
-              modSrvPrNatZ_OS_mxyz(  MATURE,FEMALE,yr)*(1-modSrvPrNatZ_OS_mxyz(  MATURE,FEMALE,yr))+
-              modSrvPrNatZ_OS_mxyz(  MATURE,  MALE,yr)*(1-modSrvPrNatZ_OS_mxyz(  MATURE,  MALE,yr));
-        for (int x=1;x<=nSXs;x++)
-            effnSrv_msxy(  MATURE,NEW_SHELL,x,yr) = num/norm2(modSrvPrNatZ_NS_mxyz(  MATURE,x,yr)-obsPrNatZ_Srv_msxnz(  MATURE,NEW_SHELL,x,i));
-            
-        num = modSrvPrNatZ_NS_mxyz(  MATURE,FEMALE,yr)*(1-modSrvPrNatZ_NS_mxyz(  MATURE,FEMALE,yr))+
-              modSrvPrNatZ_NS_mxyz(  MATURE,  MALE,yr)*(1-modSrvPrNatZ_NS_mxyz(  MATURE,  MALE,yr))+
-              modSrvPrNatZ_OS_mxyz(  MATURE,FEMALE,yr)*(1-modSrvPrNatZ_OS_mxyz(  MATURE,FEMALE,yr))+
-              modSrvPrNatZ_OS_mxyz(  MATURE,  MALE,yr)*(1-modSrvPrNatZ_OS_mxyz(  MATURE,  MALE,yr));
-        for (int x=1;x<=nSXs;x++)
-            effnSrv_msxy(  MATURE,OLD_SHELL,x,yr) = num/norm2(modSrvPrNatZ_OS_mxyz(  MATURE,x,yr)-obsPrNatZ_Srv_msxnz(  MATURE,OLD_SHELL,x,i));
+        for (int m=1;m<=nMSs;m++){
+            for (int x=1;x<=nSXs;x++){
+                num = (modSrvPrNatZ_NS_mxyz(m,x,yr)+modSrvPrNatZ_OS_mxyz(m,x,yr))
+                        *(1-(modSrvPrNatZ_NS_mxyz(m,x,yr)+modSrvPrNatZ_OS_mxyz(m,x,yr)));
+                den = norm2((obsPrNatZ_Srv_msxnz(m,NEW_SHELL,x,i)+obsPrNatZ_Srv_msxnz(m,OLD_SHELL,x,i))
+                              -(modSrvPrNatZ_NS_mxyz(m,x,yr)+modSrvPrNatZ_OS_mxyz(m,x,yr)));
+                effnSrv_mxy(m,x,yr) = num/den;
+            } // x loop
+        } // m loop
     } // i loop
     
     // spawning biomass and related outputs
@@ -4048,7 +4065,7 @@ FUNCTION Misc_output
     modSpBioFishTime_xy.initialize();
     for (int yr=styr;yr<=endyr;yr++) {
         for (int x=1;x<=nSXs;x++){
-            for (int s=1;s<=nSCs;s++) modSpBioFishTime_xy(x,yr) += modNFT_yxmsz(yr,x,MATURE,s)*wt_xmz(x,MATURE);//dot product
+            for (int s=1;s<=nSCs;s++) modSpBioFishTime_xy(x,yr) += modFT_PopNum_yxmsz(yr,x,MATURE,s)*wt_xmz(x,MATURE);//dot product
         }//x
     }//yr
     if (debug) cout<<" sex ratio "<<endl;
@@ -4061,8 +4078,8 @@ FUNCTION Misc_output
         }
     }//yr
     
-    if (debug) cout<<" to age - struct "<<endl;
     // Age-structure
+    if (debug) cout<<" to age - struct "<<endl;
     modNumAtAZ_xyaz.initialize();
     
     // initialize
@@ -4096,10 +4113,10 @@ FUNCTION Misc_output
         }//yr
     }//x
     
-    if (debug) cout<<" to legal males "<<endl;
     // Legal males
+    if (debug) cout<<" to legal males "<<endl;
     modPopNum_y.initialize();
-    bioLegalMales_y.initialize();
+    modPopBioLegal_y.initialize();
     modSrvNumLegal_sy.initialize();
     modSrvNum_xyz.initialize();
     modSrvBio_xy.initialize();
@@ -4110,10 +4127,10 @@ FUNCTION Misc_output
         if (yr>1987)            useSelSrv = selSrv3;
         
         // legal male size is based on zLegal
-        bioLegalMales_y(yr)             = modNum_xyz(MALE,yr)*wt_xmz(MALE,  MATURE);
-        modSrvNumLegal_sy(NEW_SHELL,yr) = natlength_new(MALE,yr)*useSelSrv(MALE);
-        modSrvNumLegal_sy(OLD_SHELL,yr) = natlength_old(MALE,yr)*useSelSrv(MALE);
-        modSrvBioLegal_y(yr)            = elem_prod(modNum_xyz(MALE,yr),useSelSrv(MALE))*wt_xmz(MALE,  MATURE);
+        modPopBioLegal_y(yr)            = modNum_xyz(MALE,yr)(iZLegal,nZBs)*wt_xmz(MALE,  MATURE)(iZLegal,nZBs);
+        modSrvNumLegal_sy(NEW_SHELL,yr) = natlength_new(MALE,yr)(iZLegal,nZBs)*useSelSrv(MALE)(iZLegal,nZBs);
+        modSrvNumLegal_sy(OLD_SHELL,yr) = natlength_old(MALE,yr)(iZLegal,nZBs)*useSelSrv(MALE)(iZLegal,nZBs);
+        modSrvBioLegal_y(yr)            = elem_prod(modNum_xyz(MALE,yr),useSelSrv(MALE))(iZLegal,nZBs)*wt_xmz(MALE,  MATURE)(iZLegal,nZBs);
         
          for (int x=1;x<=nSXs;x++){
             // survey numbers
@@ -4134,8 +4151,8 @@ FUNCTION Misc_output
         }//x
     }//yr
     
+    // Survey likelihood (by year) NOTE: these are NOT contributions to objective function!!
     if (debug) cout<<" to surv like "<<endl;
-    // Survey likelihood (by year)
     lkSrvZCs_msx.initialize();
     for(int x=1;x<=nSXs;x++) {
         for (int i=1; i <=nObsZCsSrv; i++) {
@@ -4160,7 +4177,7 @@ FUNCTION Misc_output
         sdrSpBioF    = fspbio(sdrSpBioF.indexmin(),sdrSpBioF.indexmax());
         sdrSpBioM    = mspbio(sdrSpBioM.indexmin(),sdrSpBioM.indexmax());
         //cout<<"0"<<endl;
-        sdrLegalMales = numLegalMales_y(sdrLegalMales.indexmin(),sdrLegalMales.indexmax());
+        sdrPopNumLegal = modPopNumLegal_y(sdrPopNumLegal.indexmin(),sdrPopNumLegal.indexmax());
         //cout<<"1"<<endl;
         sdrRecEarly = rec_y(styr,mnYrRecCurr-1);
         sdrRecF     = rec_y(mnYrRecCurr,endyr);//was endyr-1
@@ -4179,695 +4196,6 @@ FUNCTION Misc_output
     if (debug) cout<<"done MiscOutput"<<endl;
     //exit(-1);
 
-  
-// ==========================================================================
-FUNCTION void writeReport(ostream& report)
-    CheckFile<<"start writeReport"<<endl;
-    int ii,i,k,j;
-    dvar_vector preds_sexr(styr,endyr);
-    dvar_matrix tmpo(1,2,styr,endyr);
-    dvar_matrix tmpp(1,2,styr,endyr);
-    dvar_vector obs_tmp(styr,endyr);
-    dvariable ghl,ghl_number;
-    dvariable hrate;
-    dvar_vector totcatch(styr, endyr-1);  
-    dvar_vector tmpp1(1,nZBs);
-    dvar_vector tmpp2(1,nZBs);
-    dvar_vector tmpp3(1,nZBs);
-    dvar_vector tmpp4(1,nZBs);
-    
-    Misc_output();
-
-    writeLikelihoodComponents(report,0);
-      
-  report<<"----------------------------------------------------------------------------"<<endl;
-  report<<"Natural mortality"<<endl;
-  report<<"----------------------------------------------------------------------------"<<endl;
-  dvar_vector mrt(styr,endyr-1);
-  mrt = M_msx(IMMATURE,NEW_SHELL,FEMALE);
-  report<<"Natural mortality, immature females"<<endl<<mrt<<endl;
-  mrt = M_msx(IMMATURE,NEW_SHELL,  MALE);
-  report<<"Natural mortality, immature males"<<endl<<mrt<<endl;
-  mrt = M_msx(MATURE,NEW_SHELL,FEMALE); if (mort_switch==1) mrt(lyr_mort,uyr_mort) *= pMfac_Big(FEMALE);
-  report<<"Natural mortality, mature, new shell females"<<endl<<mrt<<endl;
-  mrt = M_msx(MATURE,OLD_SHELL,FEMALE); if (mort_switch==1) mrt(lyr_mort,uyr_mort) *= pMfac_Big(FEMALE);
-  report<<"Natural mortality, mature, old shell females"<<endl<<mrt<<endl;
-  mrt = M_msx(MATURE,NEW_SHELL,  MALE); if (mort_switch==1) mrt(lyr_mort,uyr_mort) *= pMfac_Big(  MALE);
-  report<<"Natural mortality, mature, new shell males"<<endl<<mrt<<endl;
-  mrt = M_msx(MATURE,OLD_SHELL,  MALE); if (mort_switch==1) mrt(lyr_mort,uyr_mort) *= pMfac_Big(  MALE);
-  report<<"Natural mortality, mature, old shell males"<<endl<<mrt<<endl;
-      
-  report<<"----------------------------------------------------------------------------"<<endl;
-  report<<"Population numbers"<<endl;
-  report<<"----------------------------------------------------------------------------"<<endl;
-    for (int yr=styr;yr<=endyr;yr++){
-        if((modSrvNum_xy(MALE,yr)+modSrvNum_xy(FEMALE,yr))<0.01) {
-            preds_sexr(yr)=0.0;
-        } else {
-            preds_sexr(yr)=modSrvNum_xy(FEMALE,yr)/(modSrvNum_xy(FEMALE,yr)+modSrvNum_xy(MALE,yr));
-        }
-    }
-    report << "Estimated numbers of immature new shell female crab by length: 'year','27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'"<< endl;
-    for (int yr=styr;yr<=endyr;yr++) report <<  yr<<" "<<modNum_yxmsz(yr,FEMALE,IMMATURE,NEW_SHELL) << endl;
-    report << "Estimated numbers of immature old shell female crab by length: 'year','27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'"<< endl;
-    for (int yr=styr;yr<=endyr;yr++) report <<  yr<<" "<<modNum_yxmsz(yr,FEMALE,IMMATURE,OLD_SHELL) << endl;
-    report << "Estimated numbers of mature new shell female crab by length: 'year','27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'"<< endl;
-    for (int yr=styr;yr<=endyr;yr++) report <<  yr<<" "<<modNum_yxmsz(yr,FEMALE,  MATURE,NEW_SHELL) << endl;
-    report << "Estimated numbers of mature old shell female crab by length: 'year','27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'"<< endl;
-    for (int yr=styr;yr<=endyr;yr++) report <<  yr<<" "<<modNum_yxmsz(yr,FEMALE,  MATURE,OLD_SHELL) << endl;
-    
-    report << "Estimated numbers (millions) of immature new shell male crab by length: 'year','27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'"<< endl;
-    for (int yr=styr;yr<=endyr;yr++) report << yr<<" "<<modNum_yxmsz(yr,MALE,IMMATURE,NEW_SHELL) << endl;
-    report << "Estimated numbers (millions) of immature old shell male crab by length: 'year','27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'"<< endl;
-    for (int yr=styr;yr<=endyr;yr++) report << yr<<" "<<modNum_yxmsz(yr,MALE,IMMATURE,OLD_SHELL) << endl;
-    report << "Estimated numbers (millions) of mature new shell male crab by length: 'year','27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'"<< endl;
-    for (int yr=styr;yr<=endyr;yr++) report << yr<<" "<<modNum_yxmsz(yr,MALE,  MATURE,NEW_SHELL) << endl;
-    report << "Estimated numbers (millions) of mature old shell male crab by length: 'year','27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'"<< endl;
-    for (int yr=styr;yr<=endyr;yr++) report << yr<<" "<<modNum_yxmsz(yr,MALE,  MATURE,OLD_SHELL) << endl;
-    
-    report << "Observed numbers (millions) of immature new shell female crab by length: 'year','27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'"<< endl;
-    for (i=1; i <= nObsZCsSrv; i++) report<<yrsObsZCsSrv_n(i)<<" "<<obsPrNatZ_Srv_msxnz(1,1,1,i)*obsSrvNum_y(yrsObsZCsSrv_n(i))<<endl;
-    report << "Observed numbers (millions) of mature new shell female crab by length: 'year','27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'"<< endl;
-    for (i=1; i <= nObsZCsSrv; i++) report<<yrsObsZCsSrv_n(i)<<" "<<obsPrNatZ_Srv_msxnz(2,1,1,i)*obsSrvNum_y(yrsObsZCsSrv_n(i))<<endl;
-    report << "Observed numbers (millions) of mature old shell female crab by length: 'year','27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'"<< endl;
-    for (i=1; i <= nObsZCsSrv; i++) report<<yrsObsZCsSrv_n(i)<<" "<<obsPrNatZ_Srv_msxnz(2,2,1,i)*obsSrvNum_y(yrsObsZCsSrv_n(i))<<endl;
-    report << "Observed numbers (millions) of immature new shell male crab by length: 'year','27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'"<< endl;
-    for (i=1; i <= nObsZCsSrv; i++) report<<yrsObsZCsSrv_n(i)<<" "<<obsPrNatZ_Srv_msxnz(1,1,2,i)*obsSrvNum_y(yrsObsZCsSrv_n(i))<<endl;
-    report << "Observed numbers (millions) of immature old shell male crab by length: 'year','27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'"<< endl;
-    for (i=1; i <= nObsZCsSrv; i++) report<<yrsObsZCsSrv_n(i)<<" "<<obsPrNatZ_Srv_msxnz(1,2,2,i)*obsSrvNum_y(yrsObsZCsSrv_n(i))<<endl;
-    report << "Observed numbers (millions) of mature new shell male crab by length: 'year','27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'"<< endl;
-    for (i=1; i <= nObsZCsSrv; i++) report<<yrsObsZCsSrv_n(i)<<" "<<obsPrNatZ_Srv_msxnz(2,1,2,i)*obsSrvNum_y(yrsObsZCsSrv_n(i))<<endl;
-    report << "Observed numbers (millions) of mature old shell male crab by length: 'year','27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'"<< endl;
-    for (i=1; i <= nObsZCsSrv; i++) report<<yrsObsZCsSrv_n(i)<<" "<<obsPrNatZ_Srv_msxnz(2,2,2,i)*obsSrvNum_y(yrsObsZCsSrv_n(i))<<endl;
-    report << "Observed Survey Numbers (millions) by length females:  'year','27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'"<< endl;
-    for (i=1; i <= nObsZCsSrv; i++) report<<yrsObsZCsSrv_n(i)<<" " << obsSrvNum_xyz(1,yrsObsZCsSrv_n(i)) << endl;
-    report << "Observed Survey Numbers (millions) by length males: 'year', '27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'"<< endl;
-    for (i=1; i <= nObsZCsSrv; i++) report<<yrsObsZCsSrv_n(i)<<" " << obsSrvNum_xyz(2,yrsObsZCsSrv_n(i))<< endl;
-    
-    report << "Predicted Survey Numbers (millions) by length females: 'year','27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'"<< endl;
-    for (i=1; i <= nObsZCsSrv; i++) report<<yrsObsZCsSrv_n(i)<<" "  << modSrvNum_xyz(1,yrsObsZCsSrv_n(i)) << endl;
-    report << "Predicted Survey Numbers by (millions) length males: 'year', '27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'"<< endl;
-    for (i=1; i <= nObsZCsSrv; i++) report<<yrsObsZCsSrv_n(i)<<" "  << modSrvNum_xyz(2,yrsObsZCsSrv_n(i)) << endl;
-    report << "Predicted pop Numbers by (millions) length females: 'year','27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'"<< endl;
-    for(i=styr;i<=endyr;i++) report<<i<<" "<< modNum_xyz(1,i)<< endl;
-    report << "Predicted pop Numbers by (millions) length males: 'year', '27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'"<< endl;
-    for(i=styr;i<=endyr;i++) report<<i<<" "<< modNum_xyz(2,i)<< endl;
-    
-    //actual years for obs survey male are 1969,1970,1972-2009
-    report<<"observed number of legal-size males (millions): seq(1965,"<<endyr<<")"<<endl;
-    report<<obsSrvLegalNum_n<<endl;
-    report<<"observed biomass of legal-size males (1000's t): seq(1965,"<<endyr<<")"<<endl;
-    report<<obsSrvLegalBio_n<<endl;
-    report<<"pop estimate numbers (millions) of legal-size males >101: seq("<<styr<<","<<endyr<<")"<<endl;
-    report<<numLegalMales_y<<endl;
-    report<<"estimated population biomass (1000's t) of legal-size males: seq("<<styr<<","<<endyr<<") "<<endl;
-    report<<bioLegalMales_y<<endl;
-    report<<"estimated survey numbers (millions) of legal-size males: seq("<<styr<<","<<endyr<<") "<<endl;
-    report<<modSrvNumLegal_y<<endl;
-    report<<"estimated survey biomass (1000's t) of legal-size males: seq("<<styr<<","<<endyr<<") "<<endl;
-    report<<modSrvBioLegal_y<<endl;
-    report << "Observed survey biomass: seq(1974,"<<endyr<<")"<<endl;
-    report << obsSrvBio_y(1974,endyr)<<endl;
-    report << "predicted survey biomass: seq("<<styr<<","<<endyr<<")"<<endl;
-    report << modSrvBio_xy(1)+modSrvBio_xy(2)<<endl;
-  
-    //survey numbers
-    for(k=1;k<=2;k++){
-        for(i=styr;i<=endyr;i++)  {
-            tmpo(k,i)=sum(obsSrvNum_xyz(k,i));
-            tmpp(k,i)=sum(modSrvNum_xyz(k,i));
-        }
-    }
-    report << "Observed survey numbers female: seq("<<styr<<","<<endyr<<")"<<endl;
-    report << tmpo(1)<<endl;
-    report << "Observed survey numbers male: seq("<<styr<<","<<endyr<<")"<<endl;
-    report << tmpo(2)<<endl;
-    report << "predicted survey numbers female: seq("<<styr<<","<<endyr<<")"<<endl;
-    report << tmpp(1)<<endl;
-    report << "predicted survey numbers male: seq("<<styr<<","<<endyr<<")"<<endl;
-    report << tmpp(2)<<endl;
-    report << "Observed survey female spawning biomass: seq("<<styr<<","<<endyr<<")"<<endl;
-    report << obsSrvMatBio_xy(1)<<endl;
-    report << "Observed survey male spawning biomass: seq("<<styr<<","<<endyr<<")"<<endl;
-    report << obsSrvMatBio_xy(2)<<endl;
-    report << "Observed survey female new spawning numbers: seq("<<styr<<","<<endyr<<")"<<endl;
-    report << obsSrvMatNum_sxy(1,1)<<endl;
-    report << "Observed survey female old spawning numbers: seq("<<styr<<","<<endyr<<")"<<endl;
-    report << obsSrvMatNum_sxy(2,1)<<endl;
-    report << "Observed survey male new spawning numbers: seq("<<styr<<","<<endyr<<")"<<endl;
-    report << obsSrvMatNum_sxy(1,2)<<endl;
-    report << "Observed survey male old spawning numbers: seq("<<styr<<","<<endyr<<")"<<endl;
-    report << obsSrvMatNum_sxy(2,2)<<endl;
-    report << "Observed survey female biomass: seq("<<styr<<","<<endyr<<")"<<endl;
-    report << obsSrvBio_xy(1)<<endl;
-    report << "Observed survey male biomass: seq("<<styr<<","<<endyr<<")"<<endl;
-    report << obsSrvBio_xy(2)<<endl;
-    report << "natural mortality immature females, males: 'FemM','MaleM'" << endl;
-    report << M_msx(IMMATURE,NEW_SHELL) << endl;
-    report << "natural mortality mature new shell females, males: 'FemMm','MaleMm'" << endl;
-    report << M_msx(MATURE,NEW_SHELL) << endl;
-    report << "natural mortality mature old shell females, males: 'FemMmo','MaleMmo'" << endl;
-    report << M_msx(MATURE,OLD_SHELL) << endl;
-    report << "Predicted Biomass: seq("<<styr<<","<<endyr<<")" << endl;
-    report << modPopBio_y << endl;
-    report << "Predicted total population numbers: seq("<<styr<<","<<endyr<<") "<<endl;
-    report <<modPopNum_y<<endl;
-    report << "Female Spawning Biomass: seq("<<styr<<","<<endyr<<") " << endl;
-    report << fspbio << endl;
-    report << "Male Spawning Biomass (1000's t): seq("<<styr<<","<<endyr<<") " << endl;
-    report << mspbio << endl;
-    report << "Total Spawning Biomass: seq("<<styr<<","<<endyr<<") " << endl;
-    report << fspbio+mspbio << endl;
-    report << "Female Spawning Biomass at fish time: seq("<<styr<<","<<endyr<<") " << endl;
-    report << modSpBioFishTime_xy(FEMALE) << endl;
-    report << "Male Spawning Biomass at fish time: seq("<<styr<<","<<endyr<<") " << endl;
-    report << modSpBioFishTime_xy(  MALE) << endl;
-    report << "Total Spawning Biomass at fish time: seq("<<styr<<","<<endyr<<") " << endl;
-    report << modSpBioFishTime_xy(FEMALE)+modSpBioFishTime_xy(  MALE) << endl;
-    report << "Mating time Female Spawning Biomass: seq("<<styr<<","<<endyr-1<<") " << endl;
-    report << modSpBioMateTime_xy(FEMALE) << endl;
-    report << "Mating time Male Spawning Biomass: seq("<<styr<<","<<endyr-1<<") " << endl;
-    report << modSpBioMateTime_xy(  MALE) << endl;
-    report << "Mating time Male old shell Spawning Biomass: seq("<<styr<<","<<endyr-1<<") " << endl;
-    report << mspbio_old_matetime << endl;
-    report << "Mating time Female new shell Spawning Biomass: seq("<<styr<<","<<endyr-1<<") " << endl;
-    report << fspbio_new_matetime << endl;
-    report << "Mating time Total Spawning Biomass : seq("<<styr<<","<<endyr-1<<") " << endl;
-    report << modSpBioMateTime_xy(FEMALE)+modSpBioMateTime_xy(MALE) << endl;
-    report << "Mating time effective Female Spawning Biomass: seq("<<styr<<","<<endyr-1<<") " << endl;
-    report << efspbio_matetime << endl;
-    report << "Mating time effective Male Spawning Biomass(old shell only): seq("<<styr<<","<<endyr-1<<") " << endl;
-    report << emspbio_matetime << endl;
-    report << "Mating time Total effective Spawning Biomass: seq("<<styr<<","<<endyr-1<<") " << endl;
-    report << efspbio_matetime+emspbio_matetime << endl;
-    report << "Mating time male Spawning numbers: seq("<<styr<<","<<endyr-1<<") " << endl;
-    report << modSpNumMateTime_xy( MALE) << endl;
-    report << "Mating time Female Spawning numbers: seq("<<styr<<","<<endyr-1<<") " << endl;
-    report << modSpNumMateTime_xy(FEMALE) << endl;
-    report << "Mating time Male Spawning numbers(old shell only): seq("<<styr<<","<<endyr-1<<") " << endl;
-    report << modSpNumMateTime_xsy(  MALE,OLD_SHELL) << endl;
-    //  report << "ratio Mating time Female Spawning numbers to male old shell mature numbers : seq("<<styr<<","<<endyr<<") " << endl;
-    //  report << elem_div(modSpNumMateTime_xy( FEMALE),modSpNumMateTime_xsy(  MALE,OLD_SHELL)) << endl;
-    report << "Mating time effective Female new shell Spawning biomass: seq("<<styr<<","<<endyr-1<<") " << endl;
-    report <<efspbio_new_matetime << endl;
-    report << "Mating time Female new shell Spawning numbers: seq("<<styr<<","<<endyr-1<<") " << endl;
-    report << modSpNumMateTime_xsy(FEMALE,NEW_SHELL) << endl;
-    //  report << "ratio Mating time Female new shell Spawning numbers to male old shell mature numbers : seq("<<styr<<","<<endyr<<") " << endl;
-    //            for(i=styr;i<=endyr;i++){if(modSpNumMateTime_xsy(  MALE,OLD_SHELL)(i)<0.001) modSpNumMateTime_xsy(  MALE,OLD_SHELL)(i)=1.0; }
-    //  report << elem_div(modSpNumMateTime_xsy(FEMALE,NEW_SHELL),modSpNumMateTime_xsy(  MALE,OLD_SHELL)) << endl;
-    report << "Predicted Female survey Biomass: seq("<<styr<<","<<endyr<<") " << endl;
-    report << modSrvBio_xy(1) << endl;
-    report << "Predicted Male survey Biomass: seq("<<styr<<","<<endyr<<") " << endl;
-    report << modSrvBio_xy(2)<< endl;
-    report << "Predicted Female survey mature Biomass: seq("<<styr<<","<<endyr<<") " << endl;
-    report << modSrvMatBio_xy(FEMALE) << endl;
-    report << "Predicted Male survey mature Biomass: seq("<<styr<<","<<endyr<<") " << endl;
-    report << modSrvMatBio_xy(  MALE)<< endl;
-    report << "Predicted total survey mature Biomass: seq("<<styr<<","<<endyr<<") " << endl;
-    report << modSrvMatBio_xy(FEMALE)+modSrvMatBio_xy(  MALE)<< endl;
-    report << "Predicted Female survey new mature numbers: seq("<<styr<<","<<endyr<<") " << endl;
-    report << modSrvMatNum_xsy(FEMALE,NEW_SHELL) << endl;
-    report << "Predicted Female survey old mature numbers: seq("<<styr<<","<<endyr<<") " << endl;
-    report << modSrvMatNum_xsy(FEMALE,OLD_SHELL) << endl;
-    report << "Predicted Male survey new mature numbers: seq("<<styr<<","<<endyr<<") " << endl;
-    report << modSrvMatNum_xsy(  MALE,NEW_SHELL)<< endl;
-    report << "Predicted Male survey old mature numbers: seq("<<styr<<","<<endyr<<") " << endl;
-    report << modSrvMatNum_xsy(  MALE,OLD_SHELL)<< endl;
-
-  report << "Observed Prop fishery ret new males:'year','27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'"<< endl;
-  for (i=1; i<=nObsRetZCsTCF; i++) report << yrsObsRetZCsTCF_n(i) << " " << obsPrNatZ_TCFR_sn(1,i)<< endl;
-  report << "Predicted length prop fishery ret new males: 'year','27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'" << endl;
-  for (i=1; i<=nObsRetZCsTCF; i++) 
-   {
-    ii=yrsObsRetZCsTCF_n(i);  
-    report <<  ii  <<  " "  <<  modPrNatZ_TCFR_syz(1,ii)  << endl;
-   }
-  report << "Observed Prop fishery ret old males:'year','27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'"<< endl;
-  for (i=1; i<=nObsRetZCsTCF; i++) report << yrsObsRetZCsTCF_n(i) << " " << obsPrNatZ_TCFR_sn(2,i)<< endl;
-  report << "Predicted length prop fishery ret old males: 'year','27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'" << endl;
-  for (i=1; i<=nObsRetZCsTCF; i++)
-   {
-    ii=yrsObsRetZCsTCF_n(i);  
-    report <<  ii  <<  " "  <<  modPrNatZ_TCFR_syz(2,ii)  << endl;
-   }
-
-  report << "Observed Prop fishery total new males:'year','27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'"<< endl;
-  for (i=1; i<=nObsZCsTCFM; i++) report << yrsObsZCsTCFM_n(i) << " " << obsPrNatZ_TCFM_snz(NEW_SHELL,i) << endl;
-  report << "Predicted length prop fishery total new males: 'year','27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'" << endl;
-  for (i=1; i<=nObsZCsTCFM; i++){
-    ii=yrsObsZCsTCFM_n(i);  
-    report <<  ii  <<  " "  <<  modPrNatZ_TCFM_syz(NEW_SHELL,ii)  << endl;
-  }
-  report << "Observed Prop fishery total old males:'year','27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'"<< endl;
-  for (i=1; i<=nObsZCsTCFM; i++) report << yrsObsZCsTCFM_n(i) << " " << obsPrNatZ_TCFM_snz(OLD_SHELL,i) << endl;
-  report << "Predicted length prop fishery total old males: 'year','27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'" << endl;
-  for (i=1; i<=nObsZCsTCFM; i++){
-    ii=yrsObsZCsTCFM_n(i);  
-    report <<  ii  <<  " "  <<  modPrNatZ_TCFM_syz(OLD_SHELL,ii)  << endl;
-  }
-
-  report << "Observed length prop fishery discard all females: 'year','27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'" << endl;
-  for (i=1; i<=nObsZCsTCFF; i++) report <<  yrsObsZCsTCFF_n(i)  <<  " "  <<  obsPrNatZ_TCFF_nz(i)  << endl;
-  report << "Predicted length prop fishery discard all females: 'year','27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'" << endl;
-  for (i=1; i<=nObsZCsTCFF; i++) {
-    ii=yrsObsZCsTCFF_n(i);  
-    report <<  ii  <<  " "  <<  modPrNatZ_TCFF_yz(ii)  << endl;
-   }
-  report << "Observed length prop snow fishery females: 'year','27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'" << endl;
-  for (i=1; i<=nObsZCsSCF; i++)
-   {
-    report <<  yrsObsZCsSCF_n(i)  <<  " "  <<  obsPrNatZ_SCF_xnz(1,i)  << endl;
-   }
-  report << "Predicted length prop snow fishery females: 'year','27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'" << endl;
-  for (i=1; i<=nObsZCsSCF; i++)
-   {
-    ii=yrsObsZCsSCF_n(i);  
-    report <<  ii  <<  " "  <<  modPrNatZ_SCF_xyz(1,ii)  << endl;
-   }
-  report << "Observed length prop snow fishery males: 'year','27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'" << endl;
-  for (i=1; i<=nObsZCsSCF; i++)
-   {
-    report <<  yrsObsZCsSCF_n(i)  <<  " "  <<  obsPrNatZ_SCF_xnz(2,i)  << endl;
-   }
-  report << "Predicted length prop snow fishery males: 'year','27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'" << endl;
-  for (i=1; i<=nObsZCsSCF; i++)
-   {
-    ii=yrsObsZCsSCF_n(i);  
-    report <<  ii  <<  " "  <<  modPrNatZ_SCF_xyz(2,ii)  << endl;
-   }
-  report << "Observed length prop redk fishery females: 'year','27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'" << endl;
-  for (i=1; i<=nObsZCsRKF; i++)
-   {
-    report <<  yrsObsZCsRKF_n(i)  <<  " "  <<  obsPrNatZ_RKF_xnz(1,i)  << endl;
-   }
-  report << "Predicted length prop redk fishery females: 'year','27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'" << endl;
-  for (i=1; i<=nObsZCsRKF; i++)
-   {
-    ii=yrsObsZCsRKF_n(i);  
-    report <<  ii  <<  " "  <<  modPrNatZ_RKF_xyz(1,ii)  << endl;
-   }
-  report << "Observed length prop redk fishery males: 'year','27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'" << endl;
-  for (i=1; i<=nObsZCsRKF; i++)
-   {
-    report <<  yrsObsZCsRKF_n(i)  <<  " "  <<  obsPrNatZ_RKF_xnz(2,i)  << endl;
-   }
-  report << "Predicted length prop redk fishery males: 'year','27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'" << endl;
-  for (i=1; i<=nObsZCsRKF; i++)
-   {
-    ii=yrsObsZCsRKF_n(i);  
-    report <<  ii  <<  " "  <<  modPrNatZ_RKF_xyz(2,ii)  << endl;
-   }
-
-  report << "Predicted length prop trawl females: 'year','27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'" << endl;
-  for (i=1; i<=nObsZCsGTF; i++)
-   {
-    ii=yrsObsZCsGTF_n(i);  
-    report <<  ii  <<  " "  <<  modPrNatZ_GTF_xyz(1,ii)  << endl;
-   }
-  report << "Observed length prop trawl females: 'year','27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'" << endl;
-  for (i=1; i<=nObsZCsGTF; i++) report <<  yrsObsZCsGTF_n(i)  <<  " "  <<  obsPrNatZ_GTF_xnz(1,i)  << endl;
-  report << "Predicted length prop trawl males: 'year','27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'" << endl;
-  for (i=1; i<=nObsZCsGTF; i++)
-   {
-    ii=yrsObsZCsGTF_n(i);  
-    report <<  ii  <<  " "  <<  modPrNatZ_GTF_xyz(2,ii)  << endl;
-   }
-  report << "Observed length prop trawl males: 'year','27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'" << endl;
-  for (i=1; i<=nObsZCsGTF; i++) report <<  yrsObsZCsGTF_n(i)  <<  " "  <<  obsPrNatZ_GTF_xnz(2,i)  << endl;
-
-  report << "Observed Length Prop survey immature new females: 'year','27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'" << endl;
-  for (i=1; i<=nObsZCsSrv; i++)
-   {
-    ii=yrsObsZCsSrv_n(i);
-    report << ii <<" " <<obsPrNatZ_Srv_msxnz(1,1,1,i) << endl;
-   }
-  report << "Predicted length prop survey immature new females: 'year','27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'" << endl;
-  for (i=1; i<=nObsZCsSrv; i++)
-   {
-    ii=yrsObsZCsSrv_n(i);  
-    report << ii << " " << modSrvPrNatZ_NS_mxyz(1,1,ii) << endl;
-   }
-  report << "Observed Length Prop survey immature old females: 'year','27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'" << endl;
-  for (i=1; i<=nObsZCsSrv; i++)
-   {
-    ii=yrsObsZCsSrv_n(i);
-    report << ii <<" " <<obsPrNatZ_Srv_msxnz(1,2,1,i) << endl;
-   }
-  report << "Predicted length prop survey immature old females: 'year','27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'" << endl;
-  for (i=1; i<=nObsZCsSrv; i++)
-   {
-    ii=yrsObsZCsSrv_n(i);  
-    report << ii << " " << modSrvPrNatZ_OS_mxyz(1,1,ii) << endl;
-   }
- 
-  report << "Observed Length Prop survey immature new males: 'year','27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'" << endl;
-  for (i=1; i<=nObsZCsSrv; i++) report << yrsObsZCsSrv_n(i) <<" " <<obsPrNatZ_Srv_msxnz(1,1,2,i) << endl;
-  report << "Predicted length prop survey immature new males: 'year','27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'" << endl;
-  for (i=1; i<=nObsZCsSrv; i++)
-   {
-    ii=yrsObsZCsSrv_n(i);  
-    report << ii << " " << modSrvPrNatZ_NS_mxyz(1,2,ii) << endl;
-   }
-  report << "Observed Length Prop survey immature old males: 'year','27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'" << endl;
-  for (i=1; i<=nObsZCsSrv; i++) report << yrsObsZCsSrv_n(i) <<" " <<obsPrNatZ_Srv_msxnz(1,2,2,i) << endl;
-  report << "Predicted length prop survey immature old males: 'year','27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'" << endl;
-  for (i=1; i<=nObsZCsSrv; i++)
-  {
-   ii=yrsObsZCsSrv_n(i);  
-   report << ii << " " << modSrvPrNatZ_OS_mxyz(1,2,ii) << endl;
-  }
-  report << "Observed Length Prop survey mature new females: 'year','27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'" << endl;
-  for (i=1; i<=nObsZCsSrv; i++)
-   {
-    ii=yrsObsZCsSrv_n(i);
-    report << ii <<" " <<obsPrNatZ_Srv_msxnz(2,1,1,i) << endl;
-   }
-  report << "Predicted length prop survey mature new females: 'year','27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'" << endl;
-  for (i=1; i<=nObsZCsSrv; i++)
-   {
-    ii=yrsObsZCsSrv_n(i);  
-    report << ii << " " << modSrvPrNatZ_NS_mxyz(2,1,ii) << endl;
-   }
-  report << "Observed Length Prop survey mature old females: 'year','27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'" << endl;
-  for (i=1; i<=nObsZCsSrv; i++)
-   {
-    ii=yrsObsZCsSrv_n(i);
-    report << ii <<" " <<obsPrNatZ_Srv_msxnz(2,2,1,i) << endl;
-   }
-  report << "Predicted length prop survey mature old females: 'year','27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'" << endl;
-  for (i=1; i<=nObsZCsSrv; i++)
-   {
-    ii=yrsObsZCsSrv_n(i);  
-    report << ii << " " << modSrvPrNatZ_OS_mxyz(2,1,ii) << endl;
-   }
- 
-  report << "Observed Length Prop survey mature new males: 'year','27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'" << endl;
-  for (i=1; i<=nObsZCsSrv; i++) report << yrsObsZCsSrv_n(i) <<" " <<obsPrNatZ_Srv_msxnz(2,1,2,i) << endl;
-  report << "Predicted length prop survey mature new males: 'year','27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'" << endl;
-  for (i=1; i<=nObsZCsSrv; i++)
-   {
-    ii=yrsObsZCsSrv_n(i);  
-    report << ii << " " << modSrvPrNatZ_NS_mxyz(2,2,ii) << endl;
-   }
-  report << "Observed Length Prop survey mature old males: 'year','27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'" << endl;
-  for (i=1; i<=nObsZCsSrv; i++) report << yrsObsZCsSrv_n(i) <<" " <<obsPrNatZ_Srv_msxnz(2,2,2,i) << endl;
-  report << "Predicted length prop survey mature old males: 'year','27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'" << endl;
-  for (i=1; i<=nObsZCsSrv; i++){
-    ii=yrsObsZCsSrv_n(i);  
-    report << ii << " " << modSrvPrNatZ_OS_mxyz(2,2,ii) << endl;
-   }
-//for females don't have length data in first four years first year is 1974
-     report << "Observed Length Prop survey all females: 'year','27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'" << endl;
-     tmpp4.initialize();
-  for (i=1; i<=nObsZCsSrv; i++){
-    ii=yrsObsZCsSrv_n(i);
-    report << ii <<" " <<obsPrNatZ_Srv_msxnz(1,1,1,i)+obsPrNatZ_Srv_msxnz(2,1,1,i)+obsPrNatZ_Srv_msxnz(2,2,1,i)<< endl;
-              tmpp4+=obsPrNatZ_Srv_msxnz(1,1,1,i)+obsPrNatZ_Srv_msxnz(2,1,1,i)+obsPrNatZ_Srv_msxnz(2,2,1,i);
-   }
-  report << "Predicted length prop survey all females: 'year','27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'" << endl;
-  tmpp1.initialize();
-  for (i=1; i<=nObsZCsSrv; i++) {
-    ii=yrsObsZCsSrv_n(i);  
-    report << ii << " " << modSrvPrNatZ_NS_mxyz(1,1,ii)+modSrvPrNatZ_NS_mxyz(2,1,ii)+modSrvPrNatZ_OS_mxyz(2,1,ii) << endl;
-    tmpp1+=modSrvPrNatZ_NS_mxyz(1,1,ii)+modSrvPrNatZ_NS_mxyz(2,1,ii)+modSrvPrNatZ_OS_mxyz(2,1,ii);
-   }
-  report << "Observed Length Prop survey all males: 'year','27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'" << endl;
-  tmpp2.initialize();
-  for (i=1; i<=nObsZCsSrv; i++) {
-    ii=yrsObsZCsSrv_n(i);
-    report << ii <<" " <<obsPrNatZ_Srv_msxnz(1,1,2,i)+obsPrNatZ_Srv_msxnz(1,2,2,i)+obsPrNatZ_Srv_msxnz(2,1,2,i)+obsPrNatZ_Srv_msxnz(2,2,2,i)<< endl;
-         tmpp2+=obsPrNatZ_Srv_msxnz(1,1,2,i)+obsPrNatZ_Srv_msxnz(1,2,2,i)+obsPrNatZ_Srv_msxnz(2,1,2,i)+obsPrNatZ_Srv_msxnz(2,2,2,i);
-   }
-  report << "Predicted length prop survey all males: 'year','27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'" << endl;
-  tmpp3.initialize();
-  for (i=1; i<=nObsZCsSrv; i++) {
-    ii=yrsObsZCsSrv_n(i);  
-    report << ii << " " << modSrvPrNatZ_NS_mxyz(1,2,ii)+modSrvPrNatZ_NS_mxyz(2,2,ii)+modSrvPrNatZ_OS_mxyz(2,2,ii) << endl;
-    tmpp3+=modSrvPrNatZ_NS_mxyz(1,2,ii)+modSrvPrNatZ_NS_mxyz(2,2,ii)+modSrvPrNatZ_OS_mxyz(2,2,ii);
-   }
-  report << "Sum of predicted prop survey all females: '27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'" << endl;
-            report <<tmpp1<<endl;
-  report << "Sum of predicted prop survey all males: '27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'" << endl;
-            report <<tmpp3<<endl;
-  report << "Sum of Observed prop survey all females: '27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'" << endl;
-            report <<tmpp4<<endl;
-  report << "Sum of Observed prop survey all males: '27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'" << endl;
-            report <<tmpp2<<endl;
-
-  report << "Predicted mean postmolt length females:  '27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'"<< endl;
-  report << meanPostMoltSize(1) << endl;
-  report << "Predicted mean postmolt length males:  '27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'"<< endl;
-  report << meanPostMoltSize(2)<<endl; 
-  report << "pGrAF1: 'females'" << endl;
-  report << pGrAF1 << endl;
-  report << "pGrAM1: 'males'" << endl;
-  report << pGrAM1 << endl;
-  report << "pGrBF1: 'females'" << endl;
-  report << pGrBF1 << endl;
-  report << "pGrBM1: 'males'" << endl;
-  report << pGrBM1 << endl;
-  report<<"Predicted probability of maturing females: '27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'"<<endl;
-  report<<modPrM2M(1)<<endl;
-  report<<"Predicted probability of maturing males: '27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'"<<endl;
-  report<<modPrM2M(2)<<endl;
-  report<<"molting probs female: '27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'"<<endl;
-  report<<prMoltImm_xz(1)<<endl;
-  report<<"molting probs male:'27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'"<< endl;
-  report<<prMoltImm_xz(2)<<endl;
-  report <<"Molting probability mature males: '27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'"<< endl;
-  report <<prMoltMat_xz(2)<<endl;
-  
-  //fishery info
-  report << "observed TCF retained catch biomass: seq(1965,"<<endyr-1<<")" << endl;
-  report << obsRetCatchBio_y(1965,endyr-1) << endl;
-  report << "predicted TCF retained catch biomass: seq("<<styr<<","<<endyr-1<<")" << endl;
-  report << predRetBioMortTCFM_y(styr,endyr-1)<<endl;
-  report << "predicted TCF retained new catch biomass: seq("<<styr<<","<<endyr-1<<")" << endl;
-  report << (predRetNumMortTCFM_syz(NEW_SHELL)*wt_xmz(MALE,  MATURE))(styr,endyr-1)<<endl;
-  report << "predicted TCF retained old catch biomass: seq("<<styr<<","<<endyr-1<<")" << endl;
-  report << (predRetNumMortTCFM_syz(OLD_SHELL)*wt_xmz(MALE,  MATURE))(styr,endyr-1)<<endl;
-  
-  report << "observed TCF total male catch mortality biomass: ( "<<yrsObsDscTCF_n<<" )" << endl;
-  report << obsTotBioMortTCFM_n << endl;
-  report << "predicted TCF total male catch mortality biomass: seq("<<styr<<","<<endyr-1<<")" << endl;
-  report << predTotBioMortTCFM_y(styr,endyr-1) << endl;
-  report << "predicted TCF total new male catch mortality biomass: seq("<<styr<<","<<endyr-1<<")" << endl;
-  report << (predTotNumMortTCFM_syz(NEW_SHELL)*wt_xmz(MALE,  MATURE))(styr,endyr-1) << endl;
-  report << "predicted TCF total old male catch mortality biomass: seq("<<styr<<","<<endyr-1<<")" << endl;
-  report << (predTotNumMortTCFM_syz(OLD_SHELL)*wt_xmz(MALE,  MATURE))(styr,endyr-1) << endl;
-  
-  report << "observed TCF discard male mortality biomass: ( "<<yrsObsDscTCF_n<<" )"<<endl;
-  report << (obsTotBioMortTCFM_n-obsRetCatchBio_y(yrsObsDscTCF_n)) <<endl;
-  report << "observed TCF male discard mortality biomass: ("<<yrsObsDscTCF_n<<")" << endl;
-  report << obsDscBioMortTCF_xn(MALE) << endl;
-  report << "predicted TCF male discard mortality biomass1: seq("<<styr<<","<<endyr-1<<")" << endl;
-  report << predTotBioMortTCFM_y - predRetBioMortTCFM_y<< endl;
-  report << "observed TCF female discard mortality biomass: ( "<<yrsObsDscTCF_n<<" )" << endl;
-  report << obsDscBioMortTCF_xn(FEMALE) << endl;
-  report << "predicted TCF female discard mortality biomass: seq("<<styr<<","<<endyr-1<<")" << endl;  
-  report << predDscBioMortTCF_xy(FEMALE)(styr,endyr-1) << endl;
-  
-  report << "observed SCF female discard mortality biomass: ( "<<yrsObsDscSCF<<" )" << endl;
-  report << obsDscBioSCF_xn(FEMALE)<<endl;
-  report << "predicted SCF female discard mortality biomass: seq("<<styr<<","<<endyr-1<<")" << endl;
-  report << predDscBioMortSCF_xy(FEMALE) << endl;
-  report << "observed SCF male discard mortality biomass: ( "<<yrsObsDscSCF<<" )" << endl;
-  report << obsDscBioSCF_xn(MALE)<<endl;
-  report << "predicted SCF male discard mortality biomass: seq("<<styr<<","<<endyr-1<<")" << endl;
-  report << predDscBioMortSCF_xy(MALE) << endl;  
-  
-  report << "observed RKC female discard mortality biomass: ( "<<yrsObsDscRKF<<" )" << endl;
-  report << obsDscBioRKF_xn(FEMALE) << endl;
-  report << "predicted RKC female discard mortality biomass: seq("<<styr<<","<<endyr-1<<")" << endl;
-  report << predDscBioMortRKF_xy(FEMALE) << endl;
-  report << "observed RKC male discard mortality biomass: ( "<<yrsObsDscRKF<<" )" << endl;
-  report << obsDscBioRKF_xn(MALE) << endl;
-  report << "predicted RKC male discard mortality biomass: seq("<<styr<<","<<endyr-1<<")" << endl;
-  report << predDscBioMortRKF_xy(MALE) << endl;
-  
-  report << "observed GTF discard mortality biomass: ( "<<yrsObsDscGTF<<" )"<<endl;
-  report << obsDscBioMortGTF_n<<endl;
-  report << "predicted GTF discard mortality biomass: seq("<<styr<<","<<endyr-1<<")"<<endl;
-  report <<predDscBioMortGTF_xy(MALE)+predDscBioMortGTF_xy(FEMALE)<<endl;
-  
-  report << "predicted total male catch biomass: seq("<<styr<<","<<endyr-1<<")" << endl;
-  report<<predTotBioMortTCFM_y(styr,endyr-1)+predDscBioMortRKF_xy(MALE)(styr,endyr-1)+predDscBioMortSCF_xy(MALE)(styr,endyr-1)+predDscBioMortGTF_xy(MALE)(styr,endyr-1)<<endl;
-  report << "predicted total female catch biomass: seq("<<styr<<","<<endyr-1<<")" << endl;
-  report<<predDscBioMortTCF_xy(FEMALE)(styr,endyr-1)+predDscBioMortRKF_xy(FEMALE)(styr,endyr-1)+predDscBioMortSCF_xy(FEMALE)(styr,endyr-1)+predDscBioMortGTF_xy(FEMALE)(styr,endyr-1)<<endl;
-  
-  //fishing mortality rates
-  report << "estimated annual total male directed fishing mortality: seq("<<styr<<","<<endyr-1<<")" << endl;
-  report << fTCF_xy(MALE)(styr,endyr-1) << endl;
-  report << "estimated annual male snow fishing mortality: seq("<<styr<<","<<endyr-1<<")" << endl;
-  report << fSCF_xy(MALE)(styr,endyr-1) << endl;
-  report << "estimated annual male red king fishing mortality: seq("<<styr<<","<<endyr-1<<")" << endl;
-  report << fRKF_xy(MALE)(styr,endyr-1) << endl;
-  report << "estimated annual male fishing mortality trawl bycatch: seq("<<styr<<","<<endyr-1<<")" << endl;
-  report << fGTF_xy(MALE)(styr,endyr-1) <<endl;
-  report << "estimated annual total fishing mortality rate: seq("<<styr<<","<<endyr-1<<")" << endl;
-  for(i=styr;i<endyr;i++) report << fmTCFM_syz(NEW_SHELL,i,nZBs)+ fmGTF_xyz(MALE,i,nZBs)+fmSCF_xyz(MALE,i,nZBs)+fmRKF_xyz(MALE,i,nZBs) <<" "; report<< endl;
-  report <<"retained fmTCFM_syz: seq("<<styr<<","<<endyr-1<<")" << endl;
-  for(i=styr;i<endyr;i++) report <<fmTCFR_syz(NEW_SHELL,i,nZBs)<<" "; report<<endl;
-//   report <<"ghl: seq(1979,"<<endyr<<")" << endl;
-//   report <<catch_ghl/2.2<<endl;
-  report << "estimated annual fishing mortality females pot: seq("<<styr<<","<<endyr-1<<")" << endl;
-  for(i=styr;i<endyr;i++) report << fmTCFF_yz(i,nZBs) <<" "; report<<endl;
-//recruits in the model are 1978 to 2004, the 1978 recruits are those that enter the population
-//in spring of 1979, before the 1979 survey - since using the survey as the start of the year
-// in the model spring 1979 is stil 1978.  the last recruits are 2003 that come in spring 2004
-  report << "estimated number of recruits female (1000's): seq("<<styr<<","<<endyr<<")" << endl;      //IMPORTANT CHANGE: was 'seq("<<styr+1<<","<<endyr<<")"'
-  report << rec_y <<endl;//IMPORTANT CHANGE: was i<=(endyr-1)
-  report <<endl<< "estimated number of recruits male (1000's): seq("<<styr<<","<<endyr<<")" << endl;//IMPORTANT CHANGE: was 'seq("<<styr+1<<","<<endyr<<")"'
-  report << rec_y <<endl;//IMPORTANT CHANGE: was i<=(endyr-1)
-  
-  report<<"distribution of recruits to length bins: '27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'"<<endl;
-  report<<prRec_z<<endl;
-//  report<<"fishery total selectivity new shell 50% parameter: seq("<<1981+1<<","<<endyr<<")"<<endl;
-//  report <<fish_sel50_mn(1981,endyr-1)<<endl;
-//  report <<"fishery total selectivity old shell 50% parameter: seq("<<styr+1<<","<<endyr<<")"<<endl;
-//  report <<mfexp(log_avg_sel50_mo+log_sel50_dev_mo)(styr,endyr-1)<<endl;
-  report << "selectivity fishery total new males styr to 1991: '27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'"<< endl;
-  report << selTCFM(1,1990) << endl;
-//  report << "selectivity fishery total new males 1992 to 1996: '27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'"<< endl;
-//  report << selTCFM(1,1991) << endl;
-  report << "selectivity fishery total new males 1991 to 1996: '27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'"<< endl;
-   for(i=1991;i<=1996; i++) { report << selTCFM(1,i) << endl;}
-  report << "selectivity fishery total new males 2005 to present: '27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'"<< endl;
-   for(i=2005;i<endyr; i++) { report << selTCFM(1,i) << endl;}
-//  report << "selectivity fishery total old males: '27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'"<< endl;
-//  report << selTCFM(2) << endl;
-  //wts 2014-04-25 changed from selTCFR to retFcn
-  report << "retention function new males styr to 1991: '27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'"<< endl;  
-  report << retFcn(1,1990) << endl;
-//  report << "selectivity fishery ret new males 1992 to 1996: '27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'"<< endl;  
-//  report << selTCFR(1,1991) << endl;
-  //wts 2014-04-25 changed from selTCFR to retFcn
-  report << "retention function new males 1991 to 1996: '27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'"<< endl;  
-  for(i=1991;i<=1996; i++) { 
-      for(j=1; j<=nZBs; j++){report <<retFcn(1,i,j)<<" ";}
-      report<<endl;
-   }
-  //wts 2014-04-25 changed from selTCFR to retFcn
-  report << "retention function new males 2005 to present: '27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'"<< endl;  
-  for(i=2005;i<endyr; i++) {        //IMPORTANT CHANGE: was <=endyr 
-    for(j=1; j<=nZBs; j++){report <<retFcn(1,i,j)<<" ";}
-    report<<endl;
-   }
-  report <<"FINAL YEAR retention curve males new: '27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'"<< endl;
-  report <<retFcn(NEW_SHELL,endyr-1)<<endl;
-  report <<"FINAL YEAR retention curve males old: '27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'"<< endl;
-  report <<retFcn(OLD_SHELL,endyr-1)<<endl;
-  report << "selectivity discard females: '27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'"<< endl;
-  report <<selTCFF<<endl;
-  report << "selectivity trawl females:'27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'"<< endl;
-  report <<selGTF(1,FEMALE)<<endl;
-  report <<selGTF(2,FEMALE)<<endl;
-  report <<selGTF(3,FEMALE)<<endl;
-  report << "selectivity trawl males:'27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'"<< endl;
-  report <<selGTF(1,MALE)<<endl;
-  report <<selGTF(2,MALE)<<endl;
-  report <<selGTF(3,MALE)<<endl;
-  report << "selectivity snow females:'27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'"<< endl;
-  report <<selSCF(1,FEMALE)<<endl;
-  report <<selSCF(2,FEMALE)<<endl;
-  report <<selSCF(3,FEMALE)<<endl;
-  report << "selectivity snow males:'27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'"<< endl;
-  report <<selSCF(1,MALE)<<endl;
-  report <<selSCF(2,MALE)<<endl;
-  report <<selSCF(3,MALE)<<endl;
-  report << "selectivity redk females:'27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'"<< endl;
-  report <<selRKF(1,FEMALE)<<endl;
-  report <<selRKF(2,FEMALE)<<endl;
-  report <<selRKF(3,FEMALE)<<endl;
-  report << "selectivity redk males:'27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'"<< endl;
-  report <<selRKF(1,MALE)<<endl;
-  report <<selRKF(2,MALE)<<endl;
-  report <<selRKF(3,MALE)<<endl;
-  report << "selectivity survey females 1974 to 1981: '27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'"<< endl;
-  report << selSrv2(FEMALE) << endl;
-  report << "selectivity survey males 1974 to 1981: '27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'"<< endl;
-  report << selSrv2(MALE) << endl;
-  report << "selectivity survey females 1982 to 1987: '27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'"<< endl;
-  report << selSrv2a(FEMALE) << endl;
-  report << "selectivity survey males 1982 to 1987: '27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'"<< endl;
-  report << selSrv2a(MALE) << endl;
-  report << "selectivity survey females 1988 to endyr: '27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'"<< endl;
-  report << selSrv3(FEMALE) << endl;
-  report << "selectivity survey males 1988 to endyr: '27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'"<< endl;
-  report << selSrv3(MALE) << endl;
-  report << "numbers (millions) of mature females by age and length: '27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'"<< endl;
-  for (int yr=styr;yr<=endyr;yr++)
-   { report << modNum_yxmsz(yr,FEMALE,MATURE,NEW_SHELL)<<endl; report << modNumAtAZ_xyaz(FEMALE,yr)<<endl; }
-  
-  report << "numbers (millions) of mature males by age and length: '27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'"<< endl;
-  for (int yr=styr;yr<=endyr;yr++) 
-   { report << modNum_yxmsz(yr,  MALE,MATURE,NEW_SHELL)<<endl; report << modNumAtAZ_xyaz(  MALE,yr)<<endl; }
-  report << "pred_sexr population: seq("<<styr<<","<<endyr<<")" << endl;
-  report << predpop_sexr <<endl;
-  report << "pred_sexr survey: seq("<<styr<<","<<endyr<<")" << endl;
-  report << preds_sexr <<endl;
-  
-  report<<"----------------------------------------------------------------------------"<<endl;
-  report<<"Size transition matrices"<<endl;
-  report<<"----------------------------------------------------------------------------"<<endl;
-  report<<"length - length transition matrix Females:'27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'"<< endl;
-  report<<prGr_xzz(1)<<endl;  
-  report<<"length - length transition matrix Males:'27.5','32.5','37.5','42.5','47.5','52.5','57.5','62.5','67.5','72.5','77.5','82.5','87.5','92.5','97.5','102.5','107.5','112.5','117.5','122.5','127.5','132.5','137.5','142.5','147.5','152.5','157.5','162.5','167.5','172.5','177.5','182.5'"<< endl;
-  report<<prGr_xzz(2)<<endl;  
-  
-  report<<"----------------------------------------------------------------------------"<<endl;
-  report<<"Effective N's"<<endl;
-  report<<"----------------------------------------------------------------------------"<<endl;
-  report<<"effective N survey lengths immature new shell female "<<endl;
-  report<<effnSrv_msxy(IMMATURE,NEW_SHELL,FEMALE)<<endl;
-  report<<" effective N survey lengths mature new shell female "<<endl;
-  report<<effnSrv_msxy(MATURE,NEW_SHELL,FEMALE)<<endl;
-  report<<" effective N survey lengths mature old shell female "<<endl;
-  report<<effnSrv_msxy(MATURE,OLD_SHELL,FEMALE)<<endl;
-  report<<" effective N survey lengths immature new shell male "<<endl;
-  report<<effnSrv_msxy(IMMATURE,NEW_SHELL,MALE)<<endl;
-  report<<" effective N survey lengths immature old shell male "<<endl;
-  report<<effnSrv_msxy(IMMATURE,OLD_SHELL,MALE)<<endl;
-  report<<" effective N survey lengths mature new shell male "<<endl;
-  report<<effnSrv_msxy(MATURE,NEW_SHELL,MALE)<<endl;
-  report<<" effective N survey lengths mature old shell male "<<endl;
-  report<<effnSrv_msxy(MATURE,OLD_SHELL,MALE)<<endl;
-  report<<" effective N retained lengths new, old shell "<<endl;
-  report<<effnTCF_ret_sy<<endl;
-  report<<" effective N total lengths new, old shell"<<endl;
-  report<<effnTCF_tot_sy<<endl;
-  
-  report<<"----------------------------------------------------------------------------"<<endl;
-  report<<"Exploitation rates"<<endl;
-  report<<"----------------------------------------------------------------------------"<<endl;
-  report<<"male new shell total pot fishery exploitation rates"<<endl;
-  report<<1-mfexp(-1.0*fmTCFM_syz(NEW_SHELL))<<endl;
-  report<<"male old shell total pot fishery exploitation rates"<<endl;
-  report<<1-mfexp(-1.0*fmTCFM_syz(OLD_SHELL))<<endl;
-  
-  report<<"----------------------------------------------------------------------------"<<endl;
-  report<<"Numbers at fish time and catch"<<endl;
-  report<<"----------------------------------------------------------------------------"<<endl;
-  report<<"numbers new shell males at time of pop fishery"<<endl;
-  report<<natl_new_fishtime(MALE)<<endl;
-  report<<"numbers old shell males at time of pop fishery"<<endl;
-  report<<natl_old_fishtime(MALE)<<endl;
-  report<<"total catch in numbers new shell males"<<endl;
-  report<<predTotNumMortTCFM_syz(NEW_SHELL)<<endl;
-  report<<"total catch in numbers old shell males"<<endl;
-  report<<predTotNumMortTCFM_syz(OLD_SHELL)<<endl;
-  report<<"retained catch in numbers new shell males"<<endl;
-  report<<predRetNumMortTCFM_syz(NEW_SHELL)<<endl;
-  report<<"retained catch in numbers old shell males"<<endl;
-  report<<predRetNumMortTCFM_syz(OLD_SHELL)<<endl;
-  report<<"observed retained catch new shell males"<<endl;
-  for (i=1; i<=nObsRetZCsTCF; i++) 
-   report<<yrsObsRetZCsTCF_n(i)<<" "<<obsPrNatZ_TCFR_sn(NEW_SHELL,i)*obsRetCatchNum_y(yrsObsRetZCsTCF_n(i))<<endl;
-  report<<"observed retained catch old shell males"<<endl;
-  for (i=1; i<=nObsRetZCsTCF; i++) 
-   report<<yrsObsRetZCsTCF_n(i)<<" "<<obsPrNatZ_TCFR_sn(OLD_SHELL,i)*obsRetCatchNum_y(yrsObsRetZCsTCF_n(i))<<endl;
-    
-  CheckFile<<"end writeReport"<<endl;
   
 // ==========================================================================
 FUNCTION void writeMyProjectionFile(ofstream& os)
@@ -5094,9 +4422,9 @@ FUNCTION void writeToR_OLD(ofstream& R_out)
         REP2R2(mod.effMMB,emspbio_matetime);
         REP2R2(mod.effMFB.NS,efspbio_new_matetime);
         //--legal male numbers and biomass
-        REP2R2(mod.num.pop.legalmales,numLegalMales_y);
-        REP2R2(mod.bio.pop.legalmales,bioLegalMales_y);
-        REP2R2(mod.bio.pop.FT.legalmales,modBioLegalMales_y);
+        REP2R2(mod.num.pop.legalmales,modPopNumLegal_y);
+        REP2R2(mod.bio.pop.legalmales,modPopBioLegal_y);
+        REP2R2(mod.bio.pop.FT.legalmales,modFT_PopBioLegal_y);
         //--numbers-at-size
         ivector prm5(1,5); prm5[1]=4; prm5[2]=1; prm5[3]=2; prm5[4]=3; prm5[5]=5;
         d5_array dmodNum_yxmsz = wts::value(modNum_yxmsz);
@@ -5203,9 +4531,9 @@ FUNCTION void writeToR_OLD(ofstream& R_out)
         REP2R2(mod.SumPrNatZ.srv.M,tmpp4);
         
         //--legal males in survey (in millions and 1000's t))
-        REP2R2(obs.num.srv.legalmales,obsSrvLegalNum_n);
+        REP2R2(obs.num.srv.legalmales,obsSrvNumLegal_n);
         REP2R2(mod.num.srv.legalmales,modSrvNumLegal_y);
-        REP2R2(obs.bio.srv.legalmales,obsSrvLegalBio_n);
+        REP2R2(obs.bio.srv.legalmales,obsSrvBioLegal_n);
         REP2R2(mod.bio.srv.legalmales,modSrvBioLegal_y);
         REP2R2(obs.bio.srv,obsSrvBio_y(yrsObsSrvBio_n(1),endyr));
         REP2R2(mod.bio.srv,modSrvBio_xy(FEMALE)+modSrvBio_xy(MALE));
@@ -5462,86 +4790,86 @@ FUNCTION void writeToR_OLD(ofstream& R_out)
                 //cout<<"yr = "<<yr<<endl;
                 //numbers of males captured in TCF
                 ratio1 = elem_prod(elem_div(fcTCFM_syz(NEW_SHELL,yr),fmTOT_xsyz(MALE,NEW_SHELL,yr)),1.0-S_xsyz(MALE,NEW_SHELL,yr));
-                cpN_fyxmsz(iTCF,yr,MALE,IMMATURE,NEW_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,MALE,IMMATURE,NEW_SHELL));
+                cpN_fyxmsz(iTCF,yr,MALE,IMMATURE,NEW_SHELL) = elem_prod(ratio1,modFT_PopNum_yxmsz(yr,MALE,IMMATURE,NEW_SHELL));
                 ratio1 = elem_prod(elem_div(fcTCFM_syz(OLD_SHELL,yr),fmTOT_xsyz(MALE,OLD_SHELL,yr)),1.0-S_xsyz(MALE,OLD_SHELL,yr));
-                cpN_fyxmsz(iTCF,yr,MALE,IMMATURE,OLD_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,MALE,IMMATURE,OLD_SHELL));
+                cpN_fyxmsz(iTCF,yr,MALE,IMMATURE,OLD_SHELL) = elem_prod(ratio1,modFT_PopNum_yxmsz(yr,MALE,IMMATURE,OLD_SHELL));
                 ratio1 = elem_prod(elem_div(fcTCFM_syz(NEW_SHELL,yr),fmTOT_xsyz(MALE,NEW_SHELL,yr)),1.0-S_xsyz(MALE,NEW_SHELL,yr));
-                cpN_fyxmsz(iTCF,yr,MALE,MATURE,NEW_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,MALE,  MATURE,NEW_SHELL));
+                cpN_fyxmsz(iTCF,yr,MALE,MATURE,NEW_SHELL) = elem_prod(ratio1,modFT_PopNum_yxmsz(yr,MALE,  MATURE,NEW_SHELL));
                 ratio1 = elem_prod(elem_div(fcTCFM_syz(OLD_SHELL,yr),fmTOT_xsyz(MALE,OLD_SHELL,yr)),1.0-S_xsyz(MALE,OLD_SHELL,yr));
-                cpN_fyxmsz(iTCF,yr,MALE,MATURE,OLD_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,MALE,  MATURE,OLD_SHELL));
+                cpN_fyxmsz(iTCF,yr,MALE,MATURE,OLD_SHELL) = elem_prod(ratio1,modFT_PopNum_yxmsz(yr,MALE,  MATURE,OLD_SHELL));
                 //cout<<"--TCF: males"<<endl;
                 //numbers of females captured in TCF
                 ratio1 = elem_prod(elem_div(fmTCFF_yz(yr),fmTOT_xsyz(FEMALE,NEW_SHELL,yr)),1.0-S_xsyz(FEMALE,NEW_SHELL,yr));
-                cpN_fyxmsz(iTCF,yr,FEMALE,IMMATURE,NEW_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,FEMALE,IMMATURE,NEW_SHELL));
+                cpN_fyxmsz(iTCF,yr,FEMALE,IMMATURE,NEW_SHELL) = elem_prod(ratio1,modFT_PopNum_yxmsz(yr,FEMALE,IMMATURE,NEW_SHELL));
                 ratio1 = elem_prod(elem_div(fcTCFF_yz(yr),fmTOT_xsyz(FEMALE,OLD_SHELL,yr)),1.0-S_xsyz(FEMALE,OLD_SHELL,yr));
-                cpN_fyxmsz(iTCF,yr,FEMALE,IMMATURE,OLD_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,FEMALE,IMMATURE,OLD_SHELL));
+                cpN_fyxmsz(iTCF,yr,FEMALE,IMMATURE,OLD_SHELL) = elem_prod(ratio1,modFT_PopNum_yxmsz(yr,FEMALE,IMMATURE,OLD_SHELL));
                 ratio1 = elem_prod(elem_div(fcTCFF_yz(yr),fmTOT_xsyz(FEMALE,NEW_SHELL,yr)),1.0-S_xsyz(FEMALE,NEW_SHELL,yr));
-                cpN_fyxmsz(iTCF,yr,FEMALE,MATURE,NEW_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,FEMALE,  MATURE,NEW_SHELL));
+                cpN_fyxmsz(iTCF,yr,FEMALE,MATURE,NEW_SHELL) = elem_prod(ratio1,modFT_PopNum_yxmsz(yr,FEMALE,  MATURE,NEW_SHELL));
                 ratio1 = elem_prod(elem_div(fcTCFF_yz(yr),fmTOT_xsyz(FEMALE,OLD_SHELL,yr)),1.0-S_xsyz(FEMALE,OLD_SHELL,yr));
-                cpN_fyxmsz(iTCF,yr,FEMALE,MATURE,OLD_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,FEMALE,  MATURE,OLD_SHELL));
+                cpN_fyxmsz(iTCF,yr,FEMALE,MATURE,OLD_SHELL) = elem_prod(ratio1,modFT_PopNum_yxmsz(yr,FEMALE,  MATURE,OLD_SHELL));
                 //cout<<"--TCF: females"<<endl;
 
                 //numbers of males captured in SCF
                 ratio1 = elem_prod(elem_div(fcSCF_xyz(MALE,yr),fmTOT_xsyz(MALE,NEW_SHELL,yr)),1.0-S_xsyz(MALE,NEW_SHELL,yr));
-                cpN_fyxmsz(iSCF,yr,MALE,IMMATURE,NEW_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,MALE,IMMATURE,NEW_SHELL));
+                cpN_fyxmsz(iSCF,yr,MALE,IMMATURE,NEW_SHELL) = elem_prod(ratio1,modFT_PopNum_yxmsz(yr,MALE,IMMATURE,NEW_SHELL));
                 ratio1 = elem_prod(elem_div(fcSCF_xyz(MALE,yr),fmTOT_xsyz(MALE,OLD_SHELL,yr)),1.0-S_xsyz(MALE,OLD_SHELL,yr));
-                cpN_fyxmsz(iSCF,yr,MALE,IMMATURE,OLD_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,MALE,IMMATURE,OLD_SHELL));
+                cpN_fyxmsz(iSCF,yr,MALE,IMMATURE,OLD_SHELL) = elem_prod(ratio1,modFT_PopNum_yxmsz(yr,MALE,IMMATURE,OLD_SHELL));
                 ratio1 = elem_prod(elem_div(fcSCF_xyz(MALE,yr),fmTOT_xsyz(MALE,NEW_SHELL,yr)),1.0-S_xsyz(MALE,NEW_SHELL,yr));
-                cpN_fyxmsz(iSCF,yr,MALE,MATURE,NEW_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,MALE,  MATURE,NEW_SHELL));
+                cpN_fyxmsz(iSCF,yr,MALE,MATURE,NEW_SHELL) = elem_prod(ratio1,modFT_PopNum_yxmsz(yr,MALE,  MATURE,NEW_SHELL));
                 ratio1 = elem_prod(elem_div(fcSCF_xyz(MALE,yr),fmTOT_xsyz(MALE,OLD_SHELL,yr)),1.0-S_xsyz(MALE,OLD_SHELL,yr));
-                cpN_fyxmsz(iSCF,yr,MALE,MATURE,OLD_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,MALE,  MATURE,OLD_SHELL));
+                cpN_fyxmsz(iSCF,yr,MALE,MATURE,OLD_SHELL) = elem_prod(ratio1,modFT_PopNum_yxmsz(yr,MALE,  MATURE,OLD_SHELL));
                 //cout<<"--SCF: males"<<endl;
                 //numbers of females captured in SCF
                 ratio1 = elem_prod(elem_div(fcSCF_xyz(FEMALE,yr),fmTOT_xsyz(FEMALE,NEW_SHELL,yr)),1.0-S_xsyz(FEMALE,NEW_SHELL,yr));
-                cpN_fyxmsz(iSCF,yr,FEMALE,IMMATURE,NEW_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,FEMALE,IMMATURE,NEW_SHELL));
+                cpN_fyxmsz(iSCF,yr,FEMALE,IMMATURE,NEW_SHELL) = elem_prod(ratio1,modFT_PopNum_yxmsz(yr,FEMALE,IMMATURE,NEW_SHELL));
                 ratio1 = elem_prod(elem_div(fcSCF_xyz(FEMALE,yr),fmTOT_xsyz(FEMALE,OLD_SHELL,yr)),1.0-S_xsyz(FEMALE,OLD_SHELL,yr));
-                cpN_fyxmsz(iSCF,yr,FEMALE,IMMATURE,OLD_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,FEMALE,IMMATURE,OLD_SHELL));
+                cpN_fyxmsz(iSCF,yr,FEMALE,IMMATURE,OLD_SHELL) = elem_prod(ratio1,modFT_PopNum_yxmsz(yr,FEMALE,IMMATURE,OLD_SHELL));
                 ratio1 = elem_prod(elem_div(fcSCF_xyz(FEMALE,yr),fmTOT_xsyz(FEMALE,NEW_SHELL,yr)),1.0-S_xsyz(FEMALE,NEW_SHELL,yr));
-                cpN_fyxmsz(iSCF,yr,FEMALE,MATURE,NEW_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,FEMALE,  MATURE,NEW_SHELL));
+                cpN_fyxmsz(iSCF,yr,FEMALE,MATURE,NEW_SHELL) = elem_prod(ratio1,modFT_PopNum_yxmsz(yr,FEMALE,  MATURE,NEW_SHELL));
                 ratio1 = elem_prod(elem_div(fcSCF_xyz(FEMALE,yr),fmTOT_xsyz(FEMALE,OLD_SHELL,yr)),1.0-S_xsyz(FEMALE,OLD_SHELL,yr));
-                cpN_fyxmsz(iSCF,yr,FEMALE,MATURE,OLD_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,FEMALE,  MATURE,OLD_SHELL));
+                cpN_fyxmsz(iSCF,yr,FEMALE,MATURE,OLD_SHELL) = elem_prod(ratio1,modFT_PopNum_yxmsz(yr,FEMALE,  MATURE,OLD_SHELL));
                 //cout<<"--SCF: females"<<endl;
 
                 //numbers of males captured in RKF
                 ratio1 = elem_prod(elem_div(fcRKF_xyz(MALE,yr),fmTOT_xsyz(MALE,NEW_SHELL,yr)),1.0-S_xsyz(MALE,NEW_SHELL,yr));
-                cpN_fyxmsz(iRKF,yr,MALE,IMMATURE,NEW_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,MALE,IMMATURE,NEW_SHELL));
+                cpN_fyxmsz(iRKF,yr,MALE,IMMATURE,NEW_SHELL) = elem_prod(ratio1,modFT_PopNum_yxmsz(yr,MALE,IMMATURE,NEW_SHELL));
                 ratio1 = elem_prod(elem_div(fcRKF_xyz(MALE,yr),fmTOT_xsyz(MALE,OLD_SHELL,yr)),1.0-S_xsyz(MALE,OLD_SHELL,yr));
-                cpN_fyxmsz(iRKF,yr,MALE,IMMATURE,OLD_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,MALE,IMMATURE,OLD_SHELL));
+                cpN_fyxmsz(iRKF,yr,MALE,IMMATURE,OLD_SHELL) = elem_prod(ratio1,modFT_PopNum_yxmsz(yr,MALE,IMMATURE,OLD_SHELL));
                 ratio1 = elem_prod(elem_div(fcRKF_xyz(MALE,yr),fmTOT_xsyz(MALE,NEW_SHELL,yr)),1.0-S_xsyz(MALE,NEW_SHELL,yr));
-                cpN_fyxmsz(iRKF,yr,MALE,MATURE,NEW_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,MALE,  MATURE,NEW_SHELL));
+                cpN_fyxmsz(iRKF,yr,MALE,MATURE,NEW_SHELL) = elem_prod(ratio1,modFT_PopNum_yxmsz(yr,MALE,  MATURE,NEW_SHELL));
                 ratio1 = elem_prod(elem_div(fcRKF_xyz(MALE,yr),fmTOT_xsyz(MALE,OLD_SHELL,yr)),1.0-S_xsyz(MALE,OLD_SHELL,yr));
-                cpN_fyxmsz(iRKF,yr,MALE,MATURE,OLD_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,MALE,  MATURE,OLD_SHELL));
+                cpN_fyxmsz(iRKF,yr,MALE,MATURE,OLD_SHELL) = elem_prod(ratio1,modFT_PopNum_yxmsz(yr,MALE,  MATURE,OLD_SHELL));
                 //cout<<"--RKF: males"<<endl;
                 //numbers of females captured in RKF
                 ratio1 = elem_prod(elem_div(fcRKF_xyz(FEMALE,yr),fmTOT_xsyz(FEMALE,NEW_SHELL,yr)),1.0-S_xsyz(FEMALE,NEW_SHELL,yr));
-                cpN_fyxmsz(iRKF,yr,FEMALE,IMMATURE,NEW_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,FEMALE,IMMATURE,NEW_SHELL));
+                cpN_fyxmsz(iRKF,yr,FEMALE,IMMATURE,NEW_SHELL) = elem_prod(ratio1,modFT_PopNum_yxmsz(yr,FEMALE,IMMATURE,NEW_SHELL));
                 ratio1 = elem_prod(elem_div(fcRKF_xyz(FEMALE,yr),fmTOT_xsyz(FEMALE,OLD_SHELL,yr)),1.0-S_xsyz(FEMALE,OLD_SHELL,yr));
-                cpN_fyxmsz(iRKF,yr,FEMALE,IMMATURE,OLD_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,FEMALE,IMMATURE,OLD_SHELL));
+                cpN_fyxmsz(iRKF,yr,FEMALE,IMMATURE,OLD_SHELL) = elem_prod(ratio1,modFT_PopNum_yxmsz(yr,FEMALE,IMMATURE,OLD_SHELL));
                 ratio1 = elem_prod(elem_div(fcRKF_xyz(FEMALE,yr),fmTOT_xsyz(FEMALE,NEW_SHELL,yr)),1.0-S_xsyz(FEMALE,NEW_SHELL,yr));
-                cpN_fyxmsz(iRKF,yr,FEMALE,MATURE,NEW_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,FEMALE,  MATURE,NEW_SHELL));
+                cpN_fyxmsz(iRKF,yr,FEMALE,MATURE,NEW_SHELL) = elem_prod(ratio1,modFT_PopNum_yxmsz(yr,FEMALE,  MATURE,NEW_SHELL));
                 ratio1 = elem_prod(elem_div(fcRKF_xyz(FEMALE,yr),fmTOT_xsyz(FEMALE,OLD_SHELL,yr)),1.0-S_xsyz(FEMALE,OLD_SHELL,yr));
-                cpN_fyxmsz(iRKF,yr,FEMALE,MATURE,OLD_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,FEMALE,  MATURE,OLD_SHELL));
+                cpN_fyxmsz(iRKF,yr,FEMALE,MATURE,OLD_SHELL) = elem_prod(ratio1,modFT_PopNum_yxmsz(yr,FEMALE,  MATURE,OLD_SHELL));
                 //cout<<"--RKF: females"<<endl;
 
                 //numbers of males captured in GTF
                 ratio1 = elem_prod(elem_div(fcGTF_xyz(MALE,yr),fmTOT_xsyz(MALE,NEW_SHELL,yr)),1.0-S_xsyz(MALE,NEW_SHELL,yr));
-                cpN_fyxmsz(iGTF,yr,MALE,IMMATURE,NEW_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,MALE,IMMATURE,NEW_SHELL));
+                cpN_fyxmsz(iGTF,yr,MALE,IMMATURE,NEW_SHELL) = elem_prod(ratio1,modFT_PopNum_yxmsz(yr,MALE,IMMATURE,NEW_SHELL));
                 ratio1 = elem_prod(elem_div(fcGTF_xyz(MALE,yr),fmTOT_xsyz(MALE,OLD_SHELL,yr)),1.0-S_xsyz(MALE,OLD_SHELL,yr));
-                cpN_fyxmsz(iGTF,yr,MALE,IMMATURE,OLD_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,MALE,IMMATURE,OLD_SHELL));
+                cpN_fyxmsz(iGTF,yr,MALE,IMMATURE,OLD_SHELL) = elem_prod(ratio1,modFT_PopNum_yxmsz(yr,MALE,IMMATURE,OLD_SHELL));
                 ratio1 = elem_prod(elem_div(fcGTF_xyz(MALE,yr),fmTOT_xsyz(MALE,NEW_SHELL,yr)),1.0-S_xsyz(MALE,NEW_SHELL,yr));
-                cpN_fyxmsz(iGTF,yr,MALE,MATURE,NEW_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,MALE,  MATURE,NEW_SHELL));
+                cpN_fyxmsz(iGTF,yr,MALE,MATURE,NEW_SHELL) = elem_prod(ratio1,modFT_PopNum_yxmsz(yr,MALE,  MATURE,NEW_SHELL));
                 ratio1 = elem_prod(elem_div(fcGTF_xyz(MALE,yr),fmTOT_xsyz(MALE,OLD_SHELL,yr)),1.0-S_xsyz(MALE,OLD_SHELL,yr));
-                cpN_fyxmsz(iGTF,yr,MALE,MATURE,OLD_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,MALE,  MATURE,OLD_SHELL));
+                cpN_fyxmsz(iGTF,yr,MALE,MATURE,OLD_SHELL) = elem_prod(ratio1,modFT_PopNum_yxmsz(yr,MALE,  MATURE,OLD_SHELL));
                 //cout<<"--GTF: males"<<endl;
                 //numbers of females captured in GTF
                 ratio1 = elem_prod(elem_div(fcGTF_xyz(FEMALE,yr),fmTOT_xsyz(FEMALE,NEW_SHELL,yr)),1.0-S_xsyz(FEMALE,NEW_SHELL,yr));
-                cpN_fyxmsz(iGTF,yr,FEMALE,IMMATURE,NEW_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,FEMALE,IMMATURE,NEW_SHELL));
+                cpN_fyxmsz(iGTF,yr,FEMALE,IMMATURE,NEW_SHELL) = elem_prod(ratio1,modFT_PopNum_yxmsz(yr,FEMALE,IMMATURE,NEW_SHELL));
                 ratio1 = elem_prod(elem_div(fcGTF_xyz(FEMALE,yr),fmTOT_xsyz(FEMALE,OLD_SHELL,yr)),1.0-S_xsyz(FEMALE,OLD_SHELL,yr));
-                cpN_fyxmsz(iGTF,yr,FEMALE,IMMATURE,OLD_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,FEMALE,IMMATURE,OLD_SHELL));
+                cpN_fyxmsz(iGTF,yr,FEMALE,IMMATURE,OLD_SHELL) = elem_prod(ratio1,modFT_PopNum_yxmsz(yr,FEMALE,IMMATURE,OLD_SHELL));
                 ratio1 = elem_prod(elem_div(fcGTF_xyz(FEMALE,yr),fmTOT_xsyz(FEMALE,NEW_SHELL,yr)),1.0-S_xsyz(FEMALE,NEW_SHELL,yr));
-                cpN_fyxmsz(iGTF,yr,FEMALE,MATURE,NEW_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,FEMALE,  MATURE,NEW_SHELL));
+                cpN_fyxmsz(iGTF,yr,FEMALE,MATURE,NEW_SHELL) = elem_prod(ratio1,modFT_PopNum_yxmsz(yr,FEMALE,  MATURE,NEW_SHELL));
                 ratio1 = elem_prod(elem_div(fcGTF_xyz(FEMALE,yr),fmTOT_xsyz(FEMALE,OLD_SHELL,yr)),1.0-S_xsyz(FEMALE,OLD_SHELL,yr));
-                cpN_fyxmsz(iGTF,yr,FEMALE,MATURE,OLD_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,FEMALE,  MATURE,OLD_SHELL));
+                cpN_fyxmsz(iGTF,yr,FEMALE,MATURE,OLD_SHELL) = elem_prod(ratio1,modFT_PopNum_yxmsz(yr,FEMALE,  MATURE,OLD_SHELL));
                 //cout<<"--GTF: females"<<endl;
             }//yr
 
@@ -5699,13 +5027,13 @@ FUNCTION void writeToR_OLD(ofstream& R_out)
             for (int yr=styr;yr<=(endyr-1);yr++) {
                 //numbers of males discarded in TCF
                 ratio1 = elem_prod(elem_div(fdTCFM_syz(NEW_SHELL,yr),fmTOT_xsyz(MALE,NEW_SHELL,yr)),1.0-S_xsyz(MALE,NEW_SHELL,yr));
-                dsN_fyxmsz(iTCF,yr,MALE,IMMATURE,NEW_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,MALE,IMMATURE,NEW_SHELL));
+                dsN_fyxmsz(iTCF,yr,MALE,IMMATURE,NEW_SHELL) = elem_prod(ratio1,modFT_PopNum_yxmsz(yr,MALE,IMMATURE,NEW_SHELL));
                 ratio1 = elem_prod(elem_div(fdTCFM_syz(OLD_SHELL,yr),fmTOT_xsyz(MALE,OLD_SHELL,yr)),1.0-S_xsyz(MALE,OLD_SHELL,yr));
-                dsN_fyxmsz(iTCF,yr,MALE,IMMATURE,OLD_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,MALE,IMMATURE,OLD_SHELL));
+                dsN_fyxmsz(iTCF,yr,MALE,IMMATURE,OLD_SHELL) = elem_prod(ratio1,modFT_PopNum_yxmsz(yr,MALE,IMMATURE,OLD_SHELL));
                 ratio1 = elem_prod(elem_div(fdTCFM_syz(NEW_SHELL,yr),fmTOT_xsyz(MALE,NEW_SHELL,yr)),1.0-S_xsyz(MALE,NEW_SHELL,yr));
-                dsN_fyxmsz(iTCF,yr,MALE,MATURE,NEW_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,MALE,  MATURE,NEW_SHELL));
+                dsN_fyxmsz(iTCF,yr,MALE,MATURE,NEW_SHELL) = elem_prod(ratio1,modFT_PopNum_yxmsz(yr,MALE,  MATURE,NEW_SHELL));
                 ratio1 = elem_prod(elem_div(fdTCFM_syz(OLD_SHELL,yr),fmTOT_xsyz(MALE,OLD_SHELL,yr)),1.0-S_xsyz(MALE,OLD_SHELL,yr));
-                dsN_fyxmsz(iTCF,yr,MALE,MATURE,OLD_SHELL) = elem_prod(ratio1,modNFT_yxmsz(yr,MALE,  MATURE,OLD_SHELL));
+                dsN_fyxmsz(iTCF,yr,MALE,MATURE,OLD_SHELL) = elem_prod(ratio1,modFT_PopNum_yxmsz(yr,MALE,  MATURE,OLD_SHELL));
             }
             
             //write out fishery discards for TCF
@@ -5772,33 +5100,32 @@ FUNCTION void writeToR_OLD(ofstream& R_out)
         R_out <<selRKF(3,MALE)<<endl;  
         
         //input sample sizes
-        REP2R2(inpSS.srv.F,  ssObsZCsSrv_msxn(  MATURE,NEW_SHELL,FEMALE));
-        REP2R2(inpSS.srv.M,  ssObsZCsSrv_msxn(  MATURE,NEW_SHELL,  MALE));
-        REP2R2(inpSS.srv.INF,ssObsZCsSrv_msxn(IMMATURE,NEW_SHELL,FEMALE));
-        REP2R2(inpSS.srv.INM,ssObsZCsSrv_msxn(IMMATURE,NEW_SHELL,  MALE));
-        REP2R2(inpSS.srv.IOM,ssObsZCsSrv_msxn(IMMATURE,OLD_SHELL,  MALE));
-        REP2R2(inpSS.srv.MNF,ssObsZCsSrv_msxn(  MATURE,NEW_SHELL,FEMALE));
-        REP2R2(inpSS.srv.MNM,ssObsZCsSrv_msxn(  MATURE,NEW_SHELL,  MALE));
-        REP2R2(inpSS.srv.MOF,ssObsZCsSrv_msxn(  MATURE,OLD_SHELL,FEMALE));
-        REP2R2(inpSS.srv.MOM,ssObsZCsSrv_msxn(  MATURE,OLD_SHELL,  MALE));
-        REP2R2(inpSS.ret.TCF.NM,ssRetZCsTCF_sn(NEW_SHELL));
-        REP2R2(inpSS.ret.TCF.OM,ssRetZCsTCF_sn(OLD_SHELL));
-        REP2R2(inpSS.tot.TCF.NM,ssTotZCsTCFM_sn(NEW_SHELL));  
-        REP2R2(inpSS.tot.TCF.OM,ssTotZCsTCFM_sn(OLD_SHELL));  
+        REP2R2(inpSS.srv.IF,ssObsZCsSrv_msxn(IMMATURE,NEW_SHELL,FEMALE));
+        REP2R2(inpSS.srv.IM,ssObsZCsSrv_msxn(IMMATURE,NEW_SHELL,  MALE));
+        REP2R2(inpSS.srv.MF,ssObsZCsSrv_msxn(  MATURE,NEW_SHELL,FEMALE));
+        REP2R2(inpSS.srv.MM,ssObsZCsSrv_msxn(  MATURE,NEW_SHELL,  MALE));
+        REP2R2(inpSS.ret.TCF,ssRetZCsTCF_sn(NEW_SHELL));
+        REP2R2(inpSS.tot.TCF.M,ssTotZCsTCFM_sn(NEW_SHELL));  
         REP2R2(inpSS.tot.TCF.F,ssZCsTCFF_n);  
+        REP2R2(inpSS.tot.SCF.M,ssZCsSCFM_sn(NEW_SHELL));  
+        REP2R2(inpSS.tot.SCF.F,ssZCsSCFF_n);  
+        REP2R2(inpSS.tot.RKF.M,ssZCsRKFM_sn(NEW_SHELL));  
+        REP2R2(inpSS.tot.RKF.F,ssZCsRKFF_n);
+        REP2R2(inpSS.tot.GTF,ssObsZCsGTF_n);  
         
         //effective sample sizes
-        REP2R2(effSS.srv.INF,effnSrv_msxy(IMMATURE,NEW_SHELL,FEMALE));
-        REP2R2(effSS srv.MNF,effnSrv_msxy(  MATURE,NEW_SHELL,FEMALE));
-        REP2R2(effSS srv.MOF,effnSrv_msxy(  MATURE,OLD_SHELL,FEMALE));
-        REP2R2(effSS srv.INM,effnSrv_msxy(IMMATURE,NEW_SHELL,MALE));
-        REP2R2(effSS srv.IOM,effnSrv_msxy(IMMATURE,OLD_SHELL,MALE));
-        REP2R2(effSS srv.MNM,effnSrv_msxy(  MATURE,NEW_SHELL,MALE));
-        REP2R2(effSS srv.MOM,effnSrv_msxy(  MATURE,OLD_SHELL,MALE));
-        REP2R2(effSS.ret.TCF.NS,effnTCF_ret_sy(NEW_SHELL));
-        REP2R2(effSS.ret.TCF.OS,effnTCF_ret_sy(OLD_SHELL));
-        REP2R2(effSS.tot.TCF.NS,effnTCF_tot_sy(NEW_SHELL));
-        REP2R2(effSS.tot.TCF.OS,effnTCF_tot_sy(OLD_SHELL));
+        REP2R2(effSS.srv.IF,effnSrv_mxy(IMMATURE,FEMALE));
+        REP2R2(effSS srv.MF,effnSrv_mxy(  MATURE,FEMALE));
+        REP2R2(effSS srv.IM,effnSrv_mxy(IMMATURE,MALE));
+        REP2R2(effSS srv.MM,effnSrv_mxy(  MATURE,MALE));
+        REP2R2(effSS.ret.TCF,effnTCF_ret_y);
+        REP2R2(effSS.tot.TCF.F,effnTCF_tot_xy(FEMALE));
+        REP2R2(effSS.tot.TCF.M,effnTCF_tot_xy(  MALE));
+        REP2R2(effSS.tot.SCF.F,effnSCF_tot_xy(FEMALE));
+        REP2R2(effSS.totSC.M,effnSCF_tot_xy(  MALE));
+        REP2R2(effSS.tot.RKF.F,effnRKF_tot_xy(FEMALE));
+        REP2R2(effSS.tot.RKF.M,effnRKF_tot_xy(  MALE));
+        REP2R2(effSS.tot.GTF,effnGTF_tot_y);
 
 //    cout<<"done writeToR_OLD"<<endl;
 
@@ -6136,8 +5463,6 @@ REPORT_SECTION
         ofstream os("TCSAM2013.NEWSTYLE.final.R", ios::trunc);    
         writeToR_NEW(os);
         os.close();
-
-        writeReport(report);
 
         os.open("TCSAM2013.OLDSTYLE.final.R");
         writeToR_OLD(os);
