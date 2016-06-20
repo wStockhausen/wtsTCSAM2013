@@ -81,6 +81,7 @@
 //--20160614: 1. Removed old report in favor of output to R
 //--20160615: 1. Revised recruitment parameters and rec_y to refer to total recruitment, 
 //                 not recruitment by sex (new rec_y = 2 * old rec_y).
+////            Not done (but should be--encountered estimation problems):
 ////            2. Revised rec_y and associated sdr variables to run styr to endyr-1,
 ////                 so rec_y(y) enters population at start of y+1 (as in Jack's original approach).
 ////                 This will allow direct comparisons with TCSAM2015 when starting population from 0.
@@ -111,7 +112,7 @@ GLOBALS_SECTION
     #include "FisheryData.hpp"
     #include "ModelData.hpp"
     
-    adstring version = "20160324";//model version
+    adstring version = "20160620";//model version
     int verModelControlFile = 20160324;//model control file version
     
     double zLegal = 128;//current (2015/16) legal size
@@ -3440,6 +3441,8 @@ FUNCTION evaluate_the_objective_function    //wts: revising
     if (active(pRecDevs)) {        
         //recruitment likelihood - norm2 is sum of square values   
         penal_rec = 1.0*like_wght_recf*norm2(pRecDevs); //+ like_wght_rec*norm2(rec_devm);
+        //   first difference on recruitment in period-1     
+        penal_rec += 1.0*norm2(pRecDevsHist);
         //   first difference on recruitment in period-1     
         penal_rec += 1.0*norm2(first_difference(pRecDevsHist));
         
