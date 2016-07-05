@@ -5,7 +5,7 @@
 //--Changed fishery-related devs so last year is endyr-1, not endyr. This is consistent with year being "survey year". Assessment in 2013
 //      uses 2013 survey but last possible fishery year is 2012/13 (so 2012 by survey year).
 //--20140419: changed to read model control file name from model configuration, rather than hard-wired name
-//--20140425: changed output of selTCFR to retFcn in a number of places
+//--20140425: changed output of selTCFR_syz to retFcn_syz in a number of places
 //--20140506: added parameter jitter functionality
 //--20140523: updated to use wtsADMB library.
 //--20140602: updated to use writeParameter and jitterParameter functions in wtsADMB library.
@@ -92,6 +92,8 @@
 //                  srv2a_qFem, srv2a_seldiff_f, srv2a_sel50_f, and pPrNewShellRecruits.
 //            3. Removed unused parameters fish_slope_mn, log_avg_sel50_mn, log_sel50_dev_mn, 
 //                  fish_sel50_1, fish_slope_mn2, fish_sel50_mn2.
+//            4. Changed a number of variable names defined in PARAMETER_SECTION to clarify dimensions.
+//            5. Changed/removed some variable names in DATA_SECTION. 
 //
 //IMPORTANT: 2013-09 assessment model had RKC params for 1992+ discard mortality TURNED OFF. 
 //           THE ESTIMATION PHASE FOR RKC DISCARD MORTALITY IS NOW SET IN THE CONTROLLER FILE!
@@ -691,13 +693,13 @@ DATA_SECTION
  END_CALCS
     
     int nYrsTCF;
-    int nlog_sel50_dev_3                      //number of years of directed fishery post 1990
+    int nSelTCFM_devsZ50                      //number of years of directed fishery post 1990
     ivector hasDirectedFishery_y(styr,endyr-1); //flags indicating if directed fishery is prosecuted (>0)
     vector obsRetCatchNum_y(styr,endyr-1)       //retained catch, numbers                 (IMPORTANT CHANGE: used to be "1965,endyr")
     vector obsRetCatchBio_y(styr,endyr-1)       //retained catch, millions of lbs of crab (IMPORTANT CHANGE: used to be "1965,endyr")
  LOCAL_CALCS
     nYrsTCF = 0;
-    nlog_sel50_dev_3    = 0;
+    nSelTCFM_devsZ50    = 0;
     hasDirectedFishery_y  = 0;//set all years to "no directed fishery"
     obsRetCatchNum_y.initialize();
     obsRetCatchBio_y.initialize();
@@ -709,9 +711,9 @@ DATA_SECTION
             obsRetCatchNum_y(y)     = ptrMDS->pTCFR->catch_ty(1,i);
             obsRetCatchBio_y(y)     = ptrMDS->pTCFR->catch_ty(2,i);
         }
-        if (y>1990) nlog_sel50_dev_3++;
+        if (y>1990) nSelTCFM_devsZ50++;
     }
-    CheckFile<<"number of directed fishery years after 1990: "<<nlog_sel50_dev_3<<endl;
+    CheckFile<<"number of directed fishery years after 1990: "<<nSelTCFM_devsZ50<<endl;
     CheckFile<<"retained numbers:        obsRetCatchNum_y"<<endl<<obsRetCatchNum_y<<endl;
     CheckFile<<"retained biomass (mlbs): obsRetCatchBio_y"<<endl<<obsRetCatchBio_y<<endl;
     obsRetCatchBio_y /= 2.2045; // convert from millions lbs to 1000's tons   
@@ -1064,8 +1066,6 @@ DATA_SECTION
     init_int phsQFshEff_SCF  ///< initial estimation phase for SCF effort extrapolation
     init_int phsQFshEff_RKF  ///< initial estimation phase for RKF effort extrapolation
 //    init_int phsQFshEff_GTF  ///< initial estimation phase for GTF effort extrapolation
-    number mnEff_SCF; ///< mean effort in SCF over period with observed bycatch data
-    number mnEff_RKF; ///< mean effort in RKF over period with observed bycatch data
  LOCAL_CALCS
     CheckFile<<"#---Options for extrapolating effort to fishing mortality"<<endl;
 //    CheckFile<<"phsQFshEff_TCF = "<<phsQFshEff_TCF<<endl;
@@ -1138,12 +1138,11 @@ DATA_SECTION
     matrix obsSrvBio_xy(1,nSXs,styr,endyr)           // Survey biomass, by sex
     vector obsSrvBio_y(styr,endyr)                   // Total survey biomass
     
-    number avgwt2
-    number avgwtall
-    vector avgwt(styr,endyr)
-    
     int phsBigM;
     !!if (mort_switch==1) phsBigM = phsM+1; else phsBigM = -8;
+    
+    number mnEff_SCF; ///< mean effort in SCF over period with observed bycatch data
+    number mnEff_RKF; ///< mean effort in RKF over period with observed bycatch data
     
  LOCAL_CALCS
     dmX   = "x=c("+qt+STR_FEMALE+qt    +cc+ qt+STR_MALE+qt+")";
@@ -1262,7 +1261,7 @@ PARAMETER_SECTION
     // Directed fishery selectivity pattern changing by year for period-3: 2005-P
     init_bounded_number fish_slope_yr_3(0.1,0.4,phase_logistic_sel)      
     init_bounded_number log_avg_sel50_3(4.0,5.0,phase_logistic_sel)
-    init_bounded_dev_vector log_sel50_dev_3(1,nlog_sel50_dev_3,-bnd_sel50_dev_3,bnd_sel50_dev_3,phase_logistic_sel) //Fixed index (why 2000?) (IMPORTANT CHANGE: used to be "endyr-2000")
+    init_bounded_dev_vector log_sel50_dev_3(1,nSelTCFM_devsZ50,-bnd_sel50_dev_3,bnd_sel50_dev_3,phase_logistic_sel) //Fixed index (why 2000?) (IMPORTANT CHANGE: used to be "endyr-2000")
     
     // Female discards
     init_bounded_number selTCFF_slp(00.1,000.4,phase_logistic_sel)
@@ -1372,17 +1371,17 @@ PARAMETER_SECTION
 //    init_bounded_number pQFshEff_GTF(-5.0,5.0,phsQFshEff_GTF)  ///< GTF effort extrapolation parameter
     ////end of estimated parameters///////////////
     
-    3darray retFcn(1,nSCs,styr,endyr-1,1,nZBs)    // Retention curve for males caught in directed fishery    (IMPORTANT CHANGE: used to be "endyr")
-    3darray selTCFR(1,nSCs,styr,endyr-1,1,nZBs)   // full selectivity for retained males in directed fishery (IMPORTANT CHANGE: used to be "endyr")
-    3darray selTCFM(1,nSCs,styr,endyr-1,1,nZBs)   // selectivity for all males in directed fishery           (IMPORTANT CHANGE: used to be "endy1")
-    vector  selTCFF(1,nZBs)                       // selectivity for females in directed fishery             
-    3darray selGTF(1,3,1,nSXs,1,nZBs)      // 3D array to accommodate 3 selectivity periods
-    3darray selSCF(1,3,1,nSXs,1,nZBs)      // 3D array to accommodate 3 selectivity periods 
-    3darray selRKF(1,3,1,nSXs,1,nZBs)      // 3D array to accommodate 3 selectivity periods 
+    3darray retFcn_syz(1,nSCs,styr,endyr-1,1,nZBs)    // Retention curve for males caught in directed fishery    (IMPORTANT CHANGE: used to be "endyr")
+    3darray selTCFR_syz(1,nSCs,styr,endyr-1,1,nZBs)   // full selectivity for retained males in directed fishery (IMPORTANT CHANGE: used to be "endyr")
+    3darray selTCFM_syz(1,nSCs,styr,endyr-1,1,nZBs)   // selectivity for all males in directed fishery           (IMPORTANT CHANGE: used to be "endy1")
+    vector  selTCFF_z(1,nZBs)                       // selectivity for females in directed fishery             
+    3darray selSCF_cxz(1,3,1,nSXs,1,nZBs)      // 3D array to accommodate 3 selectivity periods 
+    3darray selRKF_cxz(1,3,1,nSXs,1,nZBs)      // 3D array to accommodate 3 selectivity periods 
+    3darray selGTF_cxz(1,3,1,nSXs,1,nZBs)      // 3D array to accommodate 3 selectivity periods
     
-    matrix selSrv2(1,nSXs,1,nZBs)  // Survey selectivity 2
-    matrix selSrv2a(1,nSXs,1,nZBs) // Survey selectivity 2a
-    matrix selSrv3(1,nSXs,1,nZBs)  // Survey selectivity 3
+    matrix selSrv1_xz(1,nSXs,1,nZBs)  // Survey selectivity 2
+    matrix selSrv2_xz(1,nSXs,1,nZBs) // Survey selectivity 2a
+    matrix selSrv3_xz(1,nSXs,1,nZBs)  // Survey selectivity 3
         
     3darray M_msx(1,nMSs,1,nSCs,1,nSXs);//natural mortality rates
     
@@ -1436,7 +1435,7 @@ PARAMETER_SECTION
     
     vector prRec_z(1,nZBs)             // Recruitment size frequency
     
-    vector predpop_sexr(styr,endyr)                             // Population sex-ratio - output
+    vector modPopXR_y(styr,endyr)                             // Population sex-ratio - output
     
     //changed endyr to endyr-1
     //20150601: changed fm... to f... because these could be fishing mortality OR capture rates
@@ -2008,21 +2007,21 @@ PROCEDURE_SECTION                                          //wts: revised
 //     CheckFile<<"fSCF_xy = "<<endl<<tb<<fSCF_xy<<endl;
 //     CheckFile<<"fRKF_xy   = "<<endl<<tb<<fRKF_xy<<endl;
 //     CheckFile<<"fGTF_xy      = "<<endl<<tb<<fGTF_xy<<endl;
-//     CheckFile<<"selTCFM(NEW_SHELL) = "<<endl;
-//     for (int iy=styr;iy<=endyr;iy++) CheckFile<<iy<<tb<<selTCFM(NEW_SHELL,iy)<<endl;
-//     CheckFile<<"selTCFM(OLD_SHELL) = "<<endl;
-//     for (int iy=styr;iy<=endyr;iy++) CheckFile<<iy<<tb<<selTCFM(OLD_SHELL,iy)<<endl;
+//     CheckFile<<"selTCFM_syz(NEW_SHELL) = "<<endl;
+//     for (int iy=styr;iy<=endyr;iy++) CheckFile<<iy<<tb<<selTCFM_syz(NEW_SHELL,iy)<<endl;
+//     CheckFile<<"selTCFM_syz(OLD_SHELL) = "<<endl;
+//     for (int iy=styr;iy<=endyr;iy++) CheckFile<<iy<<tb<<selTCFM_syz(OLD_SHELL,iy)<<endl;
 
-//     CheckFile<<"retFcn(NEW_SHELL) = "<<endl;
-//     for (int iy=styr;iy<=endyr;iy++) CheckFile<<iy<<tb<<retFcn(NEW_SHELL,iy)<<endl;
-//     CheckFile<<"retFcn(OLD_SHELL) = "<<endl;
-//     for (int iy=styr;iy<=endyr;iy++) CheckFile<<iy<<tb<<retFcn(OLD_SHELL,iy)<<endl;
-//     CheckFile<<"selSCF(1-3,FEMALE) = "<<endl<<tb<<selSCF(1,FEMALE)<<endl<<tb<<selSCF(2,FEMALE)<<endl<<tb<<selSCF(3,FEMALE)<<endl;
-//     CheckFile<<"selSCF(1-3,  MALE) = "<<endl<<tb<<selSCF(1,  MALE)<<endl<<tb<<selSCF(2,  MALE)<<endl<<tb<<selSCF(3,  MALE)<<endl;
-//     CheckFile<<"selRKF(1-3,FEMALE) = "<<endl<<tb<<selRKF(1,FEMALE)<<endl<<tb<<selRKF(2,FEMALE)<<endl<<tb<<selRKF(3,FEMALE)<<endl;
-//     CheckFile<<"selRKF(1-3,  MALE) = "<<endl<<tb<<selRKF(1,  MALE)<<endl<<tb<<selRKF(2,  MALE)<<endl<<tb<<selRKF(3,  MALE)<<endl;
-//     CheckFile<<"selGTF(1-3,FEMALE) = "<<endl<<tb<<selGTF(1,FEMALE)<<endl<<tb<<selGTF(2,FEMALE)<<endl<<tb<<selGTF(3,FEMALE)<<endl;
-//     CheckFile<<"selGTF(1-3,  MALE) = "<<endl<<tb<<selGTF(1,  MALE)<<endl<<tb<<selGTF(2,  MALE)<<endl<<tb<<selGTF(3,  MALE)<<endl;
+//     CheckFile<<"retFcn_syz(NEW_SHELL) = "<<endl;
+//     for (int iy=styr;iy<=endyr;iy++) CheckFile<<iy<<tb<<retFcn_syz(NEW_SHELL,iy)<<endl;
+//     CheckFile<<"retFcn_syz(OLD_SHELL) = "<<endl;
+//     for (int iy=styr;iy<=endyr;iy++) CheckFile<<iy<<tb<<retFcn_syz(OLD_SHELL,iy)<<endl;
+//     CheckFile<<"selSCF_cxz(1-3,FEMALE) = "<<endl<<tb<<selSCF_cxz(1,FEMALE)<<endl<<tb<<selSCF_cxz(2,FEMALE)<<endl<<tb<<selSCF_cxz(3,FEMALE)<<endl;
+//     CheckFile<<"selSCF_cxz(1-3,  MALE) = "<<endl<<tb<<selSCF_cxz(1,  MALE)<<endl<<tb<<selSCF_cxz(2,  MALE)<<endl<<tb<<selSCF_cxz(3,  MALE)<<endl;
+//     CheckFile<<"selRKF_cxz(1-3,FEMALE) = "<<endl<<tb<<selRKF_cxz(1,FEMALE)<<endl<<tb<<selRKF_cxz(2,FEMALE)<<endl<<tb<<selRKF_cxz(3,FEMALE)<<endl;
+//     CheckFile<<"selRKF_cxz(1-3,  MALE) = "<<endl<<tb<<selRKF_cxz(1,  MALE)<<endl<<tb<<selRKF_cxz(2,  MALE)<<endl<<tb<<selRKF_cxz(3,  MALE)<<endl;
+//     CheckFile<<"selGTF_cxz(1-3,FEMALE) = "<<endl<<tb<<selGTF_cxz(1,FEMALE)<<endl<<tb<<selGTF_cxz(2,FEMALE)<<endl<<tb<<selGTF_cxz(3,FEMALE)<<endl;
+//     CheckFile<<"selGTF_cxz(1-3,  MALE) = "<<endl<<tb<<selGTF_cxz(1,  MALE)<<endl<<tb<<selGTF_cxz(2,  MALE)<<endl<<tb<<selGTF_cxz(3,  MALE)<<endl;
 
 //     CheckFile<<"fmTCFF_yz = "<<endl;
 //     for (int iy=styr;iy<=endyr;iy++) CheckFile<<iy<<tb<<fmTCFF_yz(iy)<<endl;
@@ -2465,12 +2464,12 @@ FUNCTION get_selectivity                  //wts: revised
 //    cout<<"get_selectivity"<<endl;
     int ii = 1;
     
-    selTCFM.initialize();
-    retFcn.initialize();
+    selTCFM_syz.initialize();
+    retFcn_syz.initialize();
     dvariable tmpSel50 = mean(exp(log_avg_sel50_3+log_sel50_dev_3(1,6)));
     for(int iy=styr;iy<=1990;iy++){ 
-        selTCFM(NEW_SHELL,iy) = 1./(1.+mfexp(-1.*fish_slope_1*(zBs-tmpSel50)));    
-        retFcn(NEW_SHELL, iy) = 1./(1.+mfexp(-1.*fish_fit_slope_mn1*(zBs-fish_fit_sel50_mn1)));
+        selTCFM_syz(NEW_SHELL,iy) = 1./(1.+mfexp(-1.*fish_slope_1*(zBs-tmpSel50)));    
+        retFcn_syz(NEW_SHELL, iy) = 1./(1.+mfexp(-1.*fish_fit_slope_mn1*(zBs-fish_fit_sel50_mn1)));
     }
 //    cout<<"get_sel: 1a"<<endl;
     int ctr = 1;
@@ -2478,7 +2477,7 @@ FUNCTION get_selectivity                  //wts: revised
     for(int iy=1991;iy<=1996;iy++){ 
         if (hasDirectedFishery_y(iy)) {
 //            cout<<"yr = "<<iy<<".  ctr = "<<ctr<<endl;
-            selTCFM(NEW_SHELL,iy)=1./(1.+mfexp(-1.*fish_slope_1*(zBs-exp(log_avg_sel50_3+log_sel50_dev_3(ctr++)))));//ctr was iy-1990
+            selTCFM_syz(NEW_SHELL,iy)=1./(1.+mfexp(-1.*fish_slope_1*(zBs-exp(log_avg_sel50_3+log_sel50_dev_3(ctr++)))));//ctr was iy-1990
         } else {
 //            cout<<"yr = "<<iy<<".  no fishery."<<endl;
         }
@@ -2488,95 +2487,95 @@ FUNCTION get_selectivity                  //wts: revised
     for(int iy=1997;iy<endyr;iy++){ 
         if (hasDirectedFishery_y(iy)) {
 //            cout<<"yr = "<<iy<<".  ctr = "<<ctr<<endl;
-            selTCFM(NEW_SHELL,iy)=1./(1.+mfexp(-1.*fish_slope_yr_3*(zBs-exp(log_avg_sel50_3+log_sel50_dev_3(ctr++)))));//ctr was iy-1998
+            selTCFM_syz(NEW_SHELL,iy)=1./(1.+mfexp(-1.*fish_slope_yr_3*(zBs-exp(log_avg_sel50_3+log_sel50_dev_3(ctr++)))));//ctr was iy-1998
         } else {
 //            cout<<"yr = "<<iy<<".  no fishery."<<endl;
-            selTCFM(NEW_SHELL,iy)=1./(1.+mfexp(-1.*fish_slope_yr_3*(zBs-exp(log_avg_sel50_3))));
+            selTCFM_syz(NEW_SHELL,iy)=1./(1.+mfexp(-1.*fish_slope_yr_3*(zBs-exp(log_avg_sel50_3))));
         }
     }
 //    cout<<"get_sel: 1d"<<endl;
     
-    for(int iy=styr;iy<=1990;iy++) retFcn(NEW_SHELL,iy) = 1./(1.+mfexp(-1.*fish_fit_slope_mn1*(zBs-fish_fit_sel50_mn1)));
+    for(int iy=styr;iy<=1990;iy++) retFcn_syz(NEW_SHELL,iy) = 1./(1.+mfexp(-1.*fish_fit_slope_mn1*(zBs-fish_fit_sel50_mn1)));
 //    cout<<"get_sel: 1f"<<endl;
-    for(int iy=1991;iy<endyr;iy++) retFcn(NEW_SHELL,iy) = 1./(1.+mfexp(-1.*fish_fit_slope_mn2*(zBs-fish_fit_sel50_mn2)));
+    for(int iy=1991;iy<endyr;iy++) retFcn_syz(NEW_SHELL,iy) = 1./(1.+mfexp(-1.*fish_fit_slope_mn2*(zBs-fish_fit_sel50_mn2)));
 //    cout<<"get_sel: 1g"<<endl;
     
     for(int iy=styr;iy<endyr;iy++){      //used to be iy<=endyr            
-        // set new and old selTCFM same
-        selTCFM(OLD_SHELL,iy) = selTCFM(NEW_SHELL,iy);
-        retFcn(OLD_SHELL,iy)  = retFcn(NEW_SHELL,iy);
+        // set new and old selTCFM_syz same
+        selTCFM_syz(OLD_SHELL,iy) = selTCFM_syz(NEW_SHELL,iy);
+        retFcn_syz(OLD_SHELL,iy)  = retFcn_syz(NEW_SHELL,iy);
     }//year loop
 //    cout<<"get_sel: 2"<<endl;
     
     // female discards ascending logistic curve 
-    selTCFF=1./(1.+mfexp(-1.*selTCFF_slp*(zBs-selTCFF_z50)));
+    selTCFF_z=1./(1.+mfexp(-1.*selTCFF_slp*(zBs-selTCFF_z50)));
     
     //  snow fishery selectivity for 3 time periods, #1 (1989-1996), #2 (1997-2004) and #3 (2005-P)      
-    selSCF(1,FEMALE)=1./(1.+mfexp(-1.*selSCFF_slpA1*(zBs-selSCFF_z50A1))); 
-    selSCF(2,FEMALE)=1./(1.+mfexp(-1.*selSCFF_slpA2*(zBs-selSCFF_z50A2))); 
-    selSCF(3,FEMALE)=1./(1.+mfexp(-1.*selSCFF_slpA3*(zBs-selSCFF_z50A3))); 
+    selSCF_cxz(1,FEMALE)=1./(1.+mfexp(-1.*selSCFF_slpA1*(zBs-selSCFF_z50A1))); 
+    selSCF_cxz(2,FEMALE)=1./(1.+mfexp(-1.*selSCFF_slpA2*(zBs-selSCFF_z50A2))); 
+    selSCF_cxz(3,FEMALE)=1./(1.+mfexp(-1.*selSCFF_slpA3*(zBs-selSCFF_z50A3))); 
 //    cout<<"get_sel: 2a"<<endl;
         
     //  snow fishery selectivity for 3 time periods, #1 (1989-1996), #2 (1997-2004) and #3 (2005-P)      
-    selSCF(1,MALE)=elem_prod(1./(1.+mfexp(-1.*selSCFM_slpA1*(zBs-selSCFM_z50A1))),
+    selSCF_cxz(1,MALE)=elem_prod(1./(1.+mfexp(-1.*selSCFM_slpA1*(zBs-selSCFM_z50A1))),
                                  1./(1.+mfexp(selSCFM_slpD1*(zBs-(selSCFM_z50A1+mfexp(selSCFM_lnZ50D1))))));
-    selSCF(2,MALE)=elem_prod(1./(1.+mfexp(-1.*selSCFM_slpA2*(zBs-selSCFM_z50A2))),
+    selSCF_cxz(2,MALE)=elem_prod(1./(1.+mfexp(-1.*selSCFM_slpA2*(zBs-selSCFM_z50A2))),
                                  1./(1.+mfexp(selSCFM_slpD2*(zBs-(selSCFM_z50A2+mfexp(selSCFM_lnZ50D2))))));
-    selSCF(3,MALE)=elem_prod(1./(1.+mfexp(-1.*selSCFM_slpA3*(zBs-selSCFM_z50A3))),
+    selSCF_cxz(3,MALE)=elem_prod(1./(1.+mfexp(-1.*selSCFM_slpA3*(zBs-selSCFM_z50A3))),
                                  1./(1.+mfexp(selSCFM_slpD3*(zBs-(selSCFM_z50A3+mfexp(selSCFM_lnZ50D3))))));
 //    cout<<"get_sel: 2b"<<endl;
     
     //  red fishery selectivity for 3 time periods, #1 (1989-1996), #2 (1997-2004) and #3 (2005-P)      
-    selRKF(1,FEMALE)=1./(1.+mfexp(-1.*selRKFF_slpA1*(zBs-selRKFF_z50A1))); 
-    selRKF(2,FEMALE)=1./(1.+mfexp(-1.*selRKFF_slpA2*(zBs-selRKFF_z50A2))); 
-    selRKF(3,FEMALE)=1./(1.+mfexp(-1.*selRKFF_slpA3*(zBs-selRKFF_z50A3))); 
+    selRKF_cxz(1,FEMALE)=1./(1.+mfexp(-1.*selRKFF_slpA1*(zBs-selRKFF_z50A1))); 
+    selRKF_cxz(2,FEMALE)=1./(1.+mfexp(-1.*selRKFF_slpA2*(zBs-selRKFF_z50A2))); 
+    selRKF_cxz(3,FEMALE)=1./(1.+mfexp(-1.*selRKFF_slpA3*(zBs-selRKFF_z50A3))); 
     
     //  red fishery selectivity for 3 time periods, #1 (1989-1996), #2 (1997-2004) and #3 (2005-P)      
-    selRKF(1,MALE)=1./(1.+mfexp(-1.*selRKFM_slpA1*(zBs-selRKFM_z50A1))); 
-    selRKF(2,MALE)=1./(1.+mfexp(-1.*selRKFM_slpA2*(zBs-selRKFM_z50A2))); 
-    selRKF(3,MALE)=1./(1.+mfexp(-1.*selRKFM_slpA3*(zBs-selRKFM_z50A3))); 
+    selRKF_cxz(1,MALE)=1./(1.+mfexp(-1.*selRKFM_slpA1*(zBs-selRKFM_z50A1))); 
+    selRKF_cxz(2,MALE)=1./(1.+mfexp(-1.*selRKFM_slpA2*(zBs-selRKFM_z50A2))); 
+    selRKF_cxz(3,MALE)=1./(1.+mfexp(-1.*selRKFM_slpA3*(zBs-selRKFM_z50A3))); 
 //    cout<<"get_sel: 2c"<<endl;
     
     //  trawl fishery selectivity for 3 time periods, #1 (1973-1987), #2 (1988-1996) and #3 (1997-P)
-    selGTF(1,FEMALE)=1./(1.+mfexp(-1.*selGTFF_slpA1*(zBs-selGTFF_z50A1)));
-    selGTF(2,FEMALE)=1./(1.+mfexp(-1.*selGTFF_slpA2*(zBs-selGTFF_z50A2)));
-    selGTF(3,FEMALE)=1./(1.+mfexp(-1.*selGTFF_slpA3*(zBs-selGTFF_z50A3)));
+    selGTF_cxz(1,FEMALE)=1./(1.+mfexp(-1.*selGTFF_slpA1*(zBs-selGTFF_z50A1)));
+    selGTF_cxz(2,FEMALE)=1./(1.+mfexp(-1.*selGTFF_slpA2*(zBs-selGTFF_z50A2)));
+    selGTF_cxz(3,FEMALE)=1./(1.+mfexp(-1.*selGTFF_slpA3*(zBs-selGTFF_z50A3)));
     
-    selGTF(1,MALE)=1./(1.+mfexp(-1.*selGTFM_slpA1*(zBs-selGTFM_z50A1)));    
-    selGTF(2,MALE)=1./(1.+mfexp(-1.*selGTFM_slpA2*(zBs-selGTFM_z50A2)));
-    selGTF(3,MALE)=1./(1.+mfexp(-1.*selGTFM_slpA3*(zBs-selGTFM_z50A3)));
+    selGTF_cxz(1,MALE)=1./(1.+mfexp(-1.*selGTFM_slpA1*(zBs-selGTFM_z50A1)));    
+    selGTF_cxz(2,MALE)=1./(1.+mfexp(-1.*selGTFM_slpA2*(zBs-selGTFM_z50A2)));
+    selGTF_cxz(3,MALE)=1./(1.+mfexp(-1.*selGTFM_slpA3*(zBs-selGTFM_z50A3)));
 //    cout<<"get_sel: 2d"<<endl;
         
-    selSrv2.initialize();
-    selSrv2a.initialize();
-    selSrv3.initialize();
+    selSrv1_xz.initialize();
+    selSrv2_xz.initialize();
+    selSrv3_xz.initialize();
 //    // somerton and otto curve for survey selectivities
 //    if (survsel_phase<0)
-//        selSrv3(MALE) = sel_som(1)/(1.+sel_som(2)*mfexp(-1.*sel_som(3)*zBs));
+//        selSrv3_xz(MALE) = sel_som(1)/(1.+sel_som(2)*mfexp(-1.*sel_som(3)*zBs));
 //    else
-//        selSrv3(MALE) = srv3_q*1./(1.+mfexp(-1.*log(19.)*(zBs-srv3_sel50)/(srv3_seldiff)));
+//        selSrv3_xz(MALE) = srv3_q*1./(1.+mfexp(-1.*log(19.)*(zBs-srv3_sel50)/(srv3_seldiff)));
 //    // this sets time periods 1 and 2 survey selectivities to somerton otto as well
 //    if (survsel1_phase < 0)
-//        selSrv2(MALE) = selSrv3(MALE);
+//        selSrv1_xz(MALE) = selSrv3_xz(MALE);
 //    else { 
-//        selSrv2(MALE)  = srv2_q*1./(1.+mfexp(-1.*log(19.)*(zBs-srv2_sel50)/(srv2_seldiff)));
-//        selSrv2a(MALE) = srv3_q*1./(1.+mfexp(-1.*log(19.)*(zBs-srv3_sel50)/(srv3_seldiff)));
+//        selSrv1_xz(MALE)  = srv2_q*1./(1.+mfexp(-1.*log(19.)*(zBs-srv2_sel50)/(srv2_seldiff)));
+//        selSrv2_xz(MALE) = srv3_q*1./(1.+mfexp(-1.*log(19.)*(zBs-srv3_sel50)/(srv3_seldiff)));
 //    }
 //        
 //    //set male and female equal unless estimating qFem
-//    selSrv2(FEMALE)  = srv2_qFem*1./(1.+mfexp(-1.*log(19.)*(zBs-srv2_sel50_f)/(srv2_seldiff_f)));
-//    selSrv2a(FEMALE) = srv3_qFem*1./(1.+mfexp(-1.*log(19.)*(zBs-srv3_sel50_f)/(srv3_seldiff_f)));
-//    selSrv3(FEMALE)  = srv3_qFem*1./(1.+mfexp(-1.*log(19.)*(zBs-srv3_sel50_f)/(srv3_seldiff_f)));
+//    selSrv1_xz(FEMALE)  = srv2_qFem*1./(1.+mfexp(-1.*log(19.)*(zBs-srv2_sel50_f)/(srv2_seldiff_f)));
+//    selSrv2_xz(FEMALE) = srv3_qFem*1./(1.+mfexp(-1.*log(19.)*(zBs-srv3_sel50_f)/(srv3_seldiff_f)));
+//    selSrv3_xz(FEMALE)  = srv3_qFem*1./(1.+mfexp(-1.*log(19.)*(zBs-srv3_sel50_f)/(srv3_seldiff_f)));
 //    cout<<"get_sel: 3"<<endl;
 //    
     dvariable maxsel;
-    selTCFR.initialize();
+    selTCFR_syz.initialize();
     for(int iy=styr;iy<endyr;iy++){          //used to be iy<=endyr
-        maxsel = max(selTCFM(NEW_SHELL,iy));
-        if(maxsel<max(selTCFM(OLD_SHELL,iy))) maxsel = max(selTCFM(OLD_SHELL,iy));  //wts: is this differentiable??
+        maxsel = max(selTCFM_syz(NEW_SHELL,iy));
+        if(maxsel<max(selTCFM_syz(OLD_SHELL,iy))) maxsel = max(selTCFM_syz(OLD_SHELL,iy));  //wts: is this differentiable??
         for (int shell=NEW_SHELL;shell<=OLD_SHELL;shell++){
-            selTCFM(shell,iy) = selTCFM(shell,iy)/maxsel;
-            selTCFR(shell,iy) = elem_prod(retFcn(shell,iy),selTCFM(shell,iy));
+            selTCFM_syz(shell,iy) = selTCFM_syz(shell,iy)/maxsel;
+            selTCFR_syz(shell,iy) = elem_prod(retFcn_syz(shell,iy),selTCFM_syz(shell,iy));
         }
     }
 //    cout<<"get_sel: 4"<<endl;
@@ -2584,75 +2583,75 @@ FUNCTION get_selectivity                  //wts: revised
     
     //new 20150901-->
     //calculate survey selectivities
-    selSrv2( MALE) = 1./(1.+mfexp(-1.*log(19.)*(zBs-srv2_sel50)/(srv2_seldiff)));
-    selSrv2a(MALE) = 1./(1.+mfexp(-1.*log(19.)*(zBs-srv3_sel50)/(srv3_seldiff)));
-    selSrv3( MALE) = 1./(1.+mfexp(-1.*log(19.)*(zBs-srv3_sel50)/(srv3_seldiff)));
+    selSrv1_xz( MALE) = 1./(1.+mfexp(-1.*log(19.)*(zBs-srv2_sel50)/(srv2_seldiff)));
+    selSrv2_xz(MALE) = 1./(1.+mfexp(-1.*log(19.)*(zBs-srv3_sel50)/(srv3_seldiff)));
+    selSrv3_xz( MALE) = 1./(1.+mfexp(-1.*log(19.)*(zBs-srv3_sel50)/(srv3_seldiff)));
         
-    selSrv2( FEMALE) = 1./(1.+mfexp(-1.*log(19.)*(zBs-srv2_sel50_f)/(srv2_seldiff_f)));
-    selSrv2a(FEMALE) = 1./(1.+mfexp(-1.*log(19.)*(zBs-srv3_sel50_f)/(srv3_seldiff_f)));
-    selSrv3( FEMALE) = 1./(1.+mfexp(-1.*log(19.)*(zBs-srv3_sel50_f)/(srv3_seldiff_f)));
+    selSrv1_xz( FEMALE) = 1./(1.+mfexp(-1.*log(19.)*(zBs-srv2_sel50_f)/(srv2_seldiff_f)));
+    selSrv2_xz(FEMALE) = 1./(1.+mfexp(-1.*log(19.)*(zBs-srv3_sel50_f)/(srv3_seldiff_f)));
+    selSrv3_xz( FEMALE) = 1./(1.+mfexp(-1.*log(19.)*(zBs-srv3_sel50_f)/(srv3_seldiff_f)));
 //    cout<<"get_sel: 3"<<endl;
     
      if (optFshSel==1){//set logistic selectivity = 1 in largest size bin
-        //TCFM and retFcn
+        //TCFM and retFcn_syz
         for(int iy=styr;iy<endyr;iy++){
-            selTCFM(NEW_SHELL,iy) /= selTCFM(NEW_SHELL,iy,nZBs);
-            retFcn( NEW_SHELL,iy) /= retFcn( NEW_SHELL,iy,nZBs);
-            selTCFM(OLD_SHELL,iy) /= selTCFM(OLD_SHELL,iy,nZBs);
-            retFcn( OLD_SHELL,iy) /= retFcn( OLD_SHELL,iy,nZBs);
+            selTCFM_syz(NEW_SHELL,iy) /= selTCFM_syz(NEW_SHELL,iy,nZBs);
+            retFcn_syz( NEW_SHELL,iy) /= retFcn_syz( NEW_SHELL,iy,nZBs);
+            selTCFM_syz(OLD_SHELL,iy) /= selTCFM_syz(OLD_SHELL,iy,nZBs);
+            retFcn_syz( OLD_SHELL,iy) /= retFcn_syz( OLD_SHELL,iy,nZBs);
         }
         //TCFF
-        selTCFF /= selTCFF(nZBs);
+        selTCFF_z /= selTCFF_z(nZBs);
         //SCF females (only)
-        selSCF(1,FEMALE) /= selSCF(1,FEMALE,nZBs);
-        selSCF(2,FEMALE) /= selSCF(2,FEMALE,nZBs);
-        selSCF(3,FEMALE) /= selSCF(3,FEMALE,nZBs);
+        selSCF_cxz(1,FEMALE) /= selSCF_cxz(1,FEMALE,nZBs);
+        selSCF_cxz(2,FEMALE) /= selSCF_cxz(2,FEMALE,nZBs);
+        selSCF_cxz(3,FEMALE) /= selSCF_cxz(3,FEMALE,nZBs);
         //RKF
-        selRKF(1,  MALE) /= selRKF(1,  MALE,nZBs);
-        selRKF(2,  MALE) /= selRKF(2,  MALE,nZBs);
-        selRKF(3,  MALE) /= selRKF(3,  MALE,nZBs);
-        selRKF(1,FEMALE) /= selRKF(1,FEMALE,nZBs);
-        selRKF(2,FEMALE) /= selRKF(2,FEMALE,nZBs);
-        selRKF(3,FEMALE) /= selRKF(3,FEMALE,nZBs);
+        selRKF_cxz(1,  MALE) /= selRKF_cxz(1,  MALE,nZBs);
+        selRKF_cxz(2,  MALE) /= selRKF_cxz(2,  MALE,nZBs);
+        selRKF_cxz(3,  MALE) /= selRKF_cxz(3,  MALE,nZBs);
+        selRKF_cxz(1,FEMALE) /= selRKF_cxz(1,FEMALE,nZBs);
+        selRKF_cxz(2,FEMALE) /= selRKF_cxz(2,FEMALE,nZBs);
+        selRKF_cxz(3,FEMALE) /= selRKF_cxz(3,FEMALE,nZBs);
         //GTF
-        selGTF(1,  MALE) /= selGTF(1,  MALE,nZBs);
-        selGTF(2,  MALE) /= selGTF(2,  MALE,nZBs);
-        selGTF(3,  MALE) /= selGTF(3,  MALE,nZBs);
-        selGTF(1,FEMALE) /= selGTF(1,FEMALE,nZBs);
-        selGTF(2,FEMALE) /= selGTF(2,FEMALE,nZBs);
-        selGTF(3,FEMALE) /= selGTF(3,FEMALE,nZBs);
+        selGTF_cxz(1,  MALE) /= selGTF_cxz(1,  MALE,nZBs);
+        selGTF_cxz(2,  MALE) /= selGTF_cxz(2,  MALE,nZBs);
+        selGTF_cxz(3,  MALE) /= selGTF_cxz(3,  MALE,nZBs);
+        selGTF_cxz(1,FEMALE) /= selGTF_cxz(1,FEMALE,nZBs);
+        selGTF_cxz(2,FEMALE) /= selGTF_cxz(2,FEMALE,nZBs);
+        selGTF_cxz(3,FEMALE) /= selGTF_cxz(3,FEMALE,nZBs);
      }
     
     //survey selectivities
      if (optSrvSel==1){//set logistic selectivity = 1 in largest size bin
-        selSrv2(   MALE) /= selSrv2(   MALE,nZBs);
-        selSrv2a(  MALE) /= selSrv2a(  MALE,nZBs);
-        selSrv3(   MALE) /= selSrv3(   MALE,nZBs);
-        selSrv2( FEMALE) /= selSrv2( FEMALE,nZBs);
-        selSrv2a(FEMALE) /= selSrv2a(FEMALE,nZBs);
-        selSrv3( FEMALE) /= selSrv3( FEMALE,nZBs);
+        selSrv1_xz(   MALE) /= selSrv1_xz(   MALE,nZBs);
+        selSrv2_xz(  MALE) /= selSrv2_xz(  MALE,nZBs);
+        selSrv3_xz(   MALE) /= selSrv3_xz(   MALE,nZBs);
+        selSrv1_xz( FEMALE) /= selSrv1_xz( FEMALE,nZBs);
+        selSrv2_xz(FEMALE) /= selSrv2_xz(FEMALE,nZBs);
+        selSrv3_xz( FEMALE) /= selSrv3_xz( FEMALE,nZBs);
     }
     
     if (survsel_phase<0)
         // use somerton and otto curve for survey selectivities
-        selSrv3(MALE) = sel_som(1)/(1.+sel_som(2)*mfexp(-1.*sel_som(3)*zBs));
+        selSrv3_xz(MALE) = sel_som(1)/(1.+sel_som(2)*mfexp(-1.*sel_som(3)*zBs));
     else
         //scale survey selectivity by survey catchability
-        selSrv3(MALE) *= srv3_q;
+        selSrv3_xz(MALE) *= srv3_q;
     
     if (survsel1_phase < 0)
         // this sets time periods 1 and 2 survey selectivities to somerton otto as well
-        selSrv2(MALE) = selSrv3(MALE);
+        selSrv1_xz(MALE) = selSrv3_xz(MALE);
     else { 
         //scale survey selectivity by survey catchability
-        selSrv2(MALE)  *= srv2_q;
-        selSrv2a(MALE) *= srv3_q;
+        selSrv1_xz(MALE)  *= srv2_q;
+        selSrv2_xz(MALE) *= srv3_q;
     }
         
     //scale survey selectivity by survey catchability
-    selSrv2(FEMALE)  *= srv2_qFem;
-    selSrv2a(FEMALE) *= srv3_qFem;
-    selSrv3(FEMALE)  *= srv3_qFem;
+    selSrv1_xz(FEMALE)  *= srv2_qFem;
+    selSrv2_xz(FEMALE) *= srv3_qFem;
+    selSrv3_xz(FEMALE)  *= srv3_qFem;
 //    cout<<"get_sel: 3"<<endl;
     //<--
     
@@ -2792,44 +2791,44 @@ FUNCTION get_mortality
         
         // test on year for 3 snow selectivity periods
         if (iy<=1996) {
-            tmpSelSCF(FEMALE)=selSCF(1,FEMALE);
-            tmpSelSCF(MALE)  =selSCF(1,MALE);
+            tmpSelSCF(FEMALE)=selSCF_cxz(1,FEMALE);
+            tmpSelSCF(MALE)  =selSCF_cxz(1,MALE);
         }
         if (1997<=iy && iy<=2004) {
-            tmpSelSCF(FEMALE)=selSCF(2,FEMALE);
-            tmpSelSCF(MALE)  =selSCF(2,MALE);
+            tmpSelSCF(FEMALE)=selSCF_cxz(2,FEMALE);
+            tmpSelSCF(MALE)  =selSCF_cxz(2,MALE);
         }
         if (2005<=iy) {
-            tmpSelSCF(FEMALE)=selSCF(3,FEMALE);
-            tmpSelSCF(MALE)  =selSCF(3,MALE);
+            tmpSelSCF(FEMALE)=selSCF_cxz(3,FEMALE);
+            tmpSelSCF(MALE)  =selSCF_cxz(3,MALE);
         }
         
         // test on year for 3 red selectivity periods
         if (iy<=1996) {
-            tmpSelRKF(FEMALE)=selRKF(1,FEMALE);
-            tmpSelRKF(MALE)  =selRKF(1,MALE);
+            tmpSelRKF(FEMALE)=selRKF_cxz(1,FEMALE);
+            tmpSelRKF(MALE)  =selRKF_cxz(1,MALE);
         }
         if (1997<=iy && iy<=2004) {
-            tmpSelRKF(FEMALE)=selRKF(2,FEMALE);
-            tmpSelRKF(MALE)  =selRKF(2,MALE);
+            tmpSelRKF(FEMALE)=selRKF_cxz(2,FEMALE);
+            tmpSelRKF(MALE)  =selRKF_cxz(2,MALE);
         }
         if (2005<=iy) {
-            tmpSelRKF(FEMALE)=selRKF(3,FEMALE);
-            tmpSelRKF(MALE)  =selRKF(3,MALE);
+            tmpSelRKF(FEMALE)=selRKF_cxz(3,FEMALE);
+            tmpSelRKF(MALE)  =selRKF_cxz(3,MALE);
         }
         
         // test on year for 3 trawl selectivity periods
         if (iy<=1986) {
-            tmpSelGTF(FEMALE)=selGTF(1,FEMALE);
-            tmpSelGTF(MALE)  =selGTF(1,MALE);
+            tmpSelGTF(FEMALE)=selGTF_cxz(1,FEMALE);
+            tmpSelGTF(MALE)  =selGTF_cxz(1,MALE);
         }
         if (1987<=iy && iy<=1996) {
-            tmpSelGTF(FEMALE)=selGTF(2,FEMALE);
-            tmpSelGTF(MALE)  =selGTF(2,MALE);
+            tmpSelGTF(FEMALE)=selGTF_cxz(2,FEMALE);
+            tmpSelGTF(MALE)  =selGTF_cxz(2,MALE);
         }
         if (1997<=iy) {
-            tmpSelGTF(FEMALE)=selGTF(3,FEMALE);
-            tmpSelGTF(MALE)  =selGTF(3,MALE);
+            tmpSelGTF(FEMALE)=selGTF_cxz(3,FEMALE);
+            tmpSelGTF(MALE)  =selGTF_cxz(3,MALE);
         }
         
         //20150601: Added option to use gmacs model
@@ -2841,10 +2840,10 @@ FUNCTION get_mortality
             fmRKF_xyz(  MALE,iy) = tmpSelRKF(  MALE)*fRKF_xy(  MALE,iy);   
             fmGTF_xyz(FEMALE,iy) = tmpSelGTF(FEMALE)*fGTF_xy(FEMALE,iy);   
             fmGTF_xyz(  MALE,iy) = tmpSelGTF(  MALE)*fGTF_xy(  MALE,iy);   
-            fmTCFF_yz(iy)= selTCFF*fTCF_xy(FEMALE,iy);
+            fmTCFF_yz(iy)= selTCFF_z*fTCF_xy(FEMALE,iy);
             for(int s=NEW_SHELL;s<=OLD_SHELL;s++) {
-                fmTCFM_syz(s,iy)     = selTCFM(s,iy)*fTCF_xy(MALE,iy);//total fishing mortality on males in directed fishery       
-                fmTCFR_syz(s,iy)     = selTCFR(s,iy)*fTCF_xy(MALE,iy);//retained fishing mortality on males in directed fishery
+                fmTCFM_syz(s,iy)     = selTCFM_syz(s,iy)*fTCF_xy(MALE,iy);//total fishing mortality on males in directed fishery       
+                fmTCFR_syz(s,iy)     = selTCFR_syz(s,iy)*fTCF_xy(MALE,iy);//retained fishing mortality on males in directed fishery
                 fmTCFD_syz(s,iy)     = fmTCFM_syz(s,iy)-fmTCFR_syz(s,iy);//discard fishing mortality on males in directed fishery
                 fmTOT_xsyz(  MALE,s,iy) = fmTCFM_syz(s,iy)+fmSCF_xyz(  MALE,iy)+fmRKF_xyz(  MALE,iy)+fmGTF_xyz(  MALE,iy);            
                 fmTOT_xsyz(FEMALE,s,iy) = fmTCFF_yz(iy)   +fmSCF_xyz(FEMALE,iy)+fmRKF_xyz(FEMALE,iy)+fmGTF_xyz(FEMALE,iy);//wts: does not depend on s
@@ -2861,8 +2860,8 @@ FUNCTION get_mortality
             fcRKF_xyz(  MALE,iy) = tmpSelRKF(  MALE)*fRKF_xy(  MALE,iy);   
             fcGTF_xyz(FEMALE,iy) = tmpSelGTF(FEMALE)*fGTF_xy(FEMALE,iy);   
             fcGTF_xyz(  MALE,iy) = tmpSelGTF(  MALE)*fGTF_xy(  MALE,iy);   
-            fcTCFF_yz(iy)= selTCFF*fTCF_xy(FEMALE,iy);
-            for(int s=NEW_SHELL;s<=OLD_SHELL;s++) fcTCFM_syz(s,iy) = selTCFM(s,iy)*fTCF_xy(MALE,iy);       
+            fcTCFF_yz(iy)= selTCFF_z*fTCF_xy(FEMALE,iy);
+            for(int s=NEW_SHELL;s<=OLD_SHELL;s++) fcTCFM_syz(s,iy) = selTCFM_syz(s,iy)*fTCF_xy(MALE,iy);       
         
             //mortality rates
             fmSCF_xyz(FEMALE,iy) = hm_pot*fcSCF_xyz(FEMALE,iy);   
@@ -2873,8 +2872,8 @@ FUNCTION get_mortality
             fmGTF_xyz(  MALE,iy) = hm_trawl*fcGTF_xyz(  MALE,iy);   
             fmTCFF_yz(iy)        = hm_pot*fcTCFF_yz(iy);
             for (int s=NEW_SHELL;s<=OLD_SHELL;s++) { //over new (shell=1) and old (shell=2) shell...
-                fmTCFR_syz(s,iy) = elem_prod(retFcn(s,iy),             fcTCFM_syz(s,iy)); //retention rate
-                fmTCFD_syz(s,iy) = elem_prod(hm_pot*(1.0-retFcn(s,iy)),fcTCFM_syz(s,iy));  //discard mortality rate
+                fmTCFR_syz(s,iy) = elem_prod(retFcn_syz(s,iy),             fcTCFM_syz(s,iy)); //retention rate
+                fmTCFD_syz(s,iy) = elem_prod(hm_pot*(1.0-retFcn_syz(s,iy)),fcTCFM_syz(s,iy));  //discard mortality rate
                 fmTCFM_syz(s,iy) = fmTCFR_syz(s,iy)+fmTCFD_syz(s,iy);  //total fishing mortality rate
                 fmTOT_xsyz(  MALE,s,iy) = fmTCFM_syz(s,iy)+fmSCF_xyz(  MALE,iy)+fmRKF_xyz(  MALE,iy)+fmGTF_xyz(  MALE,iy);            
                 fmTOT_xsyz(FEMALE,s,iy) = fmTCFF_yz(iy)   +fmSCF_xyz(FEMALE,iy)+fmRKF_xyz(FEMALE,iy)+fmGTF_xyz(FEMALE,iy);//wts: does not depend on s
@@ -3030,9 +3029,9 @@ FUNCTION get_numbers_at_len                                    //wts: revised
     // predicted survey values 
     for (int yr=styr;yr<=endyr;yr++){
         for(int x=1;x<=nSXs;x++) {
-            if (yr<1982)             {modSrvNum_xy(x,yr) = (modNum_xyz(x,yr)*selSrv2(x));}  else
-            if (1982<=yr && yr<1988) {modSrvNum_xy(x,yr) = (modNum_xyz(x,yr)*selSrv2a(x));} else
-            if (1988<=yr)            {modSrvNum_xy(x,yr) = (modNum_xyz(x,yr)*selSrv3(x));}
+            if (yr<1982)             {modSrvNum_xy(x,yr) = (modNum_xyz(x,yr)*selSrv1_xz(x));}  else
+            if (1982<=yr && yr<1988) {modSrvNum_xy(x,yr) = (modNum_xyz(x,yr)*selSrv2_xz(x));} else
+            if (1988<=yr)            {modSrvNum_xy(x,yr) = (modNum_xyz(x,yr)*selSrv3_xz(x));}
         }
     }
 //    cout<<"4"<<endl;
@@ -3047,9 +3046,9 @@ FUNCTION get_numbers_at_len                                    //wts: revised
         mspbio(yr) = natlength_mat(  MALE,yr)*wt_xmz(  MALE,MATURE);//dot product sum
         
         // Selection pattern
-        if (yr<1982)             {useSelSrv = selSrv2;}  else
-        if (1982<=yr && yr<1988) {useSelSrv = selSrv2a;} else
-        if (1988<=yr)            {useSelSrv = selSrv3;}
+        if (yr<1982)             {useSelSrv = selSrv1_xz;}  else
+        if (1982<=yr && yr<1988) {useSelSrv = selSrv2_xz;} else
+        if (1988<=yr)            {useSelSrv = selSrv3_xz;}
         
         modSrvImmBio_xy(FEMALE,yr) = multQ*natlength_imm(FEMALE,yr)*elem_prod(wt_xmz(FEMALE,IMMATURE),useSelSrv(FEMALE));//dot product sum
         modSrvImmBio_xy(  MALE,yr) = multQ*natlength_imm(  MALE,yr)*elem_prod(wt_xmz(MALE,  IMMATURE),useSelSrv(  MALE));//dot product sum
@@ -3079,9 +3078,9 @@ FUNCTION get_numbers_at_len                                    //wts: revised
 //    modSrvNumLegal_y.initialize();
 //    for (int yr=styr;yr<=endyr;yr++) {
 //        // Selection pattern//
-//        if (yr<1982)             {useSelSrv = selSrv2;}  else
-//        if (1982<=yr && yr<1988) {useSelSrv = selSrv2a;} else
-//        if (1988<=yr)            {useSelSrv = selSrv3;}        
+//        if (yr<1982)             {useSelSrv = selSrv1_xz;}  else
+//        if (1982<=yr && yr<1988) {useSelSrv = selSrv2_xz;} else
+//        if (1988<=yr)            {useSelSrv = selSrv3_xz;}        
 //        // legal is >=138mm take half the numbers in the 135-139 bin
 //        modPopNumLegal_y(yr)    = 0.5*modNum_xyz(MALE,yr,23);
 //        modSrvNumLegal_y(yr) = 0.5*modNum_xyz(MALE,yr,23)*useSelSrv(MALE,23);  //fixed indices; need vector of 0's, 0.5 and 1's to mult here
@@ -3777,9 +3776,9 @@ FUNCTION Misc_output
     modSrvNumLegal_y.initialize();
     modSrvBioLegal_y.initialize();
     for (int yr=styr;yr<endyr;yr++) {      //(IMPORTANT CHANGE: used to be "endyr")
-    if (yr<1982)             {useSelSrv = selSrv2;}  else
-    if (1982<=yr && yr<1988) {useSelSrv = selSrv2a;} else
-    if (1988<=yr)            {useSelSrv = selSrv3;}        
+    if (yr<1982)             {useSelSrv = selSrv1_xz;}  else
+    if (1982<=yr && yr<1988) {useSelSrv = selSrv2_xz;} else
+    if (1988<=yr)            {useSelSrv = selSrv3_xz;}        
         for (int m=1;m<=nMSs;m++){
             for (int s=1;s<=nSCs;s++){
                 modPopNumLegal_y(yr) += sum(modNum_yxmsz(yr,MALE,m,s)(iZLegal,nZBs));
@@ -3950,9 +3949,9 @@ FUNCTION Misc_output
     // Sex ratio
     for (int yr=styr;yr<=endyr;yr++){
         if ((sum(modNum_xyz(FEMALE,yr))+sum(modNum_xyz(MALE,yr)))<0.01) { 
-            predpop_sexr(yr)=0.0;
+            modPopXR_y(yr)=0.0;
         } else {
-            predpop_sexr(yr)=sum(modNum_xyz(FEMALE,yr))/(sum(modNum_xyz(FEMALE,yr))+sum(modNum_xyz(  MALE,yr)));
+            modPopXR_y(yr)=sum(modNum_xyz(FEMALE,yr))/(sum(modNum_xyz(FEMALE,yr))+sum(modNum_xyz(  MALE,yr)));
         }
     }//yr
     
@@ -4000,9 +3999,9 @@ FUNCTION Misc_output
     modSrvBio_xy.initialize();
     for (int yr=styr;yr<=endyr;yr++) {
         // Selection pattern
-        if (yr<1982)            useSelSrv = selSrv2;
-        if (yr>1981 && yr<1988) useSelSrv = selSrv2a;
-        if (yr>1987)            useSelSrv = selSrv3;
+        if (yr<1982)            useSelSrv = selSrv1_xz;
+        if (yr>1981 && yr<1988) useSelSrv = selSrv2_xz;
+        if (yr>1987)            useSelSrv = selSrv3_xz;
         
         // legal male size is based on zLegal
         modPopBioLegal_y(yr)            = modNum_xyz(MALE,yr)(iZLegal,nZBs)*wt_xmz(MALE,  MATURE)(iZLegal,nZBs);
@@ -4141,34 +4140,34 @@ FUNCTION void writeMyProjectionFile(ofstream& os)
       os<<mean(fRKF_xy(MALE)(endyr-5,endyr-1))<<tb<<tb<<"#inpFmRKF: input male F for BBRKC  fishing mortality"<<endl;
       os<<mean(fGTF_xy(MALE)(endyr-5,endyr-1))<<tb<<tb<<"#inpFmGTF: input male F for groundfish fishery fishing mortality"<<endl;
       
-      os<<"#selTCF_TotMale(nSCs,nSXs): average of last 4 years selTCFM total male new old shell"<<endl;
-      os<<(selTCFM(NEW_SHELL,endyr-4)+selTCFM(NEW_SHELL,endyr-3)+selTCFM(NEW_SHELL,endyr-2)+selTCFM(NEW_SHELL,endyr-1))/4.0<<endl;
-      os<<(selTCFM(OLD_SHELL,endyr-4)+selTCFM(OLD_SHELL,endyr-3)+selTCFM(OLD_SHELL,endyr-2)+selTCFM(OLD_SHELL,endyr-1))/4.0<<endl;
-      os<<"#selTCF_RetMale(nSCs,nSXs): average of last 4 years selTCFM retained curve male new old shell"<<endl;
-      os<<(selTCFR(NEW_SHELL,endyr-4)+selTCFR(NEW_SHELL,endyr-3)+selTCFR(NEW_SHELL,endyr-2)+selTCFR(NEW_SHELL,endyr-1))/4.0<<endl;//IMPORTANT CHANGE: was only over last 3 years (but said 4)
-      os<<(selTCFR(OLD_SHELL,endyr-4)+selTCFR(OLD_SHELL,endyr-3)+selTCFR(OLD_SHELL,endyr-2)+selTCFR(OLD_SHELL,endyr-1))/4.0<<endl;
+      os<<"#selTCF_TotMale(nSCs,nSXs): average of last 4 years selTCFM_syz total male new old shell"<<endl;
+      os<<(selTCFM_syz(NEW_SHELL,endyr-4)+selTCFM_syz(NEW_SHELL,endyr-3)+selTCFM_syz(NEW_SHELL,endyr-2)+selTCFM_syz(NEW_SHELL,endyr-1))/4.0<<endl;
+      os<<(selTCFM_syz(OLD_SHELL,endyr-4)+selTCFM_syz(OLD_SHELL,endyr-3)+selTCFM_syz(OLD_SHELL,endyr-2)+selTCFM_syz(OLD_SHELL,endyr-1))/4.0<<endl;
+      os<<"#selTCF_RetMale(nSCs,nSXs): average of last 4 years selTCFM_syz retained curve male new old shell"<<endl;
+      os<<(selTCFR_syz(NEW_SHELL,endyr-4)+selTCFR_syz(NEW_SHELL,endyr-3)+selTCFR_syz(NEW_SHELL,endyr-2)+selTCFR_syz(NEW_SHELL,endyr-1))/4.0<<endl;//IMPORTANT CHANGE: was only over last 3 years (but said 4)
+      os<<(selTCFR_syz(OLD_SHELL,endyr-4)+selTCFR_syz(OLD_SHELL,endyr-3)+selTCFR_syz(OLD_SHELL,endyr-2)+selTCFR_syz(OLD_SHELL,endyr-1))/4.0<<endl;
       os<<"#selTCF_TotMaleEast(nSCs,nSXs): set same as average total"<<endl;
-      os<<(selTCFM(NEW_SHELL,endyr-4)+selTCFM(NEW_SHELL,endyr-3)+selTCFM(NEW_SHELL,endyr-2)+selTCFM(NEW_SHELL,endyr-1))/4.0<<endl;
-      os<<(selTCFM(OLD_SHELL,endyr-4)+selTCFM(OLD_SHELL,endyr-3)+selTCFM(OLD_SHELL,endyr-2)+selTCFM(OLD_SHELL,endyr-1))/4.0<<endl;
+      os<<(selTCFM_syz(NEW_SHELL,endyr-4)+selTCFM_syz(NEW_SHELL,endyr-3)+selTCFM_syz(NEW_SHELL,endyr-2)+selTCFM_syz(NEW_SHELL,endyr-1))/4.0<<endl;
+      os<<(selTCFM_syz(OLD_SHELL,endyr-4)+selTCFM_syz(OLD_SHELL,endyr-3)+selTCFM_syz(OLD_SHELL,endyr-2)+selTCFM_syz(OLD_SHELL,endyr-1))/4.0<<endl;
       os<<"#selTCF_RetMaleEast(nSCs,nSXs): set same as avg retained"<<endl;
-      os<<(selTCFR(NEW_SHELL,endyr-4)+selTCFR(NEW_SHELL,endyr-3)+selTCFR(NEW_SHELL,endyr-2)+selTCFR(NEW_SHELL,endyr-1))/4.0<<endl;//IMPORTANT CHANGE: was only over last 3 years (but said 4)
-      os<<(selTCFR(OLD_SHELL,endyr-4)+selTCFR(OLD_SHELL,endyr-3)+selTCFR(OLD_SHELL,endyr-2)+selTCFR(OLD_SHELL,endyr-1))/4.0<<endl;
+      os<<(selTCFR_syz(NEW_SHELL,endyr-4)+selTCFR_syz(NEW_SHELL,endyr-3)+selTCFR_syz(NEW_SHELL,endyr-2)+selTCFR_syz(NEW_SHELL,endyr-1))/4.0<<endl;//IMPORTANT CHANGE: was only over last 3 years (but said 4)
+      os<<(selTCFR_syz(OLD_SHELL,endyr-4)+selTCFR_syz(OLD_SHELL,endyr-3)+selTCFR_syz(OLD_SHELL,endyr-2)+selTCFR_syz(OLD_SHELL,endyr-1))/4.0<<endl;
       os<<"#selTCF_TotMaleWest(nSCs,nSXs): set same as average total"<<endl;
-      os<<(selTCFM(NEW_SHELL,endyr-4)+selTCFM(NEW_SHELL,endyr-3)+selTCFM(NEW_SHELL,endyr-2)+selTCFM(NEW_SHELL,endyr-1))/4.0<<endl;
-      os<<(selTCFM(OLD_SHELL,endyr-4)+selTCFM(OLD_SHELL,endyr-3)+selTCFM(OLD_SHELL,endyr-2)+selTCFM(OLD_SHELL,endyr-1))/4.0<<endl;
+      os<<(selTCFM_syz(NEW_SHELL,endyr-4)+selTCFM_syz(NEW_SHELL,endyr-3)+selTCFM_syz(NEW_SHELL,endyr-2)+selTCFM_syz(NEW_SHELL,endyr-1))/4.0<<endl;
+      os<<(selTCFM_syz(OLD_SHELL,endyr-4)+selTCFM_syz(OLD_SHELL,endyr-3)+selTCFM_syz(OLD_SHELL,endyr-2)+selTCFM_syz(OLD_SHELL,endyr-1))/4.0<<endl;
       os<<"#selTCF_RetMaleWest(nSCs,nSXs): SET SAME AS AVG RETAINED, BUT SHIFTED TO LOWER END BY 10 mm"<<endl;
-      os<<(selTCFR(NEW_SHELL,endyr-4)+selTCFR(NEW_SHELL,endyr-3)+selTCFR(NEW_SHELL,endyr-2)+selTCFR(NEW_SHELL,endyr-1))/4.0<<endl;//IMPORTANT CHANGE: was only over last 3 years (but said 4)
-      os<<(selTCFR(OLD_SHELL,endyr-4)+selTCFR(OLD_SHELL,endyr-3)+selTCFR(OLD_SHELL,endyr-2)+selTCFR(OLD_SHELL,endyr-1))/4.0<<endl;
+      os<<(selTCFR_syz(NEW_SHELL,endyr-4)+selTCFR_syz(NEW_SHELL,endyr-3)+selTCFR_syz(NEW_SHELL,endyr-2)+selTCFR_syz(NEW_SHELL,endyr-1))/4.0<<endl;//IMPORTANT CHANGE: was only over last 3 years (but said 4)
+      os<<(selTCFR_syz(OLD_SHELL,endyr-4)+selTCFR_syz(OLD_SHELL,endyr-3)+selTCFR_syz(OLD_SHELL,endyr-2)+selTCFR_syz(OLD_SHELL,endyr-1))/4.0<<endl;
       os<<"#selTCF_Female(nZs): selectivity for females in directed fishery"<<endl;
-      os<<selTCFF<<endl;
-      os<<"#selSCF(nSXs,nZs): selectivity in snow crab fishery"<<endl;
-      os<<selSCF(3,FEMALE)<<endl;
-      os<<selSCF(3,  MALE)<<endl;
-      os<<"#selRKF(nSXs,nZs): selectivity in BBRKC fishery"<<endl;
-      os<<selRKF(3,FEMALE)<<endl;
-      os<<selRKF(3,  MALE)<<endl;      
-      os<<"#selGTF(nSXs,nZs): selectivity in groundfish fishery"<<endl;
-      os<<selGTF(3)<<endl;
+      os<<selTCFF_z<<endl;
+      os<<"#selSCF_cxz(nSXs,nZs): selectivity in snow crab fishery"<<endl;
+      os<<selSCF_cxz(3,FEMALE)<<endl;
+      os<<selSCF_cxz(3,  MALE)<<endl;
+      os<<"#selRKF_cxz(nSXs,nZs): selectivity in BBRKC fishery"<<endl;
+      os<<selRKF_cxz(3,FEMALE)<<endl;
+      os<<selRKF_cxz(3,  MALE)<<endl;      
+      os<<"#selGTF_cxz(nSXs,nZs): selectivity in groundfish fishery"<<endl;
+      os<<selGTF_cxz(3)<<endl;
       
       os<<"#---------------------------"<<endl;
       os<<"#Biological info"<<endl;
@@ -4898,7 +4897,7 @@ FUNCTION void writeToR_OLD(ofstream& R_out)
         
             //discard rates
             for (int s=NEW_SHELL;s<=OLD_SHELL;s++) {
-                for (int yr=styr;yr<=(endyr-1);yr++) fdTCFM_syz(s,yr) = elem_prod((1.0-retFcn(s,yr)),fcTCFM_syz(s,yr));  //discard mortality rate
+                for (int yr=styr;yr<=(endyr-1);yr++) fdTCFM_syz(s,yr) = elem_prod((1.0-retFcn_syz(s,yr)),fcTCFM_syz(s,yr));  //discard mortality rate
             }//shell category
             
             //total numbers-at-size discarded
@@ -4937,45 +4936,45 @@ FUNCTION void writeToR_OLD(ofstream& R_out)
         //selectivity and retention curves
         //--surveys
         R_out << "$mod.sel.srv.F"<< endl;
-        R_out << selSrv2(FEMALE) << endl; //1974.to.1981
-        R_out << selSrv2a(FEMALE)<< endl; //1982.to.1987
-        R_out << selSrv3(FEMALE) << endl; //1988.to.endyr
+        R_out << selSrv1_xz(FEMALE) << endl; //1974.to.1981
+        R_out << selSrv2_xz(FEMALE)<< endl; //1982.to.1987
+        R_out << selSrv3_xz(FEMALE) << endl; //1988.to.endyr
         R_out << "$mod.sel.srv.M"<< endl;
-        R_out << selSrv2(MALE) << endl;
-        R_out << selSrv2a(MALE)<< endl;
-        R_out << selSrv3(MALE) << endl;
+        R_out << selSrv1_xz(MALE) << endl;
+        R_out << selSrv2_xz(MALE)<< endl;
+        R_out << selSrv3_xz(MALE) << endl;
         //--fisheries
-        REP2R2(mod.sel.TCF.NM,selTCFM(NEW_SHELL));
-        REP2R2(mod.sel.TCF.OM,selTCFM(OLD_SHELL));
-        REP2R2(mod.selr.TCF.NM,selTCFR(NEW_SHELL));
-        REP2R2(mod.selr.TCF.OM,selTCFR(OLD_SHELL));
-        REP2R2(mod.ret.TCF.NM,retFcn(NEW_SHELL));
-        REP2R2(mod.ret.TCF.OM,retFcn(OLD_SHELL));
-        REP2R2(mod.sel.TCF.F,selTCFF);
+        REP2R2(mod.sel.TCF.NM,selTCFM_syz(NEW_SHELL));
+        REP2R2(mod.sel.TCF.OM,selTCFM_syz(OLD_SHELL));
+        REP2R2(mod.selr.TCF.NM,selTCFR_syz(NEW_SHELL));
+        REP2R2(mod.selr.TCF.OM,selTCFR_syz(OLD_SHELL));
+        REP2R2(mod.ret.TCF.NM,retFcn_syz(NEW_SHELL));
+        REP2R2(mod.ret.TCF.OM,retFcn_syz(OLD_SHELL));
+        REP2R2(mod.sel.TCF.F,selTCFF_z);
         R_out << "$mod.sel.GTF.F"<< endl;
-        R_out <<selGTF(1,FEMALE)<<endl;
-        R_out <<selGTF(2,FEMALE)<<endl;
-        R_out <<selGTF(3,FEMALE)<<endl;  
+        R_out <<selGTF_cxz(1,FEMALE)<<endl;
+        R_out <<selGTF_cxz(2,FEMALE)<<endl;
+        R_out <<selGTF_cxz(3,FEMALE)<<endl;  
         R_out << "$mod.sel.GTF.M"<< endl;
-        R_out <<selGTF(1,MALE)<<endl;
-        R_out <<selGTF(2,MALE)<<endl;
-        R_out <<selGTF(3,MALE)<<endl;
+        R_out <<selGTF_cxz(1,MALE)<<endl;
+        R_out <<selGTF_cxz(2,MALE)<<endl;
+        R_out <<selGTF_cxz(3,MALE)<<endl;
         R_out << "$mod.sel.SCF.F"<< endl;
-        R_out <<selSCF(1,FEMALE)<<endl;
-        R_out <<selSCF(2,FEMALE)<<endl;
-        R_out <<selSCF(3,FEMALE)<<endl;  
+        R_out <<selSCF_cxz(1,FEMALE)<<endl;
+        R_out <<selSCF_cxz(2,FEMALE)<<endl;
+        R_out <<selSCF_cxz(3,FEMALE)<<endl;  
         R_out << "$mod.sel.SCF.M"<< endl;
-        R_out <<selSCF(1,MALE)<<endl;
-        R_out <<selSCF(2,MALE)<<endl;
-        R_out <<selSCF(3,MALE)<<endl;
+        R_out <<selSCF_cxz(1,MALE)<<endl;
+        R_out <<selSCF_cxz(2,MALE)<<endl;
+        R_out <<selSCF_cxz(3,MALE)<<endl;
         R_out << "$mod.sel.RKF.F"<< endl;
-        R_out <<selRKF(1,FEMALE)<<endl;
-        R_out <<selRKF(2,FEMALE)<<endl;
-        R_out <<selRKF(3,FEMALE)<<endl;  
+        R_out <<selRKF_cxz(1,FEMALE)<<endl;
+        R_out <<selRKF_cxz(2,FEMALE)<<endl;
+        R_out <<selRKF_cxz(3,FEMALE)<<endl;  
         R_out << "$mod.sel.RKF.M"<< endl;
-        R_out <<selRKF(1,MALE)<<endl;
-        R_out <<selRKF(2,MALE)<<endl;
-        R_out <<selRKF(3,MALE)<<endl;  
+        R_out <<selRKF_cxz(1,MALE)<<endl;
+        R_out <<selRKF_cxz(2,MALE)<<endl;
+        R_out <<selRKF_cxz(3,MALE)<<endl;  
         
         //input sample sizes
         REP2R2(inpSS.srv.IF,ssObsZCsSrv_msxn(IMMATURE,NEW_SHELL,FEMALE));
@@ -5068,7 +5067,7 @@ FUNCTION void myWriteParamsToR(ostream& os)
                 os<<"male=list(";
                         sel = mfexp(log_avg_sel50_3);
                         slp(1) = fish_slope_1; slp(2) = fish_slope_yr_3;
-                        strp = qt+str(1)+":"+str(nlog_sel50_dev_3)+qt;
+                        strp = qt+str(1)+":"+str(nSelTCFM_devsZ50)+qt;
                         os<<"z50="; wts::writeToR(os,value(sel)); os<<", slope="; wts::writeToR(os,value(slp)); os<<cc<<"devs.lnSel50="; wts::writeToR(os,value(log_sel50_dev_3),strp);
                 os<<"),";
                 os<<"female=list(z50="<<selTCFF_z50<<cc<<"slope="<<selTCFF_slp<<")";
