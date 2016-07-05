@@ -85,6 +85,12 @@
 ////            2. Revised rec_y and associated sdr variables to run styr to endyr-1,
 ////                 so rec_y(y) enters population at start of y+1 (as in Jack's original approach).
 ////                 This will allow direct comparisons with TCSAM2015 when starting population from 0.
+//--20160705: 1. Removed all molt parameters no longer involved in any calculations (pPrMoltFA, pPrMoltFB, 
+//                  pPrMoltMA, pPrMoltMB, pPrMoltMatMA, pPrMoltMatMB). Modified get_moltingp() to reflect
+//                  assumption that only immature crab molt, and they molt annually.
+//            2., srv2a_q, srv2a_seldiff, srv2a_sel50,
+//                  srv2a_qFem, srv2a_seldiff_f, srv2a_sel50_f, pPrNewShellRecruits, fish_slope_mn,
+//                  log_avg_sel50_mn, log_sel50_dev_mn, fish_sel50_1, fish_slope_mn2, fish_sel50_mn2).
 //
 //IMPORTANT: 2013-09 assessment model had RKC params for 1992+ discard mortality TURNED OFF. 
 //           THE ESTIMATION PHASE FOR RKC DISCARD MORTALITY IS NOW SET IN THE CONTROLLER FILE!
@@ -1169,13 +1175,6 @@ INITIALIZATION_SECTION
     //  selGTFM_slpA 0.07
     //  selGTFM_z50A 65.0
     
-    //  pPrMoltFA 2.0
-    //  pPrMoltFB 150.
-    //  pPrMoltMA 0.02
-    //  pPrMoltMB 300.
-    //  pPrMoltMatMA 0.05
-    //  pPrMoltMatMB 105.0
-    
     //  af 15.75
     //  bf 1.01
     //  am2 15.75
@@ -1223,13 +1222,6 @@ PARAMETER_SECTION
     init_bounded_vector pMfac_Big(1,nSXs,0.1,10.0,phsBigM)     // mult. on 1980-1984 M for mature males and females                     
     init_bounded_number pRecAlpha(11.49,11.51,-8)              // Parameters related to fraction recruiting  //this is NOT estimated (why?)
     init_bounded_number pRecBeta(3.99,4.01,-8)                 // Parameters related to fraction recruiting  //this is NOT estimated (why?)
-    
-    init_bounded_number pPrMoltFA(0.04,3.0,-6)                       // parameter for immature female logistic prMolt   //this is NOT estimated (why?)
-    init_bounded_number pPrMoltFB(130.,300.,-6)                      // parameter for immature female logistic prMolt   //this is NOT estimated (why?)
-    init_bounded_number pPrMoltMA(0.04,3.0,-5)                       // parameter for immature   male logistic prMolt   //this is NOT estimated (why?)
-    init_bounded_number pPrMoltMB(130.0,300.0,-5)                    // parameter for immature   male logistic prMolt   //this is NOT estimated (why?)
-    init_bounded_number pPrMoltMatMA(.0025,3.0,phsPrMolt_MatureMale) // logistic parameter for molting prob for mature males
-    init_bounded_number pPrMoltMatMB(1,120,phsPrMolt_MatureMale)     // logistic parameter for molting prob for mature males
     
     init_number pMnLnRec(phsMnLnRec)                                                         // Mean ln-scale total "current" recruitment
     init_bounded_dev_vector pRecDevs(mnYrRecCurr,endyr,-15,15,phsRecDevs)                    // "current" ln-scale total recruitment devs
@@ -2095,11 +2087,6 @@ PROCEDURE_SECTION                                          //wts: revised
 // ----------------------------------------------------------------------
 // ----------------------------------------------------------------------
 FUNCTION runPopMod
-    // Update growth (if the parameters are being estimated)
-    if (active(pPrMoltFA) || active(pPrMoltFB) || active(pPrMoltMA) || active(pPrMoltMB) || active(pPrMoltMatMA) || active(pPrMoltMatMB)) {
-        get_moltingp();
-    }
-    
     // growth estimated in prelimn calcs if growth parameters estimated in the model
     // then will redo growth matrix, otherwise not
     if(active(pGrAM1) || active(pGrBM1) || active(pGrAF1) || active(pGrBF1) || active(pGrBeta_x)) {
@@ -2133,13 +2120,6 @@ FUNCTION void writeParameters(ofstream& os,int toR, int willBeActive)           
     wts::writeParameter(os,pMfac_Big,toR,willBeActive);      
     wts::writeParameter(os,pRecAlpha,toR,willBeActive);      
     wts::writeParameter(os,pRecBeta,toR,willBeActive);      
-    
-    wts::writeParameter(os,pPrMoltFA,toR,willBeActive);      
-    wts::writeParameter(os,pPrMoltFB,toR,willBeActive);      
-    wts::writeParameter(os,pPrMoltMA,toR,willBeActive);      
-    wts::writeParameter(os,pPrMoltMB,toR,willBeActive);      
-    wts::writeParameter(os,pPrMoltMatMA,toR,willBeActive);      
-    wts::writeParameter(os,pPrMoltMatMB,toR,willBeActive);      
     
     wts::writeParameter(os,pMnLnRec,toR,willBeActive);      
     wts::writeParameter(os,pRecDevs,toR,willBeActive);      
@@ -2279,13 +2259,6 @@ FUNCTION void jitterParameters(double fac)   //wts: new 2014-05-10
     pMfac_Big     = wts::jitterParameter(pMfac_Big,fac,rng);     // mult. on 1980-1984 M for mature males and females                     
     pRecAlpha  = wts::jitterParameter(pRecAlpha,fac,rng);  // Parameters related to fraction recruiting  //this is NOT estimated (why?)
     pRecBeta    = wts::jitterParameter(pRecBeta,fac,rng);    // Parameters related to fraction recruiting  //this is NOT estimated (why?)
-    
-    pPrMoltFA = wts::jitterParameter(pPrMoltFA,fac,rng);       // paramters for logistic function molting   //this is NOT estimated (why?)
-    pPrMoltFB = wts::jitterParameter(pPrMoltFB,fac,rng);       // female                                    //this is NOT estimated (why?)
-    pPrMoltMA = wts::jitterParameter(pPrMoltMA,fac,rng);       // paramters for logistic function molting   //this is NOT estimated (why?)
-    pPrMoltMB = wts::jitterParameter(pPrMoltMB,fac,rng);       // immature males                            //this is NOT estimated (why?)
-    pPrMoltMatMA = wts::jitterParameter(pPrMoltMatMA,fac,rng);    // logistic molting prob for mature males
-    pPrMoltMatMA = wts::jitterParameter(pPrMoltMatMB,fac,rng);    // logistic molting prob for mature males
     
     pMnLnRec = wts::jitterParameter(pMnLnRec,fac,rng);         // Mean log-scale recruitment mnYrRecCurr+ (males, females are equal)
     pRecDevs = wts::jitterParameter(pRecDevs,0.1*fac,rng);     // Deviations about mean recruitment mnYrRecCurr+ (IMPORTANT CHANGE: used to be "endyr-1")
@@ -2545,19 +2518,13 @@ FUNCTION get_growth1                                   //wts: revised
 // -------------------------------------------------------------------------
 // -------------------------------------------------------------------------
 FUNCTION get_moltingp                         //wts: revised
-    //assuming a declining logistic function
-    prMoltImm_xz(FEMALE)=1.0-(1.0/(1.0+mfexp(-1.*pPrMoltFA*(zBs-pPrMoltFB))));
-    prMoltImm_xz(MALE)  =1.0-(1.0/(1.0+mfexp(-1.*pPrMoltMA*(zBs-pPrMoltMB))));
+    //assume all immature crab molt
+    prMoltImm_xz(FEMALE)=1.0;
+    prMoltImm_xz(MALE)  =1.0;
     
-    // set molting prob for mature females at 0.0
+    //assume mature crab do not molt
     prMoltMat_xz(FEMALE)=0.0;
-    
-    // molting probability for mature males can be zero (or estimated)
-    if(phsPrMolt_MatureMale > 0){
-        prMoltMat_xz(MALE) = 1.0-(1.0/(1.0+mfexp(-1.*pPrMoltMatMA*(zBs-pPrMoltMatMB))));
-    } else {
-        prMoltMat_xz(MALE) = 0.0;
-    }
+    prMoltMat_xz(  MALE)=0.0;
 
 // -------------------------------------------------------------------------
 // -------------------------------------------------------------------------
@@ -5156,10 +5123,6 @@ FUNCTION void myWriteParamsToR(ostream& os)
             os<<"Mmult.m="<<pMfac_MatM<<cc;
             os<<"Mmult.f="<<pMfac_MatF<<cc;
             os<<"big.mort="; wts::writeToR(os,value(pMfac_Big),dmX); 
-        os<<")"<<cc;
-        os<<"molting=list(";
-            os<<"a="<<pPrMoltMatMA<<cc;
-            os<<"b="<<pPrMoltMatMB; 
         os<<")"<<cc;
         os<<"recruitment=list(";
             strp = "y="+str(mnYrRecCurr)+":"+str(endyr);
