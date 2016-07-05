@@ -88,9 +88,10 @@
 //--20160705: 1. Removed all molt parameters no longer involved in any calculations (pPrMoltFA, pPrMoltFB, 
 //                  pPrMoltMA, pPrMoltMB, pPrMoltMatMA, pPrMoltMatMB). Modified get_moltingp() to reflect
 //                  assumption that only immature crab molt, and they molt annually.
-//            2., srv2a_q, srv2a_seldiff, srv2a_sel50,
-//                  srv2a_qFem, srv2a_seldiff_f, srv2a_sel50_f, pPrNewShellRecruits, fish_slope_mn,
-//                  log_avg_sel50_mn, log_sel50_dev_mn, fish_sel50_1, fish_slope_mn2, fish_sel50_mn2).
+//            2. Removed unused parameters srv2a_q, srv2a_seldiff, srv2a_sel50, 
+//                  srv2a_qFem, srv2a_seldiff_f, srv2a_sel50_f, and pPrNewShellRecruits.
+//            3. Removed unused parameters fish_slope_mn, log_avg_sel50_mn, log_sel50_dev_mn, 
+//                  fish_sel50_1, fish_slope_mn2, fish_sel50_mn2).
 //
 //IMPORTANT: 2013-09 assessment model had RKC params for 1992+ discard mortality TURNED OFF. 
 //           THE ESTIMATION PHASE FOR RKC DISCARD MORTALITY IS NOW SET IN THE CONTROLLER FILE!
@@ -1355,15 +1356,9 @@ PARAMETER_SECTION
     //    init_bounded_number srv1_sel50(20.0,140.01,survsel1_phase)
     //1974 to 1981 
     init_bounded_number srv2_q(0.50,1.001,survsel1_phase)
-    //  init_bounded_number srv2_sel95(120.409,120.4091,-survsel1_phase)
-    //  init_bounded_number srv2_sel50(62.519,62.5191,-survsel1_phase)
     init_bounded_number srv2_seldiff(0.0,100.0,survsel1_phase)
     init_bounded_number srv2_sel50(0.0,90.0,survsel1_phase)
-    //1982-86 net change; 1982 first year of 83-112; burn-in period
-    init_bounded_number srv2a_q(0.1,1.00001,-survsel1_phase)
-    init_bounded_number srv2a_seldiff(0.0,100.0,-survsel1_phase)
-    init_bounded_number srv2a_sel50(10.0,120.01,-survsel_phase)
-    //1987-P
+    //1982-P
     //max of the underbag at 182.5 mm is 0.873
     init_bounded_number srv3_q(0.2,2.0,survsel1_phase)
     init_bounded_number srv3_seldiff(0.0,100.0,survsel1_phase)
@@ -1373,20 +1368,13 @@ PARAMETER_SECTION
     init_bounded_vector pPrM2MM(1,nZBs,lbPrM2M,ubPrM2M,phsPrM2M)
     
     init_bounded_number srv2_qFem(0.5,1.001,survsel1_phase)
-    init_bounded_number srv2_seldiff_f(0.0,100.0,survsel1_phase)
-    
+    init_bounded_number srv2_seldiff_f(0.0,100.0,survsel1_phase)    
     init_bounded_number srv2_sel50_f(-200.0,100.01,survsel1_phase)
-    
-    init_bounded_number srv2a_qFem(0.25,1.001,-survsel1_phase)
-    init_bounded_number srv2a_seldiff_f(0.0,100.0,-survsel1_phase)
-    init_bounded_number srv2a_sel50_f(-200.0,100.01,-survsel1_phase)
     
     init_bounded_number srv3_qFem(0.2,1.0,survsel1_phase)
     init_bounded_number srv3_seldiff_f(0.0,100.0,survsel1_phase)
     init_bounded_number srv3_sel50_f(-50.0,69.0,survsel1_phase)
     
-    init_bounded_number pPrNewShellRecruits(1.0,1.0,-2)  ///< proportion new shell in recruits  (NOT ESTIMATED)
-
     init_bounded_number pAvgLnF_TCFF(-5.0,5.0,phsTCFF)  ///< female offset to ln-scale mean fishing mortality in directed fishery
     init_bounded_number pAvgLnF_SCFF(-5.0,5.0,phsSCFF)  ///< female offset to ln-scale mean fishing mortality in snow crab fishery
     init_bounded_number pAvgLnF_RKFF(-5.0,5.0,phsRKFF)  ///< female offset to ln-scale mean fishing mortality in BBRKC fishery
@@ -2213,10 +2201,6 @@ FUNCTION void writeParameters(ofstream& os,int toR, int willBeActive)           
     wts::writeParameter(os,srv2_seldiff,toR,willBeActive); 
     wts::writeParameter(os,srv2_sel50,toR,willBeActive);   
 
-    wts::writeParameter(os,srv2a_q,toR,willBeActive);       
-    wts::writeParameter(os,srv2a_seldiff,toR,willBeActive); 
-    wts::writeParameter(os,srv2a_sel50,toR,willBeActive);   
-
     wts::writeParameter(os,srv3_q,toR,willBeActive);       
     wts::writeParameter(os,srv3_seldiff,toR,willBeActive); 
     wts::writeParameter(os,srv3_sel50,toR,willBeActive);   
@@ -2228,15 +2212,9 @@ FUNCTION void writeParameters(ofstream& os,int toR, int willBeActive)           
     wts::writeParameter(os,srv2_seldiff_f,toR,willBeActive); 
     wts::writeParameter(os,srv2_sel50_f,toR,willBeActive);   
     
-    wts::writeParameter(os,srv2a_qFem,toR,willBeActive);      
-    wts::writeParameter(os,srv2a_seldiff_f,toR,willBeActive); 
-    wts::writeParameter(os,srv2a_sel50_f,toR,willBeActive);   
-    
     wts::writeParameter(os,srv3_qFem,toR,willBeActive);      
     wts::writeParameter(os,srv3_seldiff_f,toR,willBeActive); 
     wts::writeParameter(os,srv3_sel50_f,toR,willBeActive);
-    
-    wts::writeParameter(os,pPrNewShellRecruits,toR,willBeActive);
     
     wts::writeParameter(os,pAvgLnF_TCFF,toR,willBeActive);
     wts::writeParameter(os,pAvgLnF_SCFF,toR,willBeActive);
@@ -2373,11 +2351,7 @@ FUNCTION void jitterParameters(double fac)   //wts: new 2014-05-10
     srv2_q       = wts::jitterParameter(srv2_q,fac,rng);
     srv2_seldiff = wts::jitterParameter(srv2_seldiff,fac,rng);
     srv2_sel50   = wts::jitterParameter(srv2_sel50,fac,rng);
-    //1982-86 net change; 1982 first year of 83-112; burn-in period
-    srv2a_q       = wts::jitterParameter(srv2a_q,fac,rng);
-    srv2a_seldiff = wts::jitterParameter(srv2a_seldiff,fac,rng);
-    srv2a_sel50   = wts::jitterParameter(srv2a_sel50,fac,rng);
-    //1987-P
+    //1982-P
     srv3_q       = wts::jitterParameter(srv3_q,fac,rng);
     srv3_seldiff = wts::jitterParameter(srv3_seldiff,fac,rng);
     srv3_sel50   = wts::jitterParameter(srv3_sel50,fac,rng);
@@ -2389,16 +2363,9 @@ FUNCTION void jitterParameters(double fac)   //wts: new 2014-05-10
     srv2_seldiff_f = wts::jitterParameter(srv2_seldiff_f,fac,rng);    
     srv2_sel50_f   = wts::jitterParameter(srv2_sel50_f,fac,rng);
     
-    srv2a_qFem      = wts::jitterParameter(srv2a_qFem,fac,rng);
-    srv2a_seldiff_f = wts::jitterParameter(srv2a_seldiff_f,fac,rng);
-    srv2a_sel50_f   = wts::jitterParameter(srv2a_sel50_f,fac,rng);
-    
     srv3_qFem      = wts::jitterParameter(srv3_qFem,fac,rng);
     srv3_seldiff_f = wts::jitterParameter(srv3_seldiff_f,fac,rng);
     srv3_sel50_f   = wts::jitterParameter(srv3_sel50_f,fac,rng);
-    
-    
-    pPrNewShellRecruits = wts::jitterParameter(pPrNewShellRecruits,fac,rng);
     
     pAvgLnF_TCFF = wts::jitterParameter(pAvgLnF_TCFF,fac,rng);
     pAvgLnF_SCFF = wts::jitterParameter(pAvgLnF_SCFF,fac,rng);
@@ -4295,7 +4262,7 @@ FUNCTION void writeMyProjectionFile(ofstream& os)
       os<<"#prMoltMat(nSXs,nZs): molting probability mature female male"<<endl;
       os<<prMoltMat_xz<<endl;
       os<<0.5     <<tb<<tb<<"#recPropAsMale: proportion recruiting as males"<<endl;
-      os<<pPrNewShellRecruits<<tb<<tb<<"#recPropAsNewShell: prop recruits to new shell"<<endl;
+      os<<1.0     <<tb<<tb<<"#recPropAsNewShell: prop recruits to new shell"<<endl;
       os<<"#recPropAtZ(nZs): distribution of recruits to length bins"<<endl;
       os<<prRec_z<<endl;
       os<<"#propEast(nZs): proportion of population at size east of 166W"<<endl;
