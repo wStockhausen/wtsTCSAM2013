@@ -91,7 +91,7 @@
 //            2. Removed unused parameters srv2a_q, srv2a_seldiff, srv2a_sel50, 
 //                  srv2a_qFem, srv2a_seldiff_f, srv2a_sel50_f, and pPrNewShellRecruits.
 //            3. Removed unused parameters fish_slope_mn, log_avg_sel50_mn, log_sel50_dev_mn, 
-//                  fish_sel50_1, fish_slope_mn2, fish_sel50_mn2).
+//                  fish_sel50_1, fish_slope_mn2, fish_sel50_mn2.
 //
 //IMPORTANT: 2013-09 assessment model had RKC params for 1992+ discard mortality TURNED OFF. 
 //           THE ESTIMATION PHASE FOR RKC DISCARD MORTALITY IS NOW SET IN THE CONTROLLER FILE!
@@ -1166,7 +1166,6 @@ INITIALIZATION_SECTION
     pAvgLnF_GTF  -4.0
     pAvgLnF_SCF -3.0
     pAvgLnF_RKF -5.25       //to initialize same as TCSAM_WTS for 2013-09
-    log_avg_sel50_mn  4.87  //this is 130.3 mm
 //    pF_DevsTCF 0.00001                           //wts: dev.s should be mean 0!
     pPrM2MF -1.0
     pPrM2MM -1.0
@@ -1193,7 +1192,6 @@ INITIALIZATION_SECTION
     //  srv3_sel95 100
     //  srv3_sel50  60
     //  fish_fit_sel50_mn 95.1
-    //  log_sel50_dev_mn  0.0000
 
     selSCFM_z50A1 80.0
     selSCFM_z50A2 80.0
@@ -1248,13 +1246,6 @@ PARAMETER_SECTION
     init_bounded_number pAvgLnF_RKF(-10,5,phsFmRKF)                           // fishing mortality red king crab fishery discards
     init_bounded_dev_vector pF_DevsRKF(1,nObsDscRKF,-15,15,phsFmRKF+1) // 
     
-    // Selectivity pattern for males (directed fishery)
-    // Set -phase so not estimated if using @3 selectivity periods
-    init_bounded_number fish_slope_mn(0.1,0.4,-phase_logistic_sel)                //this is NOT estimated (why?)
-    init_bounded_number log_avg_sel50_mn(4,5.0,-phase_logistic_sel)               //this is NOT estimated (why?)
-    init_bounded_dev_vector log_sel50_dev_mn(1,nObsRetZCsTCF,-5,5,-phase_logistic_sel)//this is NOT estimated (why?)
-    vector fish_sel50_mn(styr,endyr-1)  //(IMPORTANT CHANGE: used to be "endyr")
-    
     // Retention function
     // init_bounded_number fish_fit_slope_mn(.250,1.001,phase_logistic_sel)
     // init_bounded_number fish_fit_sel50_mn(85.0,160.0,phase_logistic_sel)
@@ -1267,16 +1258,11 @@ PARAMETER_SECTION
     
     // Directed fishery selectivity pattern for period-1: 1993-1996
     init_bounded_number fish_slope_1(00.05,000.75,phase_logistic_sel)      
-    init_bounded_number fish_sel50_1(50.00,170.00,-phase_logistic_sel)//this is NOT estimated! (why?)
     
     // Directed fishery selectivity pattern changing by year for period-3: 2005-P
     init_bounded_number fish_slope_yr_3(0.1,0.4,phase_logistic_sel)      
     init_bounded_number log_avg_sel50_3(4.0,5.0,phase_logistic_sel)
     init_bounded_dev_vector log_sel50_dev_3(1,nlog_sel50_dev_3,-bnd_sel50_dev_3,bnd_sel50_dev_3,phase_logistic_sel) //Fixed index (why 2000?) (IMPORTANT CHANGE: used to be "endyr-2000")
-    
-    // for a dome-shaped selex pattern
-    init_bounded_number fish_slope_mn2(000.01,002.0,phase_fishsel)
-    init_bounded_number fish_sel50_mn2(100.00,160.0,phase_fishsel)
     
     // Female discards
     init_bounded_number selTCFF_slp(00.1,000.4,phase_logistic_sel)
@@ -2123,24 +2109,16 @@ FUNCTION void writeParameters(ofstream& os,int toR, int willBeActive)           
     wts::writeParameter(os,pAvgLnF_RKF,toR,willBeActive);   
     wts::writeParameter(os,pF_DevsRKF,toR,willBeActive);    
     
-    wts::writeParameter(os,fish_slope_mn,toR,willBeActive);   
-    wts::writeParameter(os,log_avg_sel50_mn,toR,willBeActive);    
-    wts::writeParameter(os,log_sel50_dev_mn,toR,willBeActive);   
-    
     wts::writeParameter(os,fish_fit_slope_mn1,toR,willBeActive);   
     wts::writeParameter(os,fish_fit_sel50_mn1,toR,willBeActive);    
     wts::writeParameter(os,fish_fit_slope_mn2,toR,willBeActive);   
     wts::writeParameter(os,fish_fit_sel50_mn2,toR,willBeActive);    
     
     wts::writeParameter(os,fish_slope_1,toR,willBeActive);   
-    wts::writeParameter(os,fish_sel50_1,toR,willBeActive);    
     
     wts::writeParameter(os,fish_slope_yr_3,toR,willBeActive);   
     wts::writeParameter(os,log_avg_sel50_3,toR,willBeActive);    
     wts::writeParameter(os,log_sel50_dev_3,toR,willBeActive);    
-    
-    wts::writeParameter(os,fish_slope_mn2,toR,willBeActive);   
-    wts::writeParameter(os,fish_sel50_mn2,toR,willBeActive);    
     
     wts::writeParameter(os,selTCFF_slp,toR,willBeActive);   
     wts::writeParameter(os,selTCFF_z50,toR,willBeActive);    
@@ -2252,11 +2230,6 @@ FUNCTION void jitterParameters(double fac)   //wts: new 2014-05-10
     pAvgLnF_RKF = wts::jitterParameter(pAvgLnF_RKF,fac,rng);   // fishing mortality red king crab fishery discards //this is NOT estimated (why?)
     pF_DevsRKF  = wts::jitterParameter(pF_DevsRKF,0.1*fac,rng);//this is NOT estimated (why?)  IMPORTANT CHANGEA: was nObsDscRKF-1.  why -1 in "nObsDscRKF-1"
     
-    // Selectivity pattern for males (directed fishery)
-    fish_slope_mn = wts::jitterParameter(fish_slope_mn,fac,rng);           //this is NOT estimated (why?)
-    log_avg_sel50_mn = wts::jitterParameter(log_avg_sel50_mn,fac,rng);        //this is NOT estimated (why?)
-    log_sel50_dev_mn = wts::jitterParameter(log_sel50_dev_mn,fac,rng);//this is NOT estimated (why?)
-    
     // Retention function
     // 1981 - 1992
     fish_fit_slope_mn1 = wts::jitterParameter(fish_fit_slope_mn1,fac,rng);
@@ -2267,16 +2240,11 @@ FUNCTION void jitterParameters(double fac)   //wts: new 2014-05-10
     
     // Directed fishery selectivity pattern for period-1: 1993-1996
     fish_slope_1 = wts::jitterParameter(fish_slope_1,fac,rng);      
-    fish_sel50_1 = wts::jitterParameter(fish_sel50_1,fac,rng);
     
     // Directed fishery selectivity pattern changing by year for period-3: 2005-P
     fish_slope_yr_3 = wts::jitterParameter(fish_slope_yr_3,fac,rng);      
     log_avg_sel50_3 = wts::jitterParameter(log_avg_sel50_3,fac,rng);
     log_sel50_dev_3 = wts::jitterParameter(log_sel50_dev_3,0.1*fac,rng);
-    
-    // for a dome-shaped selex pattern
-    fish_slope_mn2 = wts::jitterParameter(fish_slope_mn2,fac,rng);
-    fish_sel50_mn2 = wts::jitterParameter(fish_sel50_mn2,fac,rng);
     
     // Female discards
     selTCFF_slp = wts::jitterParameter(selTCFF_slp,fac,rng);
@@ -2395,8 +2363,6 @@ FUNCTION WriteMCMC                                     //wts: checked
     post<<
     // srv1_slope <<","<<
     // srv1_sel50 <<","<<
-    fish_slope_mn <<","<<
-    fish_sel50_mn <<","<<
     // fish_fit_slope_mn <<","<<
     // fish_fit_sel50_mn <<","<<
     selTCFF_slp <<","<<
@@ -2501,36 +2467,6 @@ FUNCTION get_selectivity                  //wts: revised
     
     selTCFM.initialize();
     retFcn.initialize();
-    // logistic selectivity curves
-    if(active(log_sel50_dev_mn)) {
-        fish_sel50_mn.initialize();
-        for(int iy=styr;iy<endyr;iy++){      //used to be iy<=endyr
-            // length at 50% selectivity
-            if( (iy<=1979) || (1985<=iy && iy<=1987) || (1997<=iy && iy<=2004) || (2010<=iy) )
-                fish_sel50_mn(iy)=mfexp(log_avg_sel50_mn);
-            else {
-                fish_sel50_mn(iy)=mfexp(log_avg_sel50_mn+log_sel50_dev_mn(ii));
-                ii=ii+1;
-            }
-            
-            //logistic selectivity curve
-            selTCFM(NEW_SHELL,iy) = 1./(1.+mfexp(-1.*fish_slope_mn*(zBs-fish_sel50_mn(iy))));
-            if(iy<=1992)    
-                retFcn(NEW_SHELL,iy) = 1./(1.+mfexp(-1.*fish_fit_slope_mn1*(zBs-fish_fit_sel50_mn1)));
-            else
-                retFcn(NEW_SHELL,iy) = 1./(1.+mfexp(-1.*fish_fit_slope_mn2*(zBs-fish_fit_sel50_mn2)));
-                
-            if(phase_fishsel > 0) {
-                //for dome shaped add this part
-                selTCFM(NEW_SHELL,iy)=elem_prod(selTCFM(NEW_SHELL,iy),1./(1.+mfexp(fish_slope_mn2*(zBs-fish_sel50_mn2))));
-            }               
-            // set new and old selTCFM same
-            selTCFM(OLD_SHELL,iy) = selTCFM(NEW_SHELL,iy);
-            retFcn(OLD_SHELL,iy)= retFcn(NEW_SHELL,iy);
-        }//year loop
-    } //<-if(active(log_sel50_dev_mn))
-//    cout<<"get_sel: 1"<<endl;
-    
     dvariable tmpSel50 = mean(exp(log_avg_sel50_3+log_sel50_dev_3(1,6)));
     for(int iy=styr;iy<=1990;iy++){ 
         selTCFM(NEW_SHELL,iy) = 1./(1.+mfexp(-1.*fish_slope_1*(zBs-tmpSel50)));    
@@ -2566,9 +2502,6 @@ FUNCTION get_selectivity                  //wts: revised
 //    cout<<"get_sel: 1g"<<endl;
     
     for(int iy=styr;iy<endyr;iy++){      //used to be iy<=endyr            
-        //for dome shaped add this part
-        if(phase_fishsel > 0) selTCFM(NEW_SHELL,iy) = elem_div(selTCFM(NEW_SHELL,iy),1.0+mfexp(fish_slope_mn2*(zBs-fish_sel50_mn2)));
-        
         // set new and old selTCFM same
         selTCFM(OLD_SHELL,iy) = selTCFM(NEW_SHELL,iy);
         retFcn(OLD_SHELL,iy)  = retFcn(NEW_SHELL,iy);
@@ -3461,10 +3394,10 @@ FUNCTION evaluate_the_objective_function    //wts: revising
     
     //jim said take the log
     sel_50m_penal.initialize();
-    if(active(log_sel50_dev_mn)) {
-        sel_50m_penal = like_wght_sel50*norm2(first_difference(log_sel50_dev_mn));
-        f += sel_50m_penal; objfOut(14) = sel_50m_penal; likeOut(14) = norm2(first_difference(log_sel50_dev_mn)); wgtsOut(14) = like_wght_sel50;
-    }
+//    if(active(log_sel50_dev_mn)) {
+        //sel_50m_penal = like_wght_sel50*norm2(first_difference(log_sel50_dev_mn));
+        f += sel_50m_penal; objfOut(14) = sel_50m_penal; likeOut(14) = 0.0; wgtsOut(14) = 0.0;
+//    }
     
     // various penalties
     // =================
@@ -5133,15 +5066,10 @@ FUNCTION void myWriteParamsToR(ostream& os)
                 slp(1) = fish_fit_slope_mn1; slp(2) = fish_fit_slope_mn2;
                 os<<"retention=list(z50="; wts::writeToR(os,value(sel)); os<<", slope="; wts::writeToR(os,value(slp)); os<<"),";
                 os<<"male=list(";
-                    if (phase_logistic_sel<0){
-                      os<<"=list(z50="<<fish_sel50_1<<cc<<"slope="<<fish_slope_1<<"),";
-                    } else {
-                        sel(1) = fish_sel50_1; sel(2) = mfexp(log_avg_sel50_3);
+                        sel = mfexp(log_avg_sel50_3);
                         slp(1) = fish_slope_1; slp(2) = fish_slope_yr_3;
                         strp = qt+str(1)+":"+str(nlog_sel50_dev_3)+qt;
                         os<<"z50="; wts::writeToR(os,value(sel)); os<<", slope="; wts::writeToR(os,value(slp)); os<<cc<<"devs.lnSel50="; wts::writeToR(os,value(log_sel50_dev_3),strp);
-                        if (phase_fishsel) os<<",descending.limb=list(z50="<<fish_sel50_mn2<<cc<<"slope="<<fish_slope_mn2<<")";
-                    }
                 os<<"),";
                 os<<"female=list(z50="<<selTCFF_z50<<cc<<"slope="<<selTCFF_slp<<")";
             os<<"),";
