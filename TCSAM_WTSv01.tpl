@@ -28,7 +28,7 @@
 //            Revising so fc's are fishery capture rates, fm's are fishery mortality rates.
 //            Fits are STILL to retained + discard MORTALITY (same as TCSAM2013), not catches
 //--20150615: Corrected use of wts::jitterParameter() functions for change in wtsADMB library.
-//--20150817: 1. Replaced hard-wired prior mean, variance (0.88, 0.05) used for srv3_q and srv3_qFem priors
+//--20150817: 1. Replaced hard-wired prior mean, variance (0.88, 0.05) used for pSrv2_QM and pSrv2_QF priors
 //               with srv3_qPriorMean, Var and srv3_qFemPriorMean, Var, with values read in from the
 //               control file.
 //            2. Changed q_prior_switch to srv3_qPriorWgt and srv3_qFemPriorWgt to have separate
@@ -94,6 +94,7 @@
 //                  fish_sel50_1, fish_slope_mn2, fish_sel50_mn2.
 //            4. Changed a number of variable names defined in PARAMETER_SECTION to clarify dimensions.
 //            5. Changed/removed some variable names in DATA_SECTION. 
+//            6. Changed a number of survey-related parameter names to better standardize naming.
 //
 //IMPORTANT: 2013-09 assessment model had RKC params for 1992+ discard mortality TURNED OFF. 
 //           THE ESTIMATION PHASE FOR RKC DISCARD MORTALITY IS NOW SET IN THE CONTROLLER FILE!
@@ -1182,14 +1183,14 @@ INITIALIZATION_SECTION
     //  srv1_slope 0.07
     //  srv1_sel50 60.0
     //  srv1_q 1.0
-    //  srv2_q 1.0
-    //  srv3_q 1.0
+    //  pSrv1_QM 1.0
+    //  pSrv2_QM 1.0
     //  srv1_sel95 100
     //  srv1_sel50 60 
     //  srv2_sel95 100
-    //  srv2_sel50  60
+    //  pSrv1M_z50  60
     //  srv3_sel95 100
-    //  srv3_sel50  60
+    //  pSrv2M_z50  60
     //  fish_fit_sel50_mn 95.1
 
     selSCFM_z50A1 80.0
@@ -1340,25 +1341,25 @@ PARAMETER_SECTION
     //    init_bounded_number srv1_sel50(108.334,108.33401,-survsel1_phase)
     //    init_bounded_number srv1_sel50(20.0,140.01,survsel1_phase)
     //1974 to 1981 
-    init_bounded_number srv2_q(0.50,1.001,survsel1_phase)
-    init_bounded_number srv2_seldiff(0.0,100.0,survsel1_phase)
-    init_bounded_number srv2_sel50(0.0,90.0,survsel1_phase)
+    init_bounded_number pSrv1_QM(0.50,1.001,survsel1_phase)
+    init_bounded_number pSrv1M_dz5095(0.0,100.0,survsel1_phase)
+    init_bounded_number pSrv1M_z50(0.0,90.0,survsel1_phase)
     //1982-P
     //max of the underbag at 182.5 mm is 0.873
-    init_bounded_number srv3_q(0.2,2.0,survsel1_phase)
-    init_bounded_number srv3_seldiff(0.0,100.0,survsel1_phase)
-    init_bounded_number srv3_sel50(0.0,69.0,survsel_phase)    
+    init_bounded_number pSrv2_QM(0.2,2.0,survsel1_phase)
+    init_bounded_number pSrv2M_dz5095(0.0,100.0,survsel1_phase)
+    init_bounded_number pSrv2M_z50(0.0,69.0,survsel_phase)    
     
     init_bounded_vector pPrM2MF(1,16,lbPrM2M,ubPrM2M,phsPrM2M)
     init_bounded_vector pPrM2MM(1,nZBs,lbPrM2M,ubPrM2M,phsPrM2M)
     
-    init_bounded_number srv2_qFem(0.5,1.001,survsel1_phase)
-    init_bounded_number srv2_seldiff_f(0.0,100.0,survsel1_phase)    
-    init_bounded_number srv2_sel50_f(-200.0,100.01,survsel1_phase)
+    init_bounded_number pSrv1_QF(0.5,1.001,survsel1_phase)
+    init_bounded_number pSrv1F_dz5095(0.0,100.0,survsel1_phase)    
+    init_bounded_number pSrv1F_z50(-200.0,100.01,survsel1_phase)
     
-    init_bounded_number srv3_qFem(0.2,1.0,survsel1_phase)
-    init_bounded_number srv3_seldiff_f(0.0,100.0,survsel1_phase)
-    init_bounded_number srv3_sel50_f(-50.0,69.0,survsel1_phase)
+    init_bounded_number pSrv2_QF(0.2,1.0,survsel1_phase)
+    init_bounded_number pSrv2F_dz5095(0.0,100.0,survsel1_phase)
+    init_bounded_number pSrv2F_z50(-50.0,69.0,survsel1_phase)
     
     init_bounded_number pAvgLnF_TCFF(-5.0,5.0,phsTCFF)  ///< female offset to ln-scale mean fishing mortality in directed fishery
     init_bounded_number pAvgLnF_SCFF(-5.0,5.0,phsSCFF)  ///< female offset to ln-scale mean fishing mortality in snow crab fishery
@@ -2174,24 +2175,24 @@ FUNCTION void writeParameters(ofstream& os,int toR, int willBeActive)           
     wts::writeParameter(os,selGTFM_slpA3,toR,willBeActive);   
     wts::writeParameter(os,selGTFM_z50A3,toR,willBeActive);   
     
-    wts::writeParameter(os,srv2_q,toR,willBeActive);       
-    wts::writeParameter(os,srv2_seldiff,toR,willBeActive); 
-    wts::writeParameter(os,srv2_sel50,toR,willBeActive);   
+    wts::writeParameter(os,pSrv1_QM,toR,willBeActive);       
+    wts::writeParameter(os,pSrv1M_dz5095,toR,willBeActive); 
+    wts::writeParameter(os,pSrv1M_z50,toR,willBeActive);   
 
-    wts::writeParameter(os,srv3_q,toR,willBeActive);       
-    wts::writeParameter(os,srv3_seldiff,toR,willBeActive); 
-    wts::writeParameter(os,srv3_sel50,toR,willBeActive);   
+    wts::writeParameter(os,pSrv2_QM,toR,willBeActive);       
+    wts::writeParameter(os,pSrv2M_dz5095,toR,willBeActive); 
+    wts::writeParameter(os,pSrv2M_z50,toR,willBeActive);   
 
     wts::writeParameter(os,pPrM2MF,toR,willBeActive); 
     wts::writeParameter(os,pPrM2MM,toR,willBeActive); 
     
-    wts::writeParameter(os,srv2_qFem,toR,willBeActive);      
-    wts::writeParameter(os,srv2_seldiff_f,toR,willBeActive); 
-    wts::writeParameter(os,srv2_sel50_f,toR,willBeActive);   
+    wts::writeParameter(os,pSrv1_QF,toR,willBeActive);      
+    wts::writeParameter(os,pSrv1F_dz5095,toR,willBeActive); 
+    wts::writeParameter(os,pSrv1F_z50,toR,willBeActive);   
     
-    wts::writeParameter(os,srv3_qFem,toR,willBeActive);      
-    wts::writeParameter(os,srv3_seldiff_f,toR,willBeActive); 
-    wts::writeParameter(os,srv3_sel50_f,toR,willBeActive);
+    wts::writeParameter(os,pSrv2_QF,toR,willBeActive);      
+    wts::writeParameter(os,pSrv2F_dz5095,toR,willBeActive); 
+    wts::writeParameter(os,pSrv2F_z50,toR,willBeActive);
     
     wts::writeParameter(os,pAvgLnF_TCFF,toR,willBeActive);
     wts::writeParameter(os,pAvgLnF_SCFF,toR,willBeActive);
@@ -2315,24 +2316,24 @@ FUNCTION void jitterParameters(double fac)   //wts: new 2014-05-10
     selGTFM_slpA3 = wts::jitterParameter(selGTFM_slpA3,fac,rng);
     selGTFM_z50A3 = wts::jitterParameter(selGTFM_z50A3,fac,rng);
     //1974 to 1981 
-    srv2_q       = wts::jitterParameter(srv2_q,fac,rng);
-    srv2_seldiff = wts::jitterParameter(srv2_seldiff,fac,rng);
-    srv2_sel50   = wts::jitterParameter(srv2_sel50,fac,rng);
+    pSrv1_QM       = wts::jitterParameter(pSrv1_QM,fac,rng);
+    pSrv1M_dz5095 = wts::jitterParameter(pSrv1M_dz5095,fac,rng);
+    pSrv1M_z50   = wts::jitterParameter(pSrv1M_z50,fac,rng);
     //1982-P
-    srv3_q       = wts::jitterParameter(srv3_q,fac,rng);
-    srv3_seldiff = wts::jitterParameter(srv3_seldiff,fac,rng);
-    srv3_sel50   = wts::jitterParameter(srv3_sel50,fac,rng);
+    pSrv2_QM       = wts::jitterParameter(pSrv2_QM,fac,rng);
+    pSrv2M_dz5095 = wts::jitterParameter(pSrv2M_dz5095,fac,rng);
+    pSrv2M_z50   = wts::jitterParameter(pSrv2M_z50,fac,rng);
     
 //    pPrM2MF = wts::jitterParameter(pPrM2MF,fac,rng);
 //    pPrM2MM = wts::jitterParameter(pPrM2MM,fac,rng);
     
-    srv2_qFem      = wts::jitterParameter(srv2_qFem,fac,rng);
-    srv2_seldiff_f = wts::jitterParameter(srv2_seldiff_f,fac,rng);    
-    srv2_sel50_f   = wts::jitterParameter(srv2_sel50_f,fac,rng);
+    pSrv1_QF      = wts::jitterParameter(pSrv1_QF,fac,rng);
+    pSrv1F_dz5095 = wts::jitterParameter(pSrv1F_dz5095,fac,rng);    
+    pSrv1F_z50   = wts::jitterParameter(pSrv1F_z50,fac,rng);
     
-    srv3_qFem      = wts::jitterParameter(srv3_qFem,fac,rng);
-    srv3_seldiff_f = wts::jitterParameter(srv3_seldiff_f,fac,rng);
-    srv3_sel50_f   = wts::jitterParameter(srv3_sel50_f,fac,rng);
+    pSrv2_QF      = wts::jitterParameter(pSrv2_QF,fac,rng);
+    pSrv2F_dz5095 = wts::jitterParameter(pSrv2F_dz5095,fac,rng);
+    pSrv2F_z50   = wts::jitterParameter(pSrv2F_z50,fac,rng);
     
     pAvgLnF_TCFF = wts::jitterParameter(pAvgLnF_TCFF,fac,rng);
     pAvgLnF_SCFF = wts::jitterParameter(pAvgLnF_SCFF,fac,rng);
@@ -2553,19 +2554,19 @@ FUNCTION get_selectivity                  //wts: revised
 //    if (survsel_phase<0)
 //        selSrv3_xz(MALE) = sel_som(1)/(1.+sel_som(2)*mfexp(-1.*sel_som(3)*zBs));
 //    else
-//        selSrv3_xz(MALE) = srv3_q*1./(1.+mfexp(-1.*log(19.)*(zBs-srv3_sel50)/(srv3_seldiff)));
+//        selSrv3_xz(MALE) = pSrv2_QM*1./(1.+mfexp(-1.*log(19.)*(zBs-pSrv2M_z50)/(pSrv2M_dz5095)));
 //    // this sets time periods 1 and 2 survey selectivities to somerton otto as well
 //    if (survsel1_phase < 0)
 //        selSrv1_xz(MALE) = selSrv3_xz(MALE);
 //    else { 
-//        selSrv1_xz(MALE)  = srv2_q*1./(1.+mfexp(-1.*log(19.)*(zBs-srv2_sel50)/(srv2_seldiff)));
-//        selSrv2_xz(MALE) = srv3_q*1./(1.+mfexp(-1.*log(19.)*(zBs-srv3_sel50)/(srv3_seldiff)));
+//        selSrv1_xz(MALE)  = pSrv1_QM*1./(1.+mfexp(-1.*log(19.)*(zBs-pSrv1M_z50)/(pSrv1M_dz5095)));
+//        selSrv2_xz(MALE) = pSrv2_QM*1./(1.+mfexp(-1.*log(19.)*(zBs-pSrv2M_z50)/(pSrv2M_dz5095)));
 //    }
 //        
 //    //set male and female equal unless estimating qFem
-//    selSrv1_xz(FEMALE)  = srv2_qFem*1./(1.+mfexp(-1.*log(19.)*(zBs-srv2_sel50_f)/(srv2_seldiff_f)));
-//    selSrv2_xz(FEMALE) = srv3_qFem*1./(1.+mfexp(-1.*log(19.)*(zBs-srv3_sel50_f)/(srv3_seldiff_f)));
-//    selSrv3_xz(FEMALE)  = srv3_qFem*1./(1.+mfexp(-1.*log(19.)*(zBs-srv3_sel50_f)/(srv3_seldiff_f)));
+//    selSrv1_xz(FEMALE)  = pSrv1_QF*1./(1.+mfexp(-1.*log(19.)*(zBs-pSrv1F_z50)/(pSrv1F_dz5095)));
+//    selSrv2_xz(FEMALE) = pSrv2_QF*1./(1.+mfexp(-1.*log(19.)*(zBs-pSrv2F_z50)/(pSrv2F_dz5095)));
+//    selSrv3_xz(FEMALE)  = pSrv2_QF*1./(1.+mfexp(-1.*log(19.)*(zBs-pSrv2F_z50)/(pSrv2F_dz5095)));
 //    cout<<"get_sel: 3"<<endl;
 //    
     dvariable maxsel;
@@ -2583,13 +2584,13 @@ FUNCTION get_selectivity                  //wts: revised
     
     //new 20150901-->
     //calculate survey selectivities
-    selSrv1_xz( MALE) = 1./(1.+mfexp(-1.*log(19.)*(zBs-srv2_sel50)/(srv2_seldiff)));
-    selSrv2_xz(MALE) = 1./(1.+mfexp(-1.*log(19.)*(zBs-srv3_sel50)/(srv3_seldiff)));
-    selSrv3_xz( MALE) = 1./(1.+mfexp(-1.*log(19.)*(zBs-srv3_sel50)/(srv3_seldiff)));
+    selSrv1_xz( MALE) = 1./(1.+mfexp(-1.*log(19.)*(zBs-pSrv1M_z50)/(pSrv1M_dz5095)));
+    selSrv2_xz(MALE) = 1./(1.+mfexp(-1.*log(19.)*(zBs-pSrv2M_z50)/(pSrv2M_dz5095)));
+    selSrv3_xz( MALE) = 1./(1.+mfexp(-1.*log(19.)*(zBs-pSrv2M_z50)/(pSrv2M_dz5095)));
         
-    selSrv1_xz( FEMALE) = 1./(1.+mfexp(-1.*log(19.)*(zBs-srv2_sel50_f)/(srv2_seldiff_f)));
-    selSrv2_xz(FEMALE) = 1./(1.+mfexp(-1.*log(19.)*(zBs-srv3_sel50_f)/(srv3_seldiff_f)));
-    selSrv3_xz( FEMALE) = 1./(1.+mfexp(-1.*log(19.)*(zBs-srv3_sel50_f)/(srv3_seldiff_f)));
+    selSrv1_xz( FEMALE) = 1./(1.+mfexp(-1.*log(19.)*(zBs-pSrv1F_z50)/(pSrv1F_dz5095)));
+    selSrv2_xz(FEMALE) = 1./(1.+mfexp(-1.*log(19.)*(zBs-pSrv2F_z50)/(pSrv2F_dz5095)));
+    selSrv3_xz( FEMALE) = 1./(1.+mfexp(-1.*log(19.)*(zBs-pSrv2F_z50)/(pSrv2F_dz5095)));
 //    cout<<"get_sel: 3"<<endl;
     
      if (optFshSel==1){//set logistic selectivity = 1 in largest size bin
@@ -2637,21 +2638,21 @@ FUNCTION get_selectivity                  //wts: revised
         selSrv3_xz(MALE) = sel_som(1)/(1.+sel_som(2)*mfexp(-1.*sel_som(3)*zBs));
     else
         //scale survey selectivity by survey catchability
-        selSrv3_xz(MALE) *= srv3_q;
+        selSrv3_xz(MALE) *= pSrv2_QM;
     
     if (survsel1_phase < 0)
         // this sets time periods 1 and 2 survey selectivities to somerton otto as well
         selSrv1_xz(MALE) = selSrv3_xz(MALE);
     else { 
         //scale survey selectivity by survey catchability
-        selSrv1_xz(MALE)  *= srv2_q;
-        selSrv2_xz(MALE) *= srv3_q;
+        selSrv1_xz(MALE)  *= pSrv1_QM;
+        selSrv2_xz(MALE) *= pSrv2_QM;
     }
         
     //scale survey selectivity by survey catchability
-    selSrv1_xz(FEMALE)  *= srv2_qFem;
-    selSrv2_xz(FEMALE) *= srv3_qFem;
-    selSrv3_xz(FEMALE)  *= srv3_qFem;
+    selSrv1_xz(FEMALE)  *= pSrv1_QF;
+    selSrv2_xz(FEMALE) *= pSrv2_QF;
+    selSrv3_xz(FEMALE)  *= pSrv2_QF;
 //    cout<<"get_sel: 3"<<endl;
     //<--
     
@@ -3338,26 +3339,26 @@ FUNCTION evaluate_the_objective_function    //wts: revising
     }
     
     //penalty on survey Q
-//    if(active(srv3_q) && srv3_qPriorWgt>0) {  
+//    if(active(pSrv2_QM) && srv3_qPriorWgt>0) {  
 //        //max of underbag at 182.5 mm is 0.873   
-//        srv3q_penalty = 0.5 * square((srv3_q - 0.88) / 0.05);                  //hard-wired
-//        //    srv3q_penalty = 0.0 * square((srv3_q - 0.88) / 0.05);
+//        srv3q_penalty = 0.5 * square((pSrv2_QM - 0.88) / 0.05);                  //hard-wired
+//        //    srv3q_penalty = 0.0 * square((pSrv2_QM - 0.88) / 0.05);
 //        f += srv3q_penalty; objfOut(6) = srv3q_penalty; likeOut(6) = srv3q_penalty; wgtsOut(6) = 1;
 //    }
-//    if(active(srv3_qFem) && srv3_qPriorWgt>0) {  
+//    if(active(pSrv2_QF) && srv3_qPriorWgt>0) {  
 //        //peak of females is at about 80mm underbag is 0.75 at this size - less uncertainty  
-//        srv3q_penalty = 0.5 * square((srv3_qFem - 0.88) / 0.05);                //hard-wired
-//        //    srv3q_penalty = 0.0 * square((srv3_qFem - 0.88) / 0.05);
+//        srv3q_penalty = 0.5 * square((pSrv2_QF - 0.88) / 0.05);                //hard-wired
+//        //    srv3q_penalty = 0.0 * square((pSrv2_QF - 0.88) / 0.05);
 //        f += srv3q_penalty; objfOut(7) = srv3q_penalty; likeOut(7) = srv3q_penalty; wgtsOut(7) = 1;
 //    }
-    if(active(srv3_q) && srv3_qPriorWgt>=0) {  
+    if(active(pSrv2_QM) && srv3_qPriorWgt>=0) {  
         //max of underbag at 182.5 mm is 0.873   
-        srv3q_penalty = 0.5 * square((srv3_q - srv3_qPriorMean) / srv3_qPriorStD);
+        srv3q_penalty = 0.5 * square((pSrv2_QM - srv3_qPriorMean) / srv3_qPriorStD);
         f += srv3_qPriorWgt*srv3q_penalty; objfOut(6) = srv3_qPriorWgt*srv3q_penalty; likeOut(6) = srv3q_penalty; wgtsOut(6) = srv3_qPriorWgt;
     }
-    if(active(srv3_qFem) && srv3_qFemPriorWgt>=0) {  
+    if(active(pSrv2_QF) && srv3_qFemPriorWgt>=0) {  
         //peak of females is at about 80mm underbag is 0.75 at this size - less uncertainty  
-        srv3q_penalty = 0.5 * square((srv3_qFem - srv3_qFemPriorMean) / srv3_qFemPriorStD);
+        srv3q_penalty = 0.5 * square((pSrv2_QF - srv3_qFemPriorMean) / srv3_qFemPriorStD);
         f += srv3_qFemPriorWgt*srv3q_penalty; objfOut(7) = srv3_qFemPriorWgt*srv3q_penalty; likeOut(7) = srv3q_penalty; wgtsOut(7) = srv3_qFemPriorWgt;
     }
     
