@@ -3408,9 +3408,9 @@ FUNCTION evaluate_the_objective_function    //wts: revising
     if (active(pRecDevs)) {        
         //recruitment likelihood - norm2 is sum of square values   
         penal_rec = 1.0*like_wght_recf*norm2(pRecDevs); //+ like_wght_rec*norm2(rec_devm);
-        //   first difference on recruitment in period-1     
-        penal_rec += 1.0*norm2(pRecDevsHist);
-        //   first difference on recruitment in period-1     
+        //   penalty on devs in historic period     
+        //penal_rec += 1.0*norm2(pRecDevsHist);
+        //   penalty on dev first differences in historic period     
         penal_rec += 1.0*norm2(first_difference(pRecDevsHist));
         
         f += penal_rec; objfOut(1) = penal_rec; likeOut(1) = penal_rec; wgtsOut(1) = 1;
