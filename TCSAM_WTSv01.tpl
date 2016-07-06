@@ -97,6 +97,7 @@
 //            6. Changed a number of survey-related parameter names to better standardize naming.
 //            7. Changed pQFshEff_* to pLnEffXtr_*.
 //            8. Changed fishery-related parameter names to better standardize naming.
+//--20160706: 1. Changed some control file variable names
 //
 //IMPORTANT: 2013-09 assessment model had RKC params for 1992+ discard mortality TURNED OFF. 
 //           THE ESTIMATION PHASE FOR RKC DISCARD MORTALITY IS NOW SET IN THE CONTROLLER FILE!
@@ -947,12 +948,12 @@ DATA_SECTION
     
     init_int doPenRed           //flag (0/1) to reduce penalties on fishing-related devs by phase
     init_int phsFmRKF           //phase to turn on RKF fishing estimation (originally -4 or 5)
-    init_number llw_sel50_dev_3 //llw for penalty on pSelTCFM_devsZ50 (originally 0))
-    init_number bnd_sel50_dev_3 //upper/lower bounds on pSelTCFM_devsZ50 deviations (originally 0.5)
+    init_number llwSelTCFM_devsZ50 //llw for penalty on pSelTCFM_devsZ50 (originally 0))
+    init_number bndSelTCFM_devsZ50 //upper/lower bounds on pSelTCFM_devsZ50 deviations (originally 0.5)
     !!CheckFile<<"doPenRed = "<<doPenRed<<endl;    
     !!CheckFile<<"phsFmRKF = "<<phsFmRKF<<endl;    
-    !!CheckFile<<"llw_sel50_dev_3 = "<<llw_sel50_dev_3<<endl;    
-    !!CheckFile<<"bnd_sel50_dev_3 = "<<bnd_sel50_dev_3<<endl;  
+    !!CheckFile<<"llwSelTCFM_devsZ50 = "<<llwSelTCFM_devsZ50<<endl;    
+    !!CheckFile<<"bndSelTCFM_devsZ50 = "<<bndSelTCFM_devsZ50<<endl;  
     
     //new 20150318
     init_int optFshNLLs  //flag indicating error model for fishery catch data (0=norm2, 1=lognormal)
@@ -1065,16 +1066,16 @@ DATA_SECTION
  
     //new 20160324: options for extrapolating 
     //fishery mortality/capture rate from effort
-//    init_int phsQFshEff_TCF  ///< initial estimation phase for TCF effort extrapolation
-    init_int phsQFshEff_SCF  ///< initial estimation phase for SCF effort extrapolation
-    init_int phsQFshEff_RKF  ///< initial estimation phase for RKF effort extrapolation
-//    init_int phsQFshEff_GTF  ///< initial estimation phase for GTF effort extrapolation
+//    init_int phsEffXtr_TCF  ///< initial estimation phase for TCF effort extrapolation
+    init_int phsEffXtr_SCF  ///< initial estimation phase for SCF effort extrapolation
+    init_int phsEffXtr_RKF  ///< initial estimation phase for RKF effort extrapolation
+//    init_int phsEffXtr_GTF  ///< initial estimation phase for GTF effort extrapolation
  LOCAL_CALCS
     CheckFile<<"#---Options for extrapolating effort to fishing mortality"<<endl;
-//    CheckFile<<"phsQFshEff_TCF = "<<phsQFshEff_TCF<<endl;
-    CheckFile<<"phsQFshEff_SCF = "<<phsQFshEff_SCF<<endl;
-    CheckFile<<"phsQFshEff_RKF = "<<phsQFshEff_RKF<<endl;
-//    CheckFile<<"phsQFshEff_GTF = "<<phsQFshEff_GTF<<endl;
+//    CheckFile<<"phsEffXtr_TCF = "<<phsEffXtr_TCF<<endl;
+    CheckFile<<"phsEffXtr_SCF = "<<phsEffXtr_SCF<<endl;
+    CheckFile<<"phsEffXtr_RKF = "<<phsEffXtr_RKF<<endl;
+//    CheckFile<<"phsEffXtr_GTF = "<<phsEffXtr_GTF<<endl;
  END_CALCS
          
     //Finished reading control file
@@ -1264,7 +1265,7 @@ PARAMETER_SECTION
     // Directed fishery selectivity pattern changing by year for period-3: 2005-P
     init_bounded_number pSelTCFM_slpA2(0.1,0.4,phase_logistic_sel)      
     init_bounded_number pSelTCFM_mnLnZ50A2(4.0,5.0,phase_logistic_sel)
-    init_bounded_dev_vector pSelTCFM_devsZ50(1,nSelTCFM_devsZ50,-bnd_sel50_dev_3,bnd_sel50_dev_3,phase_logistic_sel) //Fixed index (why 2000?) (IMPORTANT CHANGE: used to be "endyr-2000")
+    init_bounded_dev_vector pSelTCFM_devsZ50(1,nSelTCFM_devsZ50,-bndSelTCFM_devsZ50,bndSelTCFM_devsZ50,phase_logistic_sel) //Fixed index (why 2000?) (IMPORTANT CHANGE: used to be "endyr-2000")
     
     // Female discards
     init_bounded_number pSelTCFF_slp(00.1,000.4,phase_logistic_sel)
@@ -1368,10 +1369,10 @@ PARAMETER_SECTION
     init_bounded_number pAvgLnF_RKFF(-5.0,5.0,phsRKFF)  ///< female offset to ln-scale mean fishing mortality in BBRKC fishery
     init_bounded_number pAvgLnF_GTFF(-5.0,5.0,phsGTFF)  ///< female offset to ln-scale mean fishing mortality in groundfish trawl fisheries
 
-//    init_bounded_number pLnEffXtr_TCF(-5.0,5.0,phsQFshEff_TCF)  ///< TCF effort extrapolation parameter
-    init_bounded_number pLnEffXtr_SCF(-5.0,5.0,phsQFshEff_SCF)  ///< SCF effort extrapolation parameter
-    init_bounded_number pLnEffXtr_RKF(-5.0,5.0,phsQFshEff_RKF)  ///< RKF effort extrapolation parameter
-//    init_bounded_number pLnEffXtr_GTF(-5.0,5.0,phsQFshEff_GTF)  ///< GTF effort extrapolation parameter
+//    init_bounded_number pLnEffXtr_TCF(-5.0,5.0,phsEffXtr_TCF)  ///< TCF effort extrapolation parameter
+    init_bounded_number pLnEffXtr_SCF(-5.0,5.0,phsEffXtr_SCF)  ///< SCF effort extrapolation parameter
+    init_bounded_number pLnEffXtr_RKF(-5.0,5.0,phsEffXtr_RKF)  ///< RKF effort extrapolation parameter
+//    init_bounded_number pLnEffXtr_GTF(-5.0,5.0,phsEffXtr_GTF)  ///< GTF effort extrapolation parameter
     ////end of estimated parameters///////////////
     
     3darray retFcn_syz(1,nSCs,styr,endyr-1,1,nZBs)    // Retention curve for males caught in directed fishery    (IMPORTANT CHANGE: used to be "endyr")
@@ -3409,7 +3410,7 @@ FUNCTION evaluate_the_objective_function    //wts: revising
     fpen.initialize();
     if (active(pSelTCFM_devsZ50)) { 
         int phs = pSelTCFM_devsZ50.get_phase_start();
-        llw = llw_sel50_dev_3; 
+        llw = llwSelTCFM_devsZ50; 
 //        if (doPenRed) llw = pow(red,(current_phase()-phs)/max(1.0,1.0*(max_number_phases-phs)))*llw;
         nextf = norm2(pSelTCFM_devsZ50);
         fpen += llw*nextf; objfOut(38) = llw*nextf; likeOut(38) = nextf; wgtsOut(38) = llw;   //wts: need to turn this off in last phase?        
@@ -5367,11 +5368,11 @@ REPORT_SECTION
 // ===============================================================================
 BETWEEN_PHASES_SECTION
     //current phase() = upcoming phase (?)
-    if (current_phase()==phsQFshEff_SCF){
+    if (current_phase()==phsEffXtr_SCF){
         //set initial value based on qSCF from last phase
         pLnEffXtr_SCF = log(qSCF);
     }
-    if (current_phase()==phsQFshEff_RKF){
+    if (current_phase()==phsEffXtr_RKF){
         //set initial value based on qRKF from last phase
         pLnEffXtr_RKF = log(qRKF);
     }
