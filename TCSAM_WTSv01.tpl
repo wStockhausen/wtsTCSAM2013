@@ -9,13 +9,13 @@
 //--20140506: added parameter jitter functionality
 //--20140523: updated to use wtsADMB library.
 //--20140602: updated to use writeParameter and jitterParameter functions in wtsADMB library.
-//--20140805: decreased lower bound on log_sel50_dev_3 (directed fishery log-scale selectivity devs) from -0.5 to -1.0
-//--20140814: changed bounds on log_sel50_dev_3 (directed fishery log-scale selectivity devs) from [-1.0,0.5] to [-5,5]
+//--20140805: decreased lower bound on pSelTCFM_devsZ50 (directed fishery log-scale selectivity devs) from -0.5 to -1.0
+//--20140814: changed bounds on pSelTCFM_devsZ50 (directed fishery log-scale selectivity devs) from [-1.0,0.5] to [-5,5]
 //--20140821: put prior on log_sel50_dev3, implemented decrease with in nll weighting on fishing-related devs 
 //--20140821: added flag (doPenRed) to control file to reduce penalties on fishing-related devs with phase. 
-//--20140823: added FmRKF phase and log_sel50_dev_3 bounds to control file as inputs, 
+//--20140823: added FmRKF phase and pSelTCFM_devsZ50 bounds to control file as inputs, 
 //            changed jitter factor on devs to 0.1*fac
-//--20140830: corrected penalty reduction for pF_DevsGTF, corrected objfOut for log_sel50_dev_3 and pFmTCF
+//--20140830: corrected penalty reduction for pF_DevsGTF, corrected objfOut for pSelTCFM_devsZ50 and pFmTCF
 //            by multiplying nll by llw (was applied correctly in objfun calc)
 //--20140915: converted descending limb z50 selectivity parameter for males in the snow crab fishery
 //            from arithmetic (with no constraint to be > ascending limb z50) to ln-scale offset from 
@@ -95,6 +95,8 @@
 //            4. Changed a number of variable names defined in PARAMETER_SECTION to clarify dimensions.
 //            5. Changed/removed some variable names in DATA_SECTION. 
 //            6. Changed a number of survey-related parameter names to better standardize naming.
+//            7. Changed pQFshEff_* to pLnEffXtr_*.
+//            8. Changed fishery-related parameter names to better standardize naming.
 //
 //IMPORTANT: 2013-09 assessment model had RKC params for 1992+ discard mortality TURNED OFF. 
 //           THE ESTIMATION PHASE FOR RKC DISCARD MORTALITY IS NOW SET IN THE CONTROLLER FILE!
@@ -945,8 +947,8 @@ DATA_SECTION
     
     init_int doPenRed           //flag (0/1) to reduce penalties on fishing-related devs by phase
     init_int phsFmRKF           //phase to turn on RKF fishing estimation (originally -4 or 5)
-    init_number llw_sel50_dev_3 //llw for penalty on log_sel50_dev_3 (originally 0))
-    init_number bnd_sel50_dev_3 //upper/lower bounds on log_sel50_dev_3 deviations (originally 0.5)
+    init_number llw_sel50_dev_3 //llw for penalty on pSelTCFM_devsZ50 (originally 0))
+    init_number bnd_sel50_dev_3 //upper/lower bounds on pSelTCFM_devsZ50 deviations (originally 0.5)
     !!CheckFile<<"doPenRed = "<<doPenRed<<endl;    
     !!CheckFile<<"phsFmRKF = "<<phsFmRKF<<endl;    
     !!CheckFile<<"llw_sel50_dev_3 = "<<llw_sel50_dev_3<<endl;    
@@ -1170,10 +1172,10 @@ INITIALIZATION_SECTION
     pPrM2MF -1.0
     pPrM2MM -1.0
     pMfac_Big  1.0      //<-NEW by wts!!
-    //  selGTFF_slpA 0.05
-    //  selGTFF_z50A 85.0
-    //  selGTFM_slpA 0.07
-    //  selGTFM_z50A 65.0
+    //  pSelGTFF_slpA 0.05
+    //  pSelGTFF_z50A 85.0
+    //  pSelGTFM_slpA 0.07
+    //  pSelGTFM_z50A 65.0
     
     //  af 15.75
     //  bf 1.01
@@ -1193,12 +1195,12 @@ INITIALIZATION_SECTION
     //  pSrv2M_z50  60
     //  fish_fit_sel50_mn 95.1
 
-    selSCFM_z50A1 80.0
-    selSCFM_z50A2 80.0
-    selSCFM_z50A3 80.0
-    selSCFM_lnZ50D1 4.0
-    selSCFM_lnZ50D2 4.0
-    selSCFM_lnZ50D3 4.0
+    pSelSCFM_z50A1 80.0
+    pSelSCFM_z50A2 80.0
+    pSelSCFM_z50A3 80.0
+    pSelSCFM_lnZ50D1 4.0
+    pSelSCFM_lnZ50D2 4.0
+    pSelSCFM_lnZ50D3 4.0
 
     pAvgLnF_TCFF 0.0
     pAvgLnF_SCFF 0.0
@@ -1250,88 +1252,88 @@ PARAMETER_SECTION
     // init_bounded_number fish_fit_slope_mn(.250,1.001,phase_logistic_sel)
     // init_bounded_number fish_fit_sel50_mn(85.0,160.0,phase_logistic_sel)
     // 1981 - 1992
-    init_bounded_number fish_fit_slope_mn1(00.250,001.001,phase_logistic_sel)
-    init_bounded_number fish_fit_sel50_mn1(85.000,160.000,phase_logistic_sel)
+    init_bounded_number pRetTCFM_slpA1(00.250,001.001,phase_logistic_sel)
+    init_bounded_number pRetTCFM_z50A1(85.000,160.000,phase_logistic_sel)
     // 2005-endyr  
-    init_bounded_number fish_fit_slope_mn2(00.250,002.001,phase_logistic_sel)
-    init_bounded_number fish_fit_sel50_mn2(85.000,160.000,phase_logistic_sel)
+    init_bounded_number pRetTCFM_slpA2(00.250,002.001,phase_logistic_sel)
+    init_bounded_number pRetTCFM_z50A2(85.000,160.000,phase_logistic_sel)
     
     // Directed fishery selectivity pattern for period-1: 1993-1996
-    init_bounded_number fish_slope_1(00.05,000.75,phase_logistic_sel)      
+    init_bounded_number pSelTCFM_slpA1(00.05,000.75,phase_logistic_sel)      
     
     // Directed fishery selectivity pattern changing by year for period-3: 2005-P
-    init_bounded_number fish_slope_yr_3(0.1,0.4,phase_logistic_sel)      
-    init_bounded_number log_avg_sel50_3(4.0,5.0,phase_logistic_sel)
-    init_bounded_dev_vector log_sel50_dev_3(1,nSelTCFM_devsZ50,-bnd_sel50_dev_3,bnd_sel50_dev_3,phase_logistic_sel) //Fixed index (why 2000?) (IMPORTANT CHANGE: used to be "endyr-2000")
+    init_bounded_number pSelTCFM_slpA2(0.1,0.4,phase_logistic_sel)      
+    init_bounded_number pSelTCFM_mnLnZ50A2(4.0,5.0,phase_logistic_sel)
+    init_bounded_dev_vector pSelTCFM_devsZ50(1,nSelTCFM_devsZ50,-bnd_sel50_dev_3,bnd_sel50_dev_3,phase_logistic_sel) //Fixed index (why 2000?) (IMPORTANT CHANGE: used to be "endyr-2000")
     
     // Female discards
-    init_bounded_number selTCFF_slp(00.1,000.4,phase_logistic_sel)
-    init_bounded_number selTCFF_z50(80.0,150.0,phase_logistic_sel)
+    init_bounded_number pSelTCFF_slp(00.1,000.4,phase_logistic_sel)
+    init_bounded_number pSelTCFF_z50(80.0,150.0,phase_logistic_sel)
     
     // snow fishery female discards for period-1: 1989-1996
-    init_bounded_number selSCFF_slpA1(00.05,000.5,phase_logistic_sel+1) //add 1 to phase
-    init_bounded_number selSCFF_z50A1(50.00,150.0,phase_logistic_sel+1)
+    init_bounded_number pSelSCFF_slpA1(00.05,000.5,phase_logistic_sel+1) //add 1 to phase
+    init_bounded_number pSelSCFF_z50A1(50.00,150.0,phase_logistic_sel+1)
     
     // snow fishery female discards for period-2: 1997-2004
-    init_bounded_number selSCFF_slpA2(00.05,000.5,phase_logistic_sel+1) //add 1 to phase
-    init_bounded_number selSCFF_z50A2(50.00,120.0,phase_logistic_sel+1)
+    init_bounded_number pSelSCFF_slpA2(00.05,000.5,phase_logistic_sel+1) //add 1 to phase
+    init_bounded_number pSelSCFF_z50A2(50.00,120.0,phase_logistic_sel+1)
     
     // snow fishery female discards for period-3: 2005-P
-    init_bounded_number selSCFF_slpA3(00.05,000.5,phase_logistic_sel+1) //add 1 to phase
-    init_bounded_number selSCFF_z50A3(50.00,120.0,phase_logistic_sel+1)
+    init_bounded_number pSelSCFF_slpA3(00.05,000.5,phase_logistic_sel+1) //add 1 to phase
+    init_bounded_number pSelSCFF_z50A3(50.00,120.0,phase_logistic_sel+1)
     
     // snow fishery male discards for period-1: 1989-1996
-    init_bounded_number selSCFM_slpA1(00.1,000.5,phase_logistic_sel+1)  //add 1 to phase
-    init_bounded_number selSCFM_z50A1(40.0,140.0,phase_logistic_sel+1)
-    init_bounded_number selSCFM_slpD1(00.1,000.5,phase_logistic_sel+1)
-    init_bounded_number selSCFM_lnZ50D1(2,4.5,phase_logistic_sel+1)
+    init_bounded_number pSelSCFM_slpA1(00.1,000.5,phase_logistic_sel+1)  //add 1 to phase
+    init_bounded_number pSelSCFM_z50A1(40.0,140.0,phase_logistic_sel+1)
+    init_bounded_number pSelSCFM_slpD1(00.1,000.5,phase_logistic_sel+1)
+    init_bounded_number pSelSCFM_lnZ50D1(2,4.5,phase_logistic_sel+1)
     
     // snow fishery male discards for period-2: 1997-2004
-    init_bounded_number selSCFM_slpA2(00.1,000.5,phase_logistic_sel+1)  //add 1 to phase
-    init_bounded_number selSCFM_z50A2(40.0,140.0,phase_logistic_sel+1)
-    init_bounded_number selSCFM_slpD2(00.1,000.5,phase_logistic_sel+1)
-    init_bounded_number selSCFM_lnZ50D2(2,4.5,phase_logistic_sel+1)
+    init_bounded_number pSelSCFM_slpA2(00.1,000.5,phase_logistic_sel+1)  //add 1 to phase
+    init_bounded_number pSelSCFM_z50A2(40.0,140.0,phase_logistic_sel+1)
+    init_bounded_number pSelSCFM_slpD2(00.1,000.5,phase_logistic_sel+1)
+    init_bounded_number pSelSCFM_lnZ50D2(2,4.5,phase_logistic_sel+1)
     
     // snow fishery male discards for period-3: 2005-P
-    init_bounded_number selSCFM_slpA3(00.1,000.5,phase_logistic_sel+1)  //add 1 to phase
-    init_bounded_number selSCFM_z50A3(40.0,140.0,phase_logistic_sel+1)
-    init_bounded_number selSCFM_slpD3(00.1,000.5,phase_logistic_sel+1)
-    init_bounded_number selSCFM_lnZ50D3(2,4.5,phase_logistic_sel+1)  //was selSCF_Z50_ma2_1
+    init_bounded_number pSelSCFM_slpA3(00.1,000.5,phase_logistic_sel+1)  //add 1 to phase
+    init_bounded_number pSelSCFM_z50A3(40.0,140.0,phase_logistic_sel+1)
+    init_bounded_number pSelSCFM_slpD3(00.1,000.5,phase_logistic_sel+1)
+    init_bounded_number pSelSCFM_lnZ50D3(2,4.5,phase_logistic_sel+1)  
     
     // red king fishery female discards
-    init_bounded_number selRKFF_slpA1(00.05,000.5,phase_logistic_sel) //add 2 to phase
-    init_bounded_number selRKFF_z50A1(50.00,150.0,phase_logistic_sel) //add 2 to phase
-    init_bounded_number selRKFF_slpA2(00.05,000.5,phase_logistic_sel) //add 2 to phase
-    init_bounded_number selRKFF_z50A2(50.00,150.0,phase_logistic_sel) //add 2 to phase
-    init_bounded_number selRKFF_slpA3(00.05,000.5,phase_logistic_sel) //add 2 to phase
-    init_bounded_number selRKFF_z50A3(50.00,170.0,phase_logistic_sel) //add 2 to phase
+    init_bounded_number pSelRKFF_slpA1(00.05,000.5,phase_logistic_sel) //add 2 to phase
+    init_bounded_number pSelRKFF_z50A1(50.00,150.0,phase_logistic_sel) //add 2 to phase
+    init_bounded_number pSelRKFF_slpA2(00.05,000.5,phase_logistic_sel) //add 2 to phase
+    init_bounded_number pSelRKFF_z50A2(50.00,150.0,phase_logistic_sel) //add 2 to phase
+    init_bounded_number pSelRKFF_slpA3(00.05,000.5,phase_logistic_sel) //add 2 to phase
+    init_bounded_number pSelRKFF_z50A3(50.00,170.0,phase_logistic_sel) //add 2 to phase
     
     // red king fishery male discards
-    init_bounded_number selRKFM_slpA1(.01,.50,phase_logistic_sel)          //add 2 to phase
-    init_bounded_number selRKFM_z50A1(95.0,150.0,phase_logistic_sel)
-    init_bounded_number selRKFM_slpA2(.01,.50,phase_logistic_sel)          //add 2 to phase
-    init_bounded_number selRKFM_z50A2(95.0,150.0,phase_logistic_sel)
-    init_bounded_number selRKFM_slpA3(.01,.50,phase_logistic_sel)          //add 2 to phase
-    init_bounded_number selRKFM_z50A3(95.0,150.0,phase_logistic_sel)
+    init_bounded_number pSelRKFM_slpA1(.01,.50,phase_logistic_sel)          //add 2 to phase
+    init_bounded_number pSelRKFM_z50A1(95.0,150.0,phase_logistic_sel)
+    init_bounded_number pSelRKFM_slpA2(.01,.50,phase_logistic_sel)          //add 2 to phase
+    init_bounded_number pSelRKFM_z50A2(95.0,150.0,phase_logistic_sel)
+    init_bounded_number pSelRKFM_slpA3(.01,.50,phase_logistic_sel)          //add 2 to phase
+    init_bounded_number pSelRKFM_z50A3(95.0,150.0,phase_logistic_sel)
     
     // Trawl fishery selectivity female, 1973-1987
-    init_bounded_number selGTFF_slpA1(0.01,0.5,phase_logistic_sel)
-    init_bounded_number selGTFF_z50A1(40.0,125.01,phase_logistic_sel)
+    init_bounded_number pSelGTFF_slpA1(0.01,0.5,phase_logistic_sel)
+    init_bounded_number pSelGTFF_z50A1(40.0,125.01,phase_logistic_sel)
     // Trawl fishery selectivity female, 1988-1996
-    init_bounded_number selGTFF_slpA2(0.005,0.5,phase_logistic_sel)
-    init_bounded_number selGTFF_z50A2(40.0,250.01,phase_logistic_sel) 
+    init_bounded_number pSelGTFF_slpA2(0.005,0.5,phase_logistic_sel)
+    init_bounded_number pSelGTFF_z50A2(40.0,250.01,phase_logistic_sel) 
     // Trawl fishery selectivity female, 1997-P
-    init_bounded_number selGTFF_slpA3(0.01,0.5,phase_logistic_sel)
-    init_bounded_number selGTFF_z50A3(40.0,150.01,phase_logistic_sel)
+    init_bounded_number pSelGTFF_slpA3(0.01,0.5,phase_logistic_sel)
+    init_bounded_number pSelGTFF_z50A3(40.0,150.01,phase_logistic_sel)
     // Trawl fishery selectivity male, 1973-1987
-    init_bounded_number selGTFM_slpA1(0.01,0.5,phase_logistic_sel)
-    init_bounded_number selGTFM_z50A1(40.0,120.01,phase_logistic_sel)
+    init_bounded_number pSelGTFM_slpA1(0.01,0.5,phase_logistic_sel)
+    init_bounded_number pSelGTFM_z50A1(40.0,120.01,phase_logistic_sel)
     // Trawl fishery selectivity male, 1988-1996
-    init_bounded_number selGTFM_slpA2(0.01,0.5,phase_logistic_sel)
-    init_bounded_number selGTFM_z50A2(40.0,120.01,phase_logistic_sel)
+    init_bounded_number pSelGTFM_slpA2(0.01,0.5,phase_logistic_sel)
+    init_bounded_number pSelGTFM_z50A2(40.0,120.01,phase_logistic_sel)
     // Trawl fishery selectivity male, 1997-P
-    init_bounded_number selGTFM_slpA3(0.01,0.5,phase_logistic_sel)
-    init_bounded_number selGTFM_z50A3(40.0,120.01,phase_logistic_sel)
+    init_bounded_number pSelGTFM_slpA3(0.01,0.5,phase_logistic_sel)
+    init_bounded_number pSelGTFM_z50A3(40.0,120.01,phase_logistic_sel)
     // Tanner 1968 to 2008 use these to estimate survey selectivities - same for males and females
     // put negative for phase for q's, change to positive when use som and otto because input a negative phase 
     //  init_bounded_number srv1_slope(.01,.4,-1)
@@ -1366,10 +1368,10 @@ PARAMETER_SECTION
     init_bounded_number pAvgLnF_RKFF(-5.0,5.0,phsRKFF)  ///< female offset to ln-scale mean fishing mortality in BBRKC fishery
     init_bounded_number pAvgLnF_GTFF(-5.0,5.0,phsGTFF)  ///< female offset to ln-scale mean fishing mortality in groundfish trawl fisheries
 
-//    init_bounded_number pQFshEff_TCF(-5.0,5.0,phsQFshEff_TCF)  ///< TCF effort extrapolation parameter
-    init_bounded_number pQFshEff_SCF(-5.0,5.0,phsQFshEff_SCF)  ///< SCF effort extrapolation parameter
-    init_bounded_number pQFshEff_RKF(-5.0,5.0,phsQFshEff_RKF)  ///< RKF effort extrapolation parameter
-//    init_bounded_number pQFshEff_GTF(-5.0,5.0,phsQFshEff_GTF)  ///< GTF effort extrapolation parameter
+//    init_bounded_number pLnEffXtr_TCF(-5.0,5.0,phsQFshEff_TCF)  ///< TCF effort extrapolation parameter
+    init_bounded_number pLnEffXtr_SCF(-5.0,5.0,phsQFshEff_SCF)  ///< SCF effort extrapolation parameter
+    init_bounded_number pLnEffXtr_RKF(-5.0,5.0,phsQFshEff_RKF)  ///< RKF effort extrapolation parameter
+//    init_bounded_number pLnEffXtr_GTF(-5.0,5.0,phsQFshEff_GTF)  ///< GTF effort extrapolation parameter
     ////end of estimated parameters///////////////
     
     3darray retFcn_syz(1,nSCs,styr,endyr-1,1,nZBs)    // Retention curve for males caught in directed fishery    (IMPORTANT CHANGE: used to be "endyr")
@@ -2109,71 +2111,71 @@ FUNCTION void writeParameters(ofstream& os,int toR, int willBeActive)           
     wts::writeParameter(os,pAvgLnF_RKF,toR,willBeActive);   
     wts::writeParameter(os,pF_DevsRKF,toR,willBeActive);    
     
-    wts::writeParameter(os,fish_fit_slope_mn1,toR,willBeActive);   
-    wts::writeParameter(os,fish_fit_sel50_mn1,toR,willBeActive);    
-    wts::writeParameter(os,fish_fit_slope_mn2,toR,willBeActive);   
-    wts::writeParameter(os,fish_fit_sel50_mn2,toR,willBeActive);    
+    wts::writeParameter(os,pRetTCFM_slpA1,toR,willBeActive);   
+    wts::writeParameter(os,pRetTCFM_z50A1,toR,willBeActive);    
+    wts::writeParameter(os,pRetTCFM_slpA2,toR,willBeActive);   
+    wts::writeParameter(os,pRetTCFM_z50A2,toR,willBeActive);    
     
-    wts::writeParameter(os,fish_slope_1,toR,willBeActive);   
+    wts::writeParameter(os,pSelTCFM_slpA1,toR,willBeActive);   
     
-    wts::writeParameter(os,fish_slope_yr_3,toR,willBeActive);   
-    wts::writeParameter(os,log_avg_sel50_3,toR,willBeActive);    
-    wts::writeParameter(os,log_sel50_dev_3,toR,willBeActive);    
+    wts::writeParameter(os,pSelTCFM_slpA2,toR,willBeActive);   
+    wts::writeParameter(os,pSelTCFM_mnLnZ50A2,toR,willBeActive);    
+    wts::writeParameter(os,pSelTCFM_devsZ50,toR,willBeActive);    
     
-    wts::writeParameter(os,selTCFF_slp,toR,willBeActive);   
-    wts::writeParameter(os,selTCFF_z50,toR,willBeActive);    
+    wts::writeParameter(os,pSelTCFF_slp,toR,willBeActive);   
+    wts::writeParameter(os,pSelTCFF_z50,toR,willBeActive);    
     
-    wts::writeParameter(os,selSCFF_slpA1,toR,willBeActive);   
-    wts::writeParameter(os,selSCFF_z50A1,toR,willBeActive);    
+    wts::writeParameter(os,pSelSCFF_slpA1,toR,willBeActive);   
+    wts::writeParameter(os,pSelSCFF_z50A1,toR,willBeActive);    
     
-    wts::writeParameter(os,selSCFF_slpA2,toR,willBeActive);   
-    wts::writeParameter(os,selSCFF_z50A2,toR,willBeActive);    
+    wts::writeParameter(os,pSelSCFF_slpA2,toR,willBeActive);   
+    wts::writeParameter(os,pSelSCFF_z50A2,toR,willBeActive);    
     
-    wts::writeParameter(os,selSCFF_slpA3,toR,willBeActive);   
-    wts::writeParameter(os,selSCFF_z50A3,toR,willBeActive);    
+    wts::writeParameter(os,pSelSCFF_slpA3,toR,willBeActive);   
+    wts::writeParameter(os,pSelSCFF_z50A3,toR,willBeActive);    
     
-    wts::writeParameter(os,selSCFM_slpA1,toR,willBeActive);   
-    wts::writeParameter(os,selSCFM_z50A1,toR,willBeActive);    
-    wts::writeParameter(os,selSCFM_slpD1,toR,willBeActive);   
-    wts::writeParameter(os,selSCFM_lnZ50D1,toR,willBeActive);    
+    wts::writeParameter(os,pSelSCFM_slpA1,toR,willBeActive);   
+    wts::writeParameter(os,pSelSCFM_z50A1,toR,willBeActive);    
+    wts::writeParameter(os,pSelSCFM_slpD1,toR,willBeActive);   
+    wts::writeParameter(os,pSelSCFM_lnZ50D1,toR,willBeActive);    
     
-    wts::writeParameter(os,selSCFM_slpA2,toR,willBeActive);   
-    wts::writeParameter(os,selSCFM_z50A2,toR,willBeActive);    
-    wts::writeParameter(os,selSCFM_slpD2,toR,willBeActive);   
-    wts::writeParameter(os,selSCFM_lnZ50D2,toR,willBeActive);    
+    wts::writeParameter(os,pSelSCFM_slpA2,toR,willBeActive);   
+    wts::writeParameter(os,pSelSCFM_z50A2,toR,willBeActive);    
+    wts::writeParameter(os,pSelSCFM_slpD2,toR,willBeActive);   
+    wts::writeParameter(os,pSelSCFM_lnZ50D2,toR,willBeActive);    
     
-    wts::writeParameter(os,selSCFM_slpA3,toR,willBeActive);   
-    wts::writeParameter(os,selSCFM_z50A3,toR,willBeActive);    
-    wts::writeParameter(os,selSCFM_slpD3,toR,willBeActive);   
-    wts::writeParameter(os,selSCFM_lnZ50D3,toR,willBeActive);    
+    wts::writeParameter(os,pSelSCFM_slpA3,toR,willBeActive);   
+    wts::writeParameter(os,pSelSCFM_z50A3,toR,willBeActive);    
+    wts::writeParameter(os,pSelSCFM_slpD3,toR,willBeActive);   
+    wts::writeParameter(os,pSelSCFM_lnZ50D3,toR,willBeActive);    
     
-    wts::writeParameter(os,selRKFF_slpA1,toR,willBeActive);   
-    wts::writeParameter(os,selRKFF_z50A1,toR,willBeActive);    
-    wts::writeParameter(os,selRKFF_slpA2,toR,willBeActive);   
-    wts::writeParameter(os,selRKFF_z50A2,toR,willBeActive);    
-    wts::writeParameter(os,selRKFF_slpA3,toR,willBeActive);   
-    wts::writeParameter(os,selRKFF_z50A3,toR,willBeActive);    
+    wts::writeParameter(os,pSelRKFF_slpA1,toR,willBeActive);   
+    wts::writeParameter(os,pSelRKFF_z50A1,toR,willBeActive);    
+    wts::writeParameter(os,pSelRKFF_slpA2,toR,willBeActive);   
+    wts::writeParameter(os,pSelRKFF_z50A2,toR,willBeActive);    
+    wts::writeParameter(os,pSelRKFF_slpA3,toR,willBeActive);   
+    wts::writeParameter(os,pSelRKFF_z50A3,toR,willBeActive);    
     
-    wts::writeParameter(os,selRKFM_slpA1,toR,willBeActive);   
-    wts::writeParameter(os,selRKFM_z50A1,toR,willBeActive);    
-    wts::writeParameter(os,selRKFM_slpA2,toR,willBeActive);   
-    wts::writeParameter(os,selRKFM_z50A2,toR,willBeActive);    
-    wts::writeParameter(os,selRKFM_slpA3,toR,willBeActive);   
-    wts::writeParameter(os,selRKFM_z50A3,toR,willBeActive);    
+    wts::writeParameter(os,pSelRKFM_slpA1,toR,willBeActive);   
+    wts::writeParameter(os,pSelRKFM_z50A1,toR,willBeActive);    
+    wts::writeParameter(os,pSelRKFM_slpA2,toR,willBeActive);   
+    wts::writeParameter(os,pSelRKFM_z50A2,toR,willBeActive);    
+    wts::writeParameter(os,pSelRKFM_slpA3,toR,willBeActive);   
+    wts::writeParameter(os,pSelRKFM_z50A3,toR,willBeActive);    
     
-    wts::writeParameter(os,selGTFF_slpA1,toR,willBeActive);   
-    wts::writeParameter(os,selGTFF_z50A1,toR,willBeActive);   
-    wts::writeParameter(os,selGTFF_slpA2,toR,willBeActive);   
-    wts::writeParameter(os,selGTFF_z50A2,toR,willBeActive);   
-    wts::writeParameter(os,selGTFF_slpA3,toR,willBeActive);   
-    wts::writeParameter(os,selGTFF_z50A3,toR,willBeActive);   
+    wts::writeParameter(os,pSelGTFF_slpA1,toR,willBeActive);   
+    wts::writeParameter(os,pSelGTFF_z50A1,toR,willBeActive);   
+    wts::writeParameter(os,pSelGTFF_slpA2,toR,willBeActive);   
+    wts::writeParameter(os,pSelGTFF_z50A2,toR,willBeActive);   
+    wts::writeParameter(os,pSelGTFF_slpA3,toR,willBeActive);   
+    wts::writeParameter(os,pSelGTFF_z50A3,toR,willBeActive);   
     
-    wts::writeParameter(os,selGTFM_slpA1,toR,willBeActive);   
-    wts::writeParameter(os,selGTFM_z50A1,toR,willBeActive);   
-    wts::writeParameter(os,selGTFM_slpA2,toR,willBeActive);   
-    wts::writeParameter(os,selGTFM_z50A2,toR,willBeActive);   
-    wts::writeParameter(os,selGTFM_slpA3,toR,willBeActive);   
-    wts::writeParameter(os,selGTFM_z50A3,toR,willBeActive);   
+    wts::writeParameter(os,pSelGTFM_slpA1,toR,willBeActive);   
+    wts::writeParameter(os,pSelGTFM_z50A1,toR,willBeActive);   
+    wts::writeParameter(os,pSelGTFM_slpA2,toR,willBeActive);   
+    wts::writeParameter(os,pSelGTFM_z50A2,toR,willBeActive);   
+    wts::writeParameter(os,pSelGTFM_slpA3,toR,willBeActive);   
+    wts::writeParameter(os,pSelGTFM_z50A3,toR,willBeActive);   
     
     wts::writeParameter(os,pSrv1_QM,toR,willBeActive);       
     wts::writeParameter(os,pSrv1M_dz5095,toR,willBeActive); 
@@ -2232,89 +2234,89 @@ FUNCTION void jitterParameters(double fac)   //wts: new 2014-05-10
     
     // Retention function
     // 1981 - 1992
-    fish_fit_slope_mn1 = wts::jitterParameter(fish_fit_slope_mn1,fac,rng);
-    fish_fit_sel50_mn1 = wts::jitterParameter(fish_fit_sel50_mn1,fac,rng);
+    pRetTCFM_slpA1 = wts::jitterParameter(pRetTCFM_slpA1,fac,rng);
+    pRetTCFM_z50A1 = wts::jitterParameter(pRetTCFM_z50A1,fac,rng);
     // 2005-endyr  
-    fish_fit_slope_mn2 = wts::jitterParameter(fish_fit_slope_mn2,fac,rng);
-    fish_fit_sel50_mn2 = wts::jitterParameter(fish_fit_sel50_mn2,fac,rng);
+    pRetTCFM_slpA2 = wts::jitterParameter(pRetTCFM_slpA2,fac,rng);
+    pRetTCFM_z50A2 = wts::jitterParameter(pRetTCFM_z50A2,fac,rng);
     
     // Directed fishery selectivity pattern for period-1: 1993-1996
-    fish_slope_1 = wts::jitterParameter(fish_slope_1,fac,rng);      
+    pSelTCFM_slpA1 = wts::jitterParameter(pSelTCFM_slpA1,fac,rng);      
     
     // Directed fishery selectivity pattern changing by year for period-3: 2005-P
-    fish_slope_yr_3 = wts::jitterParameter(fish_slope_yr_3,fac,rng);      
-    log_avg_sel50_3 = wts::jitterParameter(log_avg_sel50_3,fac,rng);
-    log_sel50_dev_3 = wts::jitterParameter(log_sel50_dev_3,0.1*fac,rng);
+    pSelTCFM_slpA2 = wts::jitterParameter(pSelTCFM_slpA2,fac,rng);      
+    pSelTCFM_mnLnZ50A2 = wts::jitterParameter(pSelTCFM_mnLnZ50A2,fac,rng);
+    pSelTCFM_devsZ50 = wts::jitterParameter(pSelTCFM_devsZ50,0.1*fac,rng);
     
     // Female discards
-    selTCFF_slp = wts::jitterParameter(selTCFF_slp,fac,rng);
-    selTCFF_z50 = wts::jitterParameter(selTCFF_z50,fac,rng);
+    pSelTCFF_slp = wts::jitterParameter(pSelTCFF_slp,fac,rng);
+    pSelTCFF_z50 = wts::jitterParameter(pSelTCFF_z50,fac,rng);
     
     // snow fishery female discards for period-1: 1989-1996
-    selSCFF_slpA1 = wts::jitterParameter(selSCFF_slpA1,fac,rng);
-    selSCFF_z50A1 = wts::jitterParameter(selSCFF_z50A1,fac,rng);
+    pSelSCFF_slpA1 = wts::jitterParameter(pSelSCFF_slpA1,fac,rng);
+    pSelSCFF_z50A1 = wts::jitterParameter(pSelSCFF_z50A1,fac,rng);
     
     // snow fishery female discards for period-2: 1997-2004
-    selSCFF_slpA2 = wts::jitterParameter(selSCFF_slpA2,fac,rng);
-    selSCFF_z50A2 = wts::jitterParameter(selSCFF_z50A2,fac,rng);
+    pSelSCFF_slpA2 = wts::jitterParameter(pSelSCFF_slpA2,fac,rng);
+    pSelSCFF_z50A2 = wts::jitterParameter(pSelSCFF_z50A2,fac,rng);
     
     // snow fishery female discards for period-3: 2005-P
-    selSCFF_slpA3 = wts::jitterParameter(selSCFF_slpA3,fac,rng);
-    selSCFF_z50A3 = wts::jitterParameter(selSCFF_z50A3,fac,rng);
+    pSelSCFF_slpA3 = wts::jitterParameter(pSelSCFF_slpA3,fac,rng);
+    pSelSCFF_z50A3 = wts::jitterParameter(pSelSCFF_z50A3,fac,rng);
     
     // snow fishery male discards for period-1: 1989-1996
-    selSCFM_slpA1   = wts::jitterParameter(selSCFM_slpA1,fac,rng);
-    selSCFM_z50A1   = wts::jitterParameter(selSCFM_z50A1,fac,rng);
-    selSCFM_slpD1   = wts::jitterParameter(selSCFM_slpD1,fac,rng);
-    selSCFM_lnZ50D1 = wts::jitterParameter(selSCFM_lnZ50D1,fac,rng);
+    pSelSCFM_slpA1   = wts::jitterParameter(pSelSCFM_slpA1,fac,rng);
+    pSelSCFM_z50A1   = wts::jitterParameter(pSelSCFM_z50A1,fac,rng);
+    pSelSCFM_slpD1   = wts::jitterParameter(pSelSCFM_slpD1,fac,rng);
+    pSelSCFM_lnZ50D1 = wts::jitterParameter(pSelSCFM_lnZ50D1,fac,rng);
     
     // snow fishery male discards for period-2: 1997-2004
-    selSCFM_slpA2   = wts::jitterParameter(selSCFM_slpA2,fac,rng);
-    selSCFM_z50A2   = wts::jitterParameter(selSCFM_z50A2,fac,rng);
-    selSCFM_slpD2   = wts::jitterParameter(selSCFM_slpD2,fac,rng);
-    selSCFM_lnZ50D2 = wts::jitterParameter(selSCFM_lnZ50D2,fac,rng);
+    pSelSCFM_slpA2   = wts::jitterParameter(pSelSCFM_slpA2,fac,rng);
+    pSelSCFM_z50A2   = wts::jitterParameter(pSelSCFM_z50A2,fac,rng);
+    pSelSCFM_slpD2   = wts::jitterParameter(pSelSCFM_slpD2,fac,rng);
+    pSelSCFM_lnZ50D2 = wts::jitterParameter(pSelSCFM_lnZ50D2,fac,rng);
     
     // snow fishery male discards for period-3: 2005-P
-    selSCFM_slpA3   = wts::jitterParameter(selSCFM_slpA3,fac,rng);
-    selSCFM_z50A3   = wts::jitterParameter(selSCFM_z50A3,fac,rng);
-    selSCFM_slpD3   = wts::jitterParameter(selSCFM_slpD3,fac,rng);
-    selSCFM_lnZ50D3 = wts::jitterParameter(selSCFM_lnZ50D3,fac,rng);
+    pSelSCFM_slpA3   = wts::jitterParameter(pSelSCFM_slpA3,fac,rng);
+    pSelSCFM_z50A3   = wts::jitterParameter(pSelSCFM_z50A3,fac,rng);
+    pSelSCFM_slpD3   = wts::jitterParameter(pSelSCFM_slpD3,fac,rng);
+    pSelSCFM_lnZ50D3 = wts::jitterParameter(pSelSCFM_lnZ50D3,fac,rng);
     
     // red king fishery female discards
 
-    selRKFF_slpA1 = wts::jitterParameter(selRKFF_slpA1,fac,rng);
-    selRKFF_z50A1 = wts::jitterParameter(selRKFF_z50A1,fac,rng);
-    selRKFF_slpA2 = wts::jitterParameter(selRKFF_slpA2,fac,rng);
-    selRKFF_z50A2 = wts::jitterParameter(selRKFF_z50A2,fac,rng);
-    selRKFF_slpA3 = wts::jitterParameter(selRKFF_slpA3,fac,rng);
-    selRKFF_z50A3 = wts::jitterParameter(selRKFF_z50A3,fac,rng);
+    pSelRKFF_slpA1 = wts::jitterParameter(pSelRKFF_slpA1,fac,rng);
+    pSelRKFF_z50A1 = wts::jitterParameter(pSelRKFF_z50A1,fac,rng);
+    pSelRKFF_slpA2 = wts::jitterParameter(pSelRKFF_slpA2,fac,rng);
+    pSelRKFF_z50A2 = wts::jitterParameter(pSelRKFF_z50A2,fac,rng);
+    pSelRKFF_slpA3 = wts::jitterParameter(pSelRKFF_slpA3,fac,rng);
+    pSelRKFF_z50A3 = wts::jitterParameter(pSelRKFF_z50A3,fac,rng);
     
     // red king fishery male discards
-    selRKFM_slpA1 = wts::jitterParameter(selRKFM_slpA1,fac,rng);
-    selRKFM_z50A1 = wts::jitterParameter(selRKFM_z50A1,fac,rng);
-    selRKFM_slpA2 = wts::jitterParameter(selRKFM_slpA2,fac,rng);
-    selRKFM_z50A2 = wts::jitterParameter(selRKFM_z50A2,fac,rng);
-    selRKFM_slpA3 = wts::jitterParameter(selRKFM_slpA3,fac,rng);
-    selRKFM_z50A3 = wts::jitterParameter(selRKFM_z50A3,fac,rng);
+    pSelRKFM_slpA1 = wts::jitterParameter(pSelRKFM_slpA1,fac,rng);
+    pSelRKFM_z50A1 = wts::jitterParameter(pSelRKFM_z50A1,fac,rng);
+    pSelRKFM_slpA2 = wts::jitterParameter(pSelRKFM_slpA2,fac,rng);
+    pSelRKFM_z50A2 = wts::jitterParameter(pSelRKFM_z50A2,fac,rng);
+    pSelRKFM_slpA3 = wts::jitterParameter(pSelRKFM_slpA3,fac,rng);
+    pSelRKFM_z50A3 = wts::jitterParameter(pSelRKFM_z50A3,fac,rng);
     
     // Trawl fishery selectivity female, 1973-1987
-    selGTFF_slpA1 = wts::jitterParameter(selGTFF_slpA1,fac,rng);
-    selGTFF_z50A1 = wts::jitterParameter(selGTFF_z50A1,fac,rng);
+    pSelGTFF_slpA1 = wts::jitterParameter(pSelGTFF_slpA1,fac,rng);
+    pSelGTFF_z50A1 = wts::jitterParameter(pSelGTFF_z50A1,fac,rng);
     // Trawl fishery selectivity female, 1988-1996
-    selGTFF_slpA2 = wts::jitterParameter(selGTFF_slpA2,fac,rng);
-    selGTFF_z50A2 = wts::jitterParameter(selGTFF_z50A2,fac,rng);
+    pSelGTFF_slpA2 = wts::jitterParameter(pSelGTFF_slpA2,fac,rng);
+    pSelGTFF_z50A2 = wts::jitterParameter(pSelGTFF_z50A2,fac,rng);
     // Trawl fishery selectivity female, 1997-P
-    selGTFF_slpA3 = wts::jitterParameter(selGTFF_slpA3,fac,rng);
-    selGTFF_z50A3 = wts::jitterParameter(selGTFF_z50A3,fac,rng);
+    pSelGTFF_slpA3 = wts::jitterParameter(pSelGTFF_slpA3,fac,rng);
+    pSelGTFF_z50A3 = wts::jitterParameter(pSelGTFF_z50A3,fac,rng);
     // Trawl fishery selectivity male, 1973-1987
-    selGTFM_slpA1 = wts::jitterParameter(selGTFM_slpA1,fac,rng);
-    selGTFM_z50A1 = wts::jitterParameter(selGTFM_z50A1,fac,rng);
+    pSelGTFM_slpA1 = wts::jitterParameter(pSelGTFM_slpA1,fac,rng);
+    pSelGTFM_z50A1 = wts::jitterParameter(pSelGTFM_z50A1,fac,rng);
     // Trawl fishery selectivity male, 1988-1996
-    selGTFM_slpA2 = wts::jitterParameter(selGTFM_slpA2,fac,rng);
-    selGTFM_z50A2 = wts::jitterParameter(selGTFM_z50A2,fac,rng);
+    pSelGTFM_slpA2 = wts::jitterParameter(pSelGTFM_slpA2,fac,rng);
+    pSelGTFM_z50A2 = wts::jitterParameter(pSelGTFM_z50A2,fac,rng);
     // Trawl fishery selectivity male, 1997-P
-    selGTFM_slpA3 = wts::jitterParameter(selGTFM_slpA3,fac,rng);
-    selGTFM_z50A3 = wts::jitterParameter(selGTFM_z50A3,fac,rng);
+    pSelGTFM_slpA3 = wts::jitterParameter(pSelGTFM_slpA3,fac,rng);
+    pSelGTFM_z50A3 = wts::jitterParameter(pSelGTFM_z50A3,fac,rng);
     //1974 to 1981 
     pSrv1_QM       = wts::jitterParameter(pSrv1_QM,fac,rng);
     pSrv1M_dz5095 = wts::jitterParameter(pSrv1M_dz5095,fac,rng);
@@ -2365,10 +2367,10 @@ FUNCTION WriteMCMC                                     //wts: checked
     // srv1_sel50 <<","<<
     // fish_fit_slope_mn <<","<<
     // fish_fit_sel50_mn <<","<<
-    selTCFF_slp <<","<<
-    selTCFF_z50 <<","<<
-    //selGTFF_slpA <<","<<
-    //selGTFF_z50A <<","<<
+    pSelTCFF_slp <<","<<
+    pSelTCFF_z50 <<","<<
+    //pSelGTFF_slpA <<","<<
+    //pSelGTFF_z50A <<","<<
     endl;
 
 // --------------------------------------------------------------------------
@@ -2467,18 +2469,18 @@ FUNCTION get_selectivity                  //wts: revised
     
     selTCFM_syz.initialize();
     retFcn_syz.initialize();
-    dvariable tmpSel50 = mean(exp(log_avg_sel50_3+log_sel50_dev_3(1,6)));
+    dvariable tmpSel50 = mean(exp(pSelTCFM_mnLnZ50A2+pSelTCFM_devsZ50(1,6)));
     for(int iy=styr;iy<=1990;iy++){ 
-        selTCFM_syz(NEW_SHELL,iy) = 1./(1.+mfexp(-1.*fish_slope_1*(zBs-tmpSel50)));    
-        retFcn_syz(NEW_SHELL, iy) = 1./(1.+mfexp(-1.*fish_fit_slope_mn1*(zBs-fish_fit_sel50_mn1)));
+        selTCFM_syz(NEW_SHELL,iy) = 1./(1.+mfexp(-1.*pSelTCFM_slpA1*(zBs-tmpSel50)));    
+        retFcn_syz(NEW_SHELL, iy) = 1./(1.+mfexp(-1.*pRetTCFM_slpA1*(zBs-pRetTCFM_z50A1)));
     }
 //    cout<<"get_sel: 1a"<<endl;
     int ctr = 1;
-//    cout<<"max index of log_sel50_dev_3: "<<log_sel50_dev_3.indexmax()<<endl;
+//    cout<<"max index of pSelTCFM_devsZ50: "<<pSelTCFM_devsZ50.indexmax()<<endl;
     for(int iy=1991;iy<=1996;iy++){ 
         if (hasDirectedFishery_y(iy)) {
 //            cout<<"yr = "<<iy<<".  ctr = "<<ctr<<endl;
-            selTCFM_syz(NEW_SHELL,iy)=1./(1.+mfexp(-1.*fish_slope_1*(zBs-exp(log_avg_sel50_3+log_sel50_dev_3(ctr++)))));//ctr was iy-1990
+            selTCFM_syz(NEW_SHELL,iy)=1./(1.+mfexp(-1.*pSelTCFM_slpA1*(zBs-exp(pSelTCFM_mnLnZ50A2+pSelTCFM_devsZ50(ctr++)))));//ctr was iy-1990
         } else {
 //            cout<<"yr = "<<iy<<".  no fishery."<<endl;
         }
@@ -2488,17 +2490,17 @@ FUNCTION get_selectivity                  //wts: revised
     for(int iy=1997;iy<endyr;iy++){ 
         if (hasDirectedFishery_y(iy)) {
 //            cout<<"yr = "<<iy<<".  ctr = "<<ctr<<endl;
-            selTCFM_syz(NEW_SHELL,iy)=1./(1.+mfexp(-1.*fish_slope_yr_3*(zBs-exp(log_avg_sel50_3+log_sel50_dev_3(ctr++)))));//ctr was iy-1998
+            selTCFM_syz(NEW_SHELL,iy)=1./(1.+mfexp(-1.*pSelTCFM_slpA2*(zBs-exp(pSelTCFM_mnLnZ50A2+pSelTCFM_devsZ50(ctr++)))));//ctr was iy-1998
         } else {
 //            cout<<"yr = "<<iy<<".  no fishery."<<endl;
-            selTCFM_syz(NEW_SHELL,iy)=1./(1.+mfexp(-1.*fish_slope_yr_3*(zBs-exp(log_avg_sel50_3))));
+            selTCFM_syz(NEW_SHELL,iy)=1./(1.+mfexp(-1.*pSelTCFM_slpA2*(zBs-exp(pSelTCFM_mnLnZ50A2))));
         }
     }
 //    cout<<"get_sel: 1d"<<endl;
     
-    for(int iy=styr;iy<=1990;iy++) retFcn_syz(NEW_SHELL,iy) = 1./(1.+mfexp(-1.*fish_fit_slope_mn1*(zBs-fish_fit_sel50_mn1)));
+    for(int iy=styr;iy<=1990;iy++) retFcn_syz(NEW_SHELL,iy) = 1./(1.+mfexp(-1.*pRetTCFM_slpA1*(zBs-pRetTCFM_z50A1)));
 //    cout<<"get_sel: 1f"<<endl;
-    for(int iy=1991;iy<endyr;iy++) retFcn_syz(NEW_SHELL,iy) = 1./(1.+mfexp(-1.*fish_fit_slope_mn2*(zBs-fish_fit_sel50_mn2)));
+    for(int iy=1991;iy<endyr;iy++) retFcn_syz(NEW_SHELL,iy) = 1./(1.+mfexp(-1.*pRetTCFM_slpA2*(zBs-pRetTCFM_z50A2)));
 //    cout<<"get_sel: 1g"<<endl;
     
     for(int iy=styr;iy<endyr;iy++){      //used to be iy<=endyr            
@@ -2509,42 +2511,42 @@ FUNCTION get_selectivity                  //wts: revised
 //    cout<<"get_sel: 2"<<endl;
     
     // female discards ascending logistic curve 
-    selTCFF_z=1./(1.+mfexp(-1.*selTCFF_slp*(zBs-selTCFF_z50)));
+    selTCFF_z=1./(1.+mfexp(-1.*pSelTCFF_slp*(zBs-pSelTCFF_z50)));
     
     //  snow fishery selectivity for 3 time periods, #1 (1989-1996), #2 (1997-2004) and #3 (2005-P)      
-    selSCF_cxz(1,FEMALE)=1./(1.+mfexp(-1.*selSCFF_slpA1*(zBs-selSCFF_z50A1))); 
-    selSCF_cxz(2,FEMALE)=1./(1.+mfexp(-1.*selSCFF_slpA2*(zBs-selSCFF_z50A2))); 
-    selSCF_cxz(3,FEMALE)=1./(1.+mfexp(-1.*selSCFF_slpA3*(zBs-selSCFF_z50A3))); 
+    selSCF_cxz(1,FEMALE)=1./(1.+mfexp(-1.*pSelSCFF_slpA1*(zBs-pSelSCFF_z50A1))); 
+    selSCF_cxz(2,FEMALE)=1./(1.+mfexp(-1.*pSelSCFF_slpA2*(zBs-pSelSCFF_z50A2))); 
+    selSCF_cxz(3,FEMALE)=1./(1.+mfexp(-1.*pSelSCFF_slpA3*(zBs-pSelSCFF_z50A3))); 
 //    cout<<"get_sel: 2a"<<endl;
         
     //  snow fishery selectivity for 3 time periods, #1 (1989-1996), #2 (1997-2004) and #3 (2005-P)      
-    selSCF_cxz(1,MALE)=elem_prod(1./(1.+mfexp(-1.*selSCFM_slpA1*(zBs-selSCFM_z50A1))),
-                                 1./(1.+mfexp(selSCFM_slpD1*(zBs-(selSCFM_z50A1+mfexp(selSCFM_lnZ50D1))))));
-    selSCF_cxz(2,MALE)=elem_prod(1./(1.+mfexp(-1.*selSCFM_slpA2*(zBs-selSCFM_z50A2))),
-                                 1./(1.+mfexp(selSCFM_slpD2*(zBs-(selSCFM_z50A2+mfexp(selSCFM_lnZ50D2))))));
-    selSCF_cxz(3,MALE)=elem_prod(1./(1.+mfexp(-1.*selSCFM_slpA3*(zBs-selSCFM_z50A3))),
-                                 1./(1.+mfexp(selSCFM_slpD3*(zBs-(selSCFM_z50A3+mfexp(selSCFM_lnZ50D3))))));
+    selSCF_cxz(1,MALE)=elem_prod(1./(1.+mfexp(-1.*pSelSCFM_slpA1*(zBs-pSelSCFM_z50A1))),
+                                 1./(1.+mfexp(pSelSCFM_slpD1*(zBs-(pSelSCFM_z50A1+mfexp(pSelSCFM_lnZ50D1))))));
+    selSCF_cxz(2,MALE)=elem_prod(1./(1.+mfexp(-1.*pSelSCFM_slpA2*(zBs-pSelSCFM_z50A2))),
+                                 1./(1.+mfexp(pSelSCFM_slpD2*(zBs-(pSelSCFM_z50A2+mfexp(pSelSCFM_lnZ50D2))))));
+    selSCF_cxz(3,MALE)=elem_prod(1./(1.+mfexp(-1.*pSelSCFM_slpA3*(zBs-pSelSCFM_z50A3))),
+                                 1./(1.+mfexp(pSelSCFM_slpD3*(zBs-(pSelSCFM_z50A3+mfexp(pSelSCFM_lnZ50D3))))));
 //    cout<<"get_sel: 2b"<<endl;
     
     //  red fishery selectivity for 3 time periods, #1 (1989-1996), #2 (1997-2004) and #3 (2005-P)      
-    selRKF_cxz(1,FEMALE)=1./(1.+mfexp(-1.*selRKFF_slpA1*(zBs-selRKFF_z50A1))); 
-    selRKF_cxz(2,FEMALE)=1./(1.+mfexp(-1.*selRKFF_slpA2*(zBs-selRKFF_z50A2))); 
-    selRKF_cxz(3,FEMALE)=1./(1.+mfexp(-1.*selRKFF_slpA3*(zBs-selRKFF_z50A3))); 
+    selRKF_cxz(1,FEMALE)=1./(1.+mfexp(-1.*pSelRKFF_slpA1*(zBs-pSelRKFF_z50A1))); 
+    selRKF_cxz(2,FEMALE)=1./(1.+mfexp(-1.*pSelRKFF_slpA2*(zBs-pSelRKFF_z50A2))); 
+    selRKF_cxz(3,FEMALE)=1./(1.+mfexp(-1.*pSelRKFF_slpA3*(zBs-pSelRKFF_z50A3))); 
     
     //  red fishery selectivity for 3 time periods, #1 (1989-1996), #2 (1997-2004) and #3 (2005-P)      
-    selRKF_cxz(1,MALE)=1./(1.+mfexp(-1.*selRKFM_slpA1*(zBs-selRKFM_z50A1))); 
-    selRKF_cxz(2,MALE)=1./(1.+mfexp(-1.*selRKFM_slpA2*(zBs-selRKFM_z50A2))); 
-    selRKF_cxz(3,MALE)=1./(1.+mfexp(-1.*selRKFM_slpA3*(zBs-selRKFM_z50A3))); 
+    selRKF_cxz(1,MALE)=1./(1.+mfexp(-1.*pSelRKFM_slpA1*(zBs-pSelRKFM_z50A1))); 
+    selRKF_cxz(2,MALE)=1./(1.+mfexp(-1.*pSelRKFM_slpA2*(zBs-pSelRKFM_z50A2))); 
+    selRKF_cxz(3,MALE)=1./(1.+mfexp(-1.*pSelRKFM_slpA3*(zBs-pSelRKFM_z50A3))); 
 //    cout<<"get_sel: 2c"<<endl;
     
     //  trawl fishery selectivity for 3 time periods, #1 (1973-1987), #2 (1988-1996) and #3 (1997-P)
-    selGTF_cxz(1,FEMALE)=1./(1.+mfexp(-1.*selGTFF_slpA1*(zBs-selGTFF_z50A1)));
-    selGTF_cxz(2,FEMALE)=1./(1.+mfexp(-1.*selGTFF_slpA2*(zBs-selGTFF_z50A2)));
-    selGTF_cxz(3,FEMALE)=1./(1.+mfexp(-1.*selGTFF_slpA3*(zBs-selGTFF_z50A3)));
+    selGTF_cxz(1,FEMALE)=1./(1.+mfexp(-1.*pSelGTFF_slpA1*(zBs-pSelGTFF_z50A1)));
+    selGTF_cxz(2,FEMALE)=1./(1.+mfexp(-1.*pSelGTFF_slpA2*(zBs-pSelGTFF_z50A2)));
+    selGTF_cxz(3,FEMALE)=1./(1.+mfexp(-1.*pSelGTFF_slpA3*(zBs-pSelGTFF_z50A3)));
     
-    selGTF_cxz(1,MALE)=1./(1.+mfexp(-1.*selGTFM_slpA1*(zBs-selGTFM_z50A1)));    
-    selGTF_cxz(2,MALE)=1./(1.+mfexp(-1.*selGTFM_slpA2*(zBs-selGTFM_z50A2)));
-    selGTF_cxz(3,MALE)=1./(1.+mfexp(-1.*selGTFM_slpA3*(zBs-selGTFM_z50A3)));
+    selGTF_cxz(1,MALE)=1./(1.+mfexp(-1.*pSelGTFM_slpA1*(zBs-pSelGTFM_z50A1)));    
+    selGTF_cxz(2,MALE)=1./(1.+mfexp(-1.*pSelGTFM_slpA2*(zBs-pSelGTFM_z50A2)));
+    selGTF_cxz(3,MALE)=1./(1.+mfexp(-1.*pSelGTFM_slpA3*(zBs-pSelGTFM_z50A3)));
 //    cout<<"get_sel: 2d"<<endl;
         
     selSrv1_xz.initialize();
@@ -2689,8 +2691,8 @@ FUNCTION get_mortality
     //Fs in snow and BBRKC fishery are scalars need to multiply in projections by retained snow crab/average snow catch * fmTCFM_syz to get fmTCFM_syz.
     //20150601: ratio is now either mortality rate/effort OR fishing capture rate/effort
     //20160325: scaling factor can now be related to a model parameter
-    if (active(pQFshEff_SCF)){
-        qSCF = mfexp(pQFshEff_SCF);
+    if (active(pLnEffXtr_SCF)){
+        qSCF = mfexp(pLnEffXtr_SCF);
     } else {
         dvar_vector f_SCF1 = mfexp(pAvgLnF_SCF+pF_DevsSCF);
         qSCF = mean(f_SCF1);
@@ -2709,8 +2711,8 @@ FUNCTION get_mortality
     // need to have the devs 1992 to present
     //20150601: ratio is now either mortality rate/effort OR fishing capture rate/effort
     //20160325: scaling factor can now be related to a model parameter
-    if (active(pQFshEff_RKF)){
-        qRKF = mfexp(pQFshEff_RKF);
+    if (active(pLnEffXtr_RKF)){
+        qRKF = mfexp(pLnEffXtr_RKF);
     } else {
         dvar_vector f_RKF1(1,nObsDscRKF);   //was nObsDscRKF-1
         f_RKF1 = mfexp(pAvgLnF_RKF+pF_DevsRKF);
@@ -3405,11 +3407,11 @@ FUNCTION evaluate_the_objective_function    //wts: revising
     double red = 0.01;
     int max_number_phases = 8;
     fpen.initialize();
-    if (active(log_sel50_dev_3)) { 
-        int phs = log_sel50_dev_3.get_phase_start();
+    if (active(pSelTCFM_devsZ50)) { 
+        int phs = pSelTCFM_devsZ50.get_phase_start();
         llw = llw_sel50_dev_3; 
 //        if (doPenRed) llw = pow(red,(current_phase()-phs)/max(1.0,1.0*(max_number_phases-phs)))*llw;
-        nextf = norm2(log_sel50_dev_3);
+        nextf = norm2(pSelTCFM_devsZ50);
         fpen += llw*nextf; objfOut(38) = llw*nextf; likeOut(38) = nextf; wgtsOut(38) = llw;   //wts: need to turn this off in last phase?        
     }
     if (active(pF_DevsTCF)) { 
@@ -5062,30 +5064,30 @@ FUNCTION void myWriteParamsToR(ostream& os)
             {
             os<<"tcf=list(";
                 dvar_vector sel(1,2); dvar_vector slp(1,2); 
-                sel(1) = fish_fit_sel50_mn1; sel(2) = fish_fit_sel50_mn2;
-                slp(1) = fish_fit_slope_mn1; slp(2) = fish_fit_slope_mn2;
+                sel(1) = pRetTCFM_z50A1; sel(2) = pRetTCFM_z50A2;
+                slp(1) = pRetTCFM_slpA1; slp(2) = pRetTCFM_slpA2;
                 os<<"retention=list(z50="; wts::writeToR(os,value(sel)); os<<", slope="; wts::writeToR(os,value(slp)); os<<"),";
                 os<<"male=list(";
-                        sel = mfexp(log_avg_sel50_3);
-                        slp(1) = fish_slope_1; slp(2) = fish_slope_yr_3;
+                        sel = mfexp(pSelTCFM_mnLnZ50A2);
+                        slp(1) = pSelTCFM_slpA1; slp(2) = pSelTCFM_slpA2;
                         strp = qt+str(1)+":"+str(nSelTCFM_devsZ50)+qt;
-                        os<<"z50="; wts::writeToR(os,value(sel)); os<<", slope="; wts::writeToR(os,value(slp)); os<<cc<<"devs.lnSel50="; wts::writeToR(os,value(log_sel50_dev_3),strp);
+                        os<<"z50="; wts::writeToR(os,value(sel)); os<<", slope="; wts::writeToR(os,value(slp)); os<<cc<<"devs.lnSel50="; wts::writeToR(os,value(pSelTCFM_devsZ50),strp);
                 os<<"),";
-                os<<"female=list(z50="<<selTCFF_z50<<cc<<"slope="<<selTCFF_slp<<")";
+                os<<"female=list(z50="<<pSelTCFF_z50<<cc<<"slope="<<pSelTCFF_slp<<")";
             os<<"),";
             }
             {
             os<<"scf=list(";
                 dvar_vector sel(1,3); dvar_vector slp(1,3);
-                sel(1) = selSCFF_z50A1; sel(2) = selSCFF_z50A2; sel(3) = selSCFF_z50A3;
-                slp(1) = selSCFF_slpA1; slp(2) = selSCFF_slpA2; slp(3) = selSCFF_slpA3;
+                sel(1) = pSelSCFF_z50A1; sel(2) = pSelSCFF_z50A2; sel(3) = pSelSCFF_z50A3;
+                slp(1) = pSelSCFF_slpA1; slp(2) = pSelSCFF_slpA2; slp(3) = pSelSCFF_slpA3;
                 os<<"female=list(z50="; wts::writeToR(os,value(sel)); os<<", slope="; wts::writeToR(os,value(slp)); os<<"),";
                 os<<"male=list(";
-                    sel(1) = selSCFM_z50A1; sel(2) = selSCFM_z50A2; sel(3) = selSCFM_z50A3;
-                    slp(1) = selSCFM_slpA1; slp(2) = selSCFM_slpA2; slp(3) = selSCFM_slpA3;
+                    sel(1) = pSelSCFM_z50A1; sel(2) = pSelSCFM_z50A2; sel(3) = pSelSCFM_z50A3;
+                    slp(1) = pSelSCFM_slpA1; slp(2) = pSelSCFM_slpA2; slp(3) = pSelSCFM_slpA3;
                     os<<"ascending.limb=list(z50="; wts::writeToR(os,value(sel)); os<<", slope="; wts::writeToR(os,value(slp)); os<<"),";
-                    sel(1) = selSCFM_lnZ50D1; sel(2) = selSCFM_lnZ50D2; sel(3) = selSCFM_lnZ50D3;
-                    slp(1) = selSCFM_slpD1; slp(2) = selSCFM_slpD2; slp(3) = selSCFM_slpD3;
+                    sel(1) = pSelSCFM_lnZ50D1; sel(2) = pSelSCFM_lnZ50D2; sel(3) = pSelSCFM_lnZ50D3;
+                    slp(1) = pSelSCFM_slpD1; slp(2) = pSelSCFM_slpD2; slp(3) = pSelSCFM_slpD3;
                     os<<"descending.limb=list(z50="; wts::writeToR(os,value(sel)); os<<", slope="; wts::writeToR(os,value(slp)); os<<")";
                 os<<")";
             os<<"),"<<endl;
@@ -5093,22 +5095,22 @@ FUNCTION void myWriteParamsToR(ostream& os)
             {
             os<<"rkf=list(";
                 dvar_vector sel(1,3); dvar_vector slp(1,3);
-                sel(1) = selRKFF_z50A1; sel(2) = selRKFF_z50A2; sel(3) = selRKFF_z50A3;
-                slp(1) = selRKFF_slpA1; slp(2) = selRKFF_slpA2; slp(3) = selRKFF_slpA3;
+                sel(1) = pSelRKFF_z50A1; sel(2) = pSelRKFF_z50A2; sel(3) = pSelRKFF_z50A3;
+                slp(1) = pSelRKFF_slpA1; slp(2) = pSelRKFF_slpA2; slp(3) = pSelRKFF_slpA3;
                 os<<"female=list(z50="; wts::writeToR(os,value(sel)); os<<", slope="; wts::writeToR(os,value(slp)); os<<"),";
-                sel(1) = selRKFM_z50A1; sel(2) = selRKFM_z50A2; sel(3) = selRKFM_z50A3;
-                slp(1) = selRKFM_slpA1; slp(2) = selRKFM_slpA2; slp(3) = selRKFM_slpA3;
+                sel(1) = pSelRKFM_z50A1; sel(2) = pSelRKFM_z50A2; sel(3) = pSelRKFM_z50A3;
+                slp(1) = pSelRKFM_slpA1; slp(2) = pSelRKFM_slpA2; slp(3) = pSelRKFM_slpA3;
                 os<<"male=list(z50="; wts::writeToR(os,value(sel)); os<<", slope="; wts::writeToR(os,value(slp)); os<<")";
             os<<"),";
             }
             {
             os<<"gtf=list(";
                 dvar_vector sel(1,3); dvar_vector slp(1,3);
-                sel(1) = selGTFF_z50A1; sel(2) = selGTFF_z50A2; sel(3) = selGTFF_z50A3;
-                slp(1) = selGTFF_slpA1; slp(2) = selGTFF_slpA2; slp(3) = selGTFF_slpA3;
+                sel(1) = pSelGTFF_z50A1; sel(2) = pSelGTFF_z50A2; sel(3) = pSelGTFF_z50A3;
+                slp(1) = pSelGTFF_slpA1; slp(2) = pSelGTFF_slpA2; slp(3) = pSelGTFF_slpA3;
                 os<<"female=list(z50="; wts::writeToR(os,value(sel)); os<<", slope="; wts::writeToR(os,value(slp)); os<<"),";
-                sel(1) = selGTFM_z50A1; sel(2) = selGTFM_z50A2; sel(3) = selGTFM_z50A3;
-                slp(1) = selGTFM_slpA1; slp(2) = selGTFM_slpA2; slp(3) = selGTFM_slpA3;
+                sel(1) = pSelGTFM_z50A1; sel(2) = pSelGTFM_z50A2; sel(3) = pSelGTFM_z50A3;
+                slp(1) = pSelGTFM_slpA1; slp(2) = pSelGTFM_slpA2; slp(3) = pSelGTFM_slpA3;
                 os<<"male=list(z50="; wts::writeToR(os,value(sel)); os<<", slope="; wts::writeToR(os,value(slp)); os<<")";
             os<<")";
             }
@@ -5317,13 +5319,13 @@ REPORT_SECTION
     cout<<"qSCF = "<<qSCF<<endl;
     cout<<"qRKF = "<<qRKF<<endl;
     
-    if (active(log_sel50_dev_3)) { 
+    if (active(pSelTCFM_devsZ50)) { 
         double llw = 0.0;
         double red = 0.01;
         int max_number_phases = 8;
-        int phs = log_sel50_dev_3.get_phase_start();
+        int phs = pSelTCFM_devsZ50.get_phase_start();
         llw = 1.0; llw = pow(red,(current_phase()-phs)/max(1.0,1.0*(max_number_phases-phs)))*llw;
-        cout<<"llw for log_sel50_dev_3"<<endl;
+        cout<<"llw for pSelTCFM_devsZ50"<<endl;
         cout<<current_phase()<<tb<<phs<<tb<<max_number_phases<<endl;
         cout<<(current_phase()-phs)<<tb<<max(1.0,1.0*(max_number_phases-phs))<<endl;
         cout<<pow(red,(current_phase()-phs)/max(1.0,1.0*(max_number_phases-phs)))<<endl;
@@ -5367,11 +5369,11 @@ BETWEEN_PHASES_SECTION
     //current phase() = upcoming phase (?)
     if (current_phase()==phsQFshEff_SCF){
         //set initial value based on qSCF from last phase
-        pQFshEff_SCF = log(qSCF);
+        pLnEffXtr_SCF = log(qSCF);
     }
     if (current_phase()==phsQFshEff_RKF){
         //set initial value based on qRKF from last phase
-        pQFshEff_RKF = log(qRKF);
+        pLnEffXtr_RKF = log(qRKF);
     }
 // ===============================================================================
 // ===============================================================================
