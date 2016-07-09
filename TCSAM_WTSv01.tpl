@@ -102,6 +102,11 @@
 //            3. Added CHECK1 macro.
 //            4. Reconfigured to read new (20160622) control file format.
 //            5. Removed sel_50m_penal and penal_sexr penalties (were always 0).
+//--20160708: 1. Switched to using "inp" values from control file to set initial parameter values.
+//                  The orig.chk test yielded same final objective function value (2049.13) 
+//                  but the max gradient was smaller than previously.
+//--20160709: 1. Removed all INITIALIZATION_SECTION values EXCEPT for pPrM2MF, pPrM2MM. orig.chk passed
+//                  as in 20160708.
 //
 //IMPORTANT: 2013-09 assessment model had RKC params for 1992+ discard mortality TURNED OFF. 
 //           THE ESTIMATION PHASE FOR RKC DISCARD MORTALITY IS NOW SET IN THE CONTROLLER FILE!
@@ -1119,14 +1124,14 @@ DATA_SECTION
     !!CHECK1(phsSel_GTFM);    
     !!CHECK1(phsSel_GTFF);
     ////effort extrapolation
-    init_int phsEffXtr_TCF  ///< TCF effort extrapolation parameter
-    init_int phsEffXtr_SCF  ///< SCF effort extrapolation parameter
-    init_int phsEffXtr_RKF  ///< RKF effort extrapolation parameter
-    init_int phsEffXtr_GTF  ///< GTF effort extrapolation parameter
-    !!CHECK1(phsEffXtr_TCF);    
-    !!CHECK1(phsEffXtr_SCF);    
-    !!CHECK1(phsEffXtr_RKF);    
-    !!CHECK1(phsEffXtr_GTF);    
+    init_int phsLnEffXtr_TCF  ///< TCF effort extrapolation parameter
+    init_int phsLnEffXtr_SCF  ///< SCF effort extrapolation parameter
+    init_int phsLnEffXtr_RKF  ///< RKF effort extrapolation parameter
+    init_int phsLnEffXtr_GTF  ///< GTF effort extrapolation parameter
+    !!CHECK1(phsLnEffXtr_TCF);    
+    !!CHECK1(phsLnEffXtr_SCF);    
+    !!CHECK1(phsLnEffXtr_RKF);    
+    !!CHECK1(phsLnEffXtr_GTF);    
  LOCAL_CALCS
     if (useSomertonOtto1) {
         //turn off associated logistic function parameters
@@ -1375,14 +1380,14 @@ DATA_SECTION
     !!CHECK1(inpSelGTFF_z50A3);
 
     //effort extrapolation parameters
-    init_number inpEffXtr_TCF  ///< TCF effort extrapolation parameter
-    init_number inpEffXtr_SCF  ///< SCF effort extrapolation parameter
-    init_number inpEffXtr_RKF  ///< RKF effort extrapolation parameter
-    init_number inpEffXtr_GTF  ///< GTF effort extrapolation parameter
-    !!CHECK1(inpEffXtr_TCF);
-    !!CHECK1(inpEffXtr_SCF);
-    !!CHECK1(inpEffXtr_RKF);
-    !!CHECK1(inpEffXtr_GTF);
+    init_number inpLnEffXtr_TCF  ///< TCF effort extrapolation parameter
+    init_number inpLnEffXtr_SCF  ///< SCF effort extrapolation parameter
+    init_number inpLnEffXtr_RKF  ///< RKF effort extrapolation parameter
+    init_number inpLnEffXtr_GTF  ///< GTF effort extrapolation parameter
+    !!CHECK1(inpLnEffXtr_TCF);
+    !!CHECK1(inpLnEffXtr_SCF);
+    !!CHECK1(inpLnEffXtr_RKF);
+    !!CHECK1(inpLnEffXtr_GTF);
          
     !!CheckFile<<"#--end of file check!"<<endl;
     init_int chkEOF
@@ -1488,50 +1493,8 @@ DATA_SECTION
 // =======================================================================
 // =======================================================================
 INITIALIZATION_SECTION
-    pMnLnRec 11.4
-    pAvgLnF_TCF -0.7
-    //  log_avg_fmortdf -1.0
-    pAvgLnF_GTF  -4.0
-    pAvgLnF_SCF -3.0
-    pAvgLnF_RKF -5.25       //to initialize same as TCSAM_WTS for 2013-09
-//    pF_DevsTCF 0.00001                           //wts: dev.s should be mean 0!
     pPrM2MF -1.0
     pPrM2MM -1.0
-    pMfac_Big  1.0      //<-NEW by wts!!
-    //  pSelGTFF_slpA 0.05
-    //  pSelGTFF_z50A 85.0
-    //  pSelGTFM_slpA 0.07
-    //  pSelGTFM_z50A 65.0
-    
-    //  af 15.75
-    //  bf 1.01
-    //  am2 15.75
-    //  bm2 1.07
-    
-    //  srv1_slope 0.07
-    //  srv1_sel50 60.0
-    //  srv1_q 1.0
-    //  pSrv1_QM 1.0
-    //  pSrv2_QM 1.0
-    //  srv1_sel95 100
-    //  srv1_sel50 60 
-    //  srv2_sel95 100
-    //  pSrv1M_z50  60
-    //  srv3_sel95 100
-    //  pSrv2M_z50  60
-    //  fish_fit_sel50_mn 95.1
-
-    pSelSCFM_z50A1 80.0
-    pSelSCFM_z50A2 80.0
-    pSelSCFM_z50A3 80.0
-    pSelSCFM_lnZ50D1 4.0
-    pSelSCFM_lnZ50D2 4.0
-    pSelSCFM_lnZ50D3 4.0
-
-    pAvgLnF_TCFF 0.0
-    pAvgLnF_SCFF 0.0
-    pAvgLnF_RKFF 0.0
-    pAvgLnF_GTFF 0.0
  
 // =======================================================================
 // =======================================================================
@@ -1694,10 +1657,10 @@ PARAMETER_SECTION
     init_bounded_number pAvgLnF_RKFF(-5.0,5.0,phsRKFF)  ///< female offset to ln-scale mean fishing mortality in BBRKC fishery
     init_bounded_number pAvgLnF_GTFF(-5.0,5.0,phsGTFF)  ///< female offset to ln-scale mean fishing mortality in groundfish trawl fisheries
 
-//    init_bounded_number pLnEffXtr_TCF(-5.0,5.0,phsEffXtr_TCF)  ///< TCF effort extrapolation parameter
-    init_bounded_number pLnEffXtr_SCF(-5.0,5.0,phsEffXtr_SCF)  ///< SCF effort extrapolation parameter
-    init_bounded_number pLnEffXtr_RKF(-5.0,5.0,phsEffXtr_RKF)  ///< RKF effort extrapolation parameter
-//    init_bounded_number pLnEffXtr_GTF(-5.0,5.0,phsEffXtr_GTF)  ///< GTF effort extrapolation parameter
+    init_bounded_number pLnEffXtr_TCF(-5.0,5.0,phsLnEffXtr_TCF)  ///< TCF effort extrapolation parameter
+    init_bounded_number pLnEffXtr_SCF(-5.0,5.0,phsLnEffXtr_SCF)  ///< SCF effort extrapolation parameter
+    init_bounded_number pLnEffXtr_RKF(-5.0,5.0,phsLnEffXtr_RKF)  ///< RKF effort extrapolation parameter
+    init_bounded_number pLnEffXtr_GTF(-5.0,5.0,phsLnEffXtr_GTF)  ///< GTF effort extrapolation parameter
     ////end of estimated parameters///////////////
     
     3darray retFcn_syz(1,nSCs,styr,endyr-1,1,nZBs)    // Retention curve for males caught in directed fishery    (IMPORTANT CHANGE: used to be "endyr")
@@ -1949,17 +1912,24 @@ PRELIMINARY_CALCS_SECTION
     }
     
     if (!usePin){//set initial values from control file inputs 
-        //natural mortality multipliers
-        pMfac_Imm = inpMfac_Imm;
-        pMfac_MatM = inpMfac_MatM;
-        pMfac_MatF = inpMfac_MatF;
-        pMfac_Big = inpMfac_Big;
-        
         //recruitment
         pMnLnRecHist = inpMnLnRecHist;
         pMnLnRec     = inpMnLnRec;
         
-        //set molt to maturity parameters based on initial (input) ogives
+        //natural mortality multipliers
+        pMfac_Imm  = inpMfac_Imm;
+        pMfac_MatM = inpMfac_MatM;
+        pMfac_MatF = inpMfac_MatF;
+        pMfac_Big  = inpMfac_Big;
+        
+        //growth
+        pGrAF1    = inpGrAF1;    // Female growth-increment
+        pGrBF1    = inpGrBF1;    // Female growth-increment
+        pGrAM1    = inpGrAM1;    // Male growth-increment
+        pGrBM1    = inpGrBM1;    // Male growth-increment
+        pGrBeta_x = inpGrBeta_x; // Growth beta--NOT estimated
+        
+        //set pr(molt-to-maturity) parameters based on input ogives
         if (optPrM2M==0){
             //2015 approach: do nothing and use default initialization
         } else if (optPrM2M==1){
@@ -1968,8 +1938,128 @@ PRELIMINARY_CALCS_SECTION
             pPrM2MM = log(elem_div(modPrM2M(  MALE)      ,1.0-modPrM2M(  MALE)      ));
         }
         CheckFile<<"#--Maturity parameters"<<endl;
-        CheckFile<<"pPrM2MF = "<<pPrM2MF<<endl;
-        CheckFile<<"pPrM2MM = "<<pPrM2MM<<endl;
+        CheckFile<<"# pPrM2MF = "<<endl<<pPrM2MF<<endl;
+        CheckFile<<"# pPrM2MM = "<<endl<<pPrM2MM<<endl;
+        
+        //surveys
+        //--catchabilities
+        ////--males
+        pSrv1_QM = inpSrv1_QM;
+        pSrv2_QM = inpSrv2_QM;
+        ////--females
+        pSrv1_QF = inpSrv1_QF;
+        pSrv2_QF = inpSrv2_QF;
+        ////--selectivities
+        //////--males
+        pSrv1M_z50 = inpSrv1M_z50;
+        pSrv1M_dz5095 = inpSrv1M_dz5095;
+        //////--1982+
+        pSrv2M_z50 = inpSrv2M_z50;
+        pSrv2M_dz5095 = inpSrv2M_dz5095;
+        //--females
+        ////--1974-1981
+        pSrv1F_z50 = inpSrv1F_z50;
+        pSrv1F_dz5095= inpSrv1F_dz5095;    
+        ////--1982+
+        pSrv2F_z50 = inpSrv2F_z50;
+        pSrv2F_dz5095 = inpSrv2F_dz5095;
+        //fisheries
+        //--log-scale fishing mortality or capture rates
+        pAvgLnF_TCF = inpAvgLnF_TCF; // directed Tanner crab fishery
+        pAvgLnF_SCF = inpAvgLnF_SCF; // snow crab fishery bycatch
+        pAvgLnF_RKF = inpAvgLnF_RKF; // BBRKC fishery bycatch
+        pAvgLnF_GTF = inpAvgLnF_GTF; // groundfish fisheries bycatch
+        ////--log-scale offsets for females
+        pAvgLnF_TCFF = inpAvgLnF_TCFF;  ///< female offset to ln-scale mean fishing mortality in directed fishery
+        pAvgLnF_SCFF = inpAvgLnF_SCFF;  ///< female offset to ln-scale mean fishing mortality in snow crab fishery
+        pAvgLnF_RKFF = inpAvgLnF_RKFF;  ///< female offset to ln-scale mean fishing mortality in BBRKC fishery
+        pAvgLnF_GTFF = inpAvgLnF_GTFF;  ///< female offset to ln-scale mean fishing mortality in groundfish trawl fisheries
+        //directed fishery selectivity and retention
+        // Retention functions
+        //-- styr-1990
+        pRetTCFM_slpA1 = inpRetTCFM_slpA1;
+        pRetTCFM_z50A1 = inpRetTCFM_z50A1;
+        //-- 1991+  
+        pRetTCFM_slpA2 = inpRetTCFM_slpA2;
+        pRetTCFM_z50A2 = inpRetTCFM_z50A2;
+        // Selectivity functions
+        //--males, styr-1996
+        pSelTCFM_slpA1 = inpSelTCFM_slpA1; 
+        //--males, 2005+
+        pSelTCFM_slpA2 = inpSelTCFM_slpA2;  
+        pSelTCFM_mnLnZ50A2 = inpSelTCFM_mnLnZ50A2;
+        //--females, styr+
+        pSelTCFF_slp = inpSelTCFF_slp;
+        pSelTCFF_z50 = inpSelTCFF_z50;
+        // snow crab fishery bycatch selectivity
+        //--males styr-1996
+        pSelSCFM_slpA1 = inpSelSCFM_slpA1;
+        pSelSCFM_z50A1 = inpSelSCFM_z50A1;
+        pSelSCFM_slpD1 = inpSelSCFM_slpD1;
+        pSelSCFM_lnZ50D1 = inpSelSCFM_lnZ50D1;
+        //--males, 1997-2004
+        pSelSCFM_slpA2 = inpSelSCFM_slpA2;
+        pSelSCFM_z50A2 = inpSelSCFM_z50A2;
+        pSelSCFM_slpD2 = inpSelSCFM_slpD2;
+        pSelSCFM_lnZ50D2 = inpSelSCFM_lnZ50D2;
+        //--males, 2005+
+        pSelSCFM_slpA3 = inpSelSCFM_slpA3;
+        pSelSCFM_z50A3 = inpSelSCFM_z50A3;
+        pSelSCFM_slpD3 = inpSelSCFM_slpD3;
+        pSelSCFM_lnZ50D3 = inpSelSCFM_lnZ50D3;
+        //--females, styr-1996
+        pSelSCFF_slpA1 = inpSelSCFF_slpA1;
+        pSelSCFF_z50A1 = inpSelSCFF_z50A1;
+        //--females, 1997-2004
+        pSelSCFF_slpA2 = inpSelSCFF_slpA2;
+        pSelSCFF_z50A2 = inpSelSCFF_z50A2;
+        //--females, 2005+
+        pSelSCFF_slpA3 = inpSelSCFF_slpA3;
+        pSelSCFF_z50A3 = inpSelSCFF_z50A3;
+        // BBRKC fishery bycatch selectivity
+        //--males, styr-1996
+        pSelRKFM_slpA1 = inpSelRKFM_slpA1;
+        pSelRKFM_z50A1 = inpSelRKFM_z50A1;
+        //--males, 1997-2004
+        pSelRKFM_slpA2 = inpSelRKFM_slpA2;
+        pSelRKFM_z50A2 = inpSelRKFM_z50A2;
+        //--males, 2005+
+        pSelRKFM_slpA3 = inpSelRKFM_slpA3;
+        pSelRKFM_z50A3 = inpSelRKFM_z50A3;
+        //--females, styr-1996
+        pSelRKFF_slpA1 = inpSelRKFF_slpA1;
+        pSelRKFF_z50A1 = inpSelRKFF_z50A1;
+        //--females, 1997-2004
+        pSelRKFF_slpA2 = inpSelRKFF_slpA2;
+        pSelRKFF_z50A2 = inpSelRKFF_z50A2;
+        //--females, 2005+
+        pSelRKFF_slpA3 = inpSelRKFF_slpA3;
+        pSelRKFF_z50A3 = inpSelRKFF_z50A3;
+        // groundfish fisheries bycatch selectivity 
+        //--males, 1973-1987
+        pSelGTFM_slpA1 = inpSelGTFM_slpA1;
+        pSelGTFM_z50A1 = inpSelGTFM_z50A1;
+        //--males, 1988-1996
+        pSelGTFM_slpA2 = inpSelGTFM_slpA2;
+        pSelGTFM_z50A2 = inpSelGTFM_z50A2;
+        //--males, 1997+
+        pSelGTFM_slpA3 = inpSelGTFM_slpA3;
+        pSelGTFM_z50A3 = inpSelGTFM_z50A3;
+        //--females, 1973-1987
+        pSelGTFF_slpA1 = inpSelGTFF_slpA1;
+        pSelGTFF_z50A1 = inpSelGTFF_z50A1;
+        //--females, 1988-1996
+        pSelGTFF_slpA2 = inpSelGTFF_slpA2;
+        pSelGTFF_z50A2 = inpSelGTFF_z50A2;
+        //females, 1997+
+        pSelGTFF_slpA3 = inpSelGTFF_slpA3;
+        pSelGTFF_z50A3 = inpSelGTFF_z50A3;
+
+        //effort extrapolation parameters
+        pLnEffXtr_TCF = inpLnEffXtr_TCF;
+        pLnEffXtr_SCF = inpLnEffXtr_SCF;
+        pLnEffXtr_RKF = inpLnEffXtr_RKF;
+        pLnEffXtr_GTF = inpLnEffXtr_GTF;
     }
     if (jitter) jitterParameters(ptrMC->jitFrac);
  
@@ -5660,11 +5750,11 @@ REPORT_SECTION
 // ===============================================================================
 BETWEEN_PHASES_SECTION
     //current phase() = upcoming phase (?)
-    if (current_phase()==phsEffXtr_SCF){
+    if (current_phase()==phsLnEffXtr_SCF){
         //set initial value based on qSCF from last phase
         pLnEffXtr_SCF = log(qSCF);
     }
-    if (current_phase()==phsEffXtr_RKF){
+    if (current_phase()==phsLnEffXtr_RKF){
         //set initial value based on qRKF from last phase
         pLnEffXtr_RKF = log(qRKF);
     }
