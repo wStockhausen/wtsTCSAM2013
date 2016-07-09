@@ -97,7 +97,11 @@
 //            6. Changed a number of survey-related parameter names to better standardize naming.
 //            7. Changed pQFshEff_* to pLnEffXtr_*.
 //            8. Changed fishery-related parameter names to better standardize naming.
-//--20160706: 1. Changed some control file variable names
+//--20160706: 1. Changed some control file variable names.
+//            2. Updated version to 20160706 and verModelControlFile to 20160622.
+//            3. Added CHECK1 macro.
+//            4. Reconfigured to read new (20160622) control file format.
+//            5. Removed sel_50m_penal and penal_sexr penalties (were always 0).
 //
 //IMPORTANT: 2013-09 assessment model had RKC params for 1992+ discard mortality TURNED OFF. 
 //           THE ESTIMATION PHASE FOR RKC DISCARD MORTALITY IS NOW SET IN THE CONTROLLER FILE!
@@ -118,6 +122,7 @@
 GLOBALS_SECTION
     #include <math.h>
     #include <time.h>
+    #include <fenv.h> // must appear before admodel.h
     #include <admodel.h>
     #include "wtsADMB.hpp" 
     #include "ModelConstants.hpp"
@@ -125,8 +130,8 @@ GLOBALS_SECTION
     #include "FisheryData.hpp"
     #include "ModelData.hpp"
     
-    adstring version = "20160620";//model version
-    int verModelControlFile = 20160324;//model control file version
+    adstring version = "20160706";//model version
+    int verModelControlFile = 20160622;//model control file version
     
     double zLegal = 128;//current (2015/16) legal size
     int iZLegal = 0;    //index into size bins for legal size
@@ -198,6 +203,9 @@ GLOBALS_SECTION
 
     #undef REP2R2
     #define REP2R2(o1,o2) R_out<<"$" #o1 <<endl<<o2<<endl
+
+    #undef CHECK1
+    #define CHECK1(o) CheckFile<<o<<tb<<"#" #o<<endl
 
 // ===============================================================================
 // ===============================================================================
@@ -843,244 +851,564 @@ DATA_SECTION
         exit(-1);
     }
  END_CALCS
+    //fixed values
+    !!CheckFile<<"#---------------------------------------------------"<<endl;
+    !!CheckFile<<"#fixed values"<<endl;
+    !!CheckFile<<"#---------------------------------------------------"<<endl;
+    !!CheckFile<<"##--handling mortality"<<endl;
+    init_number hm_pot      // fraction of pot discards that die (.5)
+    init_number hm_trawl    // fraction of trawl discards that die(.8)
+    !!CHECK1(hm_pot);
+    !!CHECK1(hm_trawl);
+    
+    !!CheckFile<<"##--surveys"<<endl;
     init_number multQ                 // Q  mult by pop biomass to get survey biomass
-    init_int phsM                     // phase to turn on ordinary M component estimation
-    init_vector inpM_Imm(1,nSXs)       // base value for natural mortality on immature crab by sex
-    init_vector inpM_MatNS(1,nSXs)     // base value for natural mortality on mature new shell crab by sex
-    init_vector inpM_MatOS(1,nSXs)     // base value for natural mortality on mature old shell crab by sex
-    3darray baseM_msx(1,nMSs,1,nSCs,1,nSXs) //convenience array for all base M's
-    init_number inpMfac_Imm           // initial value for natural mortality multiplier on immature crab
-    init_number inpMfac_MatM          // initial value for natural mortality multiplier on mature males
-    init_number inpMfac_MatF          // initial value for natural mortality multiplier on mature females
-    3darray inpMfac_msx(1,nMSs,1,nSCs,1,nSXs) //convenience array for all initial M multipliers
-    init_vector inpMfac_Big(1,nSXs)    // natural mortality multiplier on mature crabby sex during "kill 'em" period
-    init_int phsPrMolt_MatureMale           // phase to estimate molting prob for mature males
-    init_int phase_fishsel            // phase to estimate dome shape parameters for fishery selectivities
-    init_int survsel_phase            // switch for which survey selectivty to use for 1989 to present - positive estimated negative fixed at somerton and otto
-    init_int survsel1_phase           // switch for fixing all survey selectivities to somerton and otto - <0 fix, >0 estimate
-    init_int phase_logistic_sel       // phase to estimate selectivities using logistic function
     init_vector sel_som(1,5)          // parameters for somerton-otto selectivity curve
+    !!CHECK1(multQ);
+    !!CHECK1(sel_som);
+         
+    !!CheckFile<<"##--natural mortality base values"<<endl;
+    init_vector baseM_Imm(1,nSXs)       // base value for natural mortality on immature crab by sex
+    init_vector baseM_MatNS(1,nSXs)     // base value for natural mortality on mature new shell crab by sex
+    init_vector baseM_MatOS(1,nSXs)     // base value for natural mortality on mature old shell crab by sex
+    3darray baseM_msx(1,nMSs,1,nSCs,1,nSXs) //convenience array for all base M's
+    3darray inpMfac_msx(1,nMSs,1,nSCs,1,nSXs) //convenience array for all initial M multipliers
  LOCAL_CALCS
-    baseM_msx(IMMATURE,NEW_SHELL,FEMALE) = inpM_Imm(FEMALE);
-    baseM_msx(IMMATURE,NEW_SHELL,  MALE) = inpM_Imm(  MALE);
-    baseM_msx(IMMATURE,OLD_SHELL,FEMALE) = inpM_Imm(FEMALE);
-    baseM_msx(IMMATURE,OLD_SHELL,  MALE) = inpM_Imm(  MALE);
-    baseM_msx(  MATURE,NEW_SHELL,FEMALE) = inpM_MatNS(FEMALE);
-    baseM_msx(  MATURE,NEW_SHELL,  MALE) = inpM_MatNS(  MALE);
-    baseM_msx(  MATURE,OLD_SHELL,FEMALE) = inpM_MatOS(FEMALE);
-    baseM_msx(  MATURE,OLD_SHELL,  MALE) = inpM_MatOS(  MALE);
-    CheckFile<<"multQ                = "<<multQ<<endl;
-    CheckFile<<"phsM                 = "<<phsM<<endl;
-    CheckFile<<"inpM_Imm             = "<<inpM_Imm<<endl;
-    CheckFile<<"inpM_MatNS           = "<<inpM_MatNS<<endl;
-    CheckFile<<"inpM_MatOS           = "<<inpM_MatOS<<endl;
-    CheckFile<<"inpMfac_Imm          = "<<inpMfac_Imm<<endl;
-    CheckFile<<"inpMfac_MatM         = "<<inpMfac_MatM<<endl;
-    CheckFile<<"inpMfac_MatF         = "<<inpMfac_MatF<<endl;
-    CheckFile<<"inpMfac_Big          = "<<inpMfac_Big<<endl;
-    CheckFile<<"phsPrMolt_MatureMale = "<<phsPrMolt_MatureMale<<endl;
-    CheckFile<<"phase_fishsel        = "<<phase_fishsel<<endl;
-    CheckFile<<"survsel_phase        = "<<survsel_phase<<endl;
-    CheckFile<<"survsel1_phase       = "<<survsel1_phase<<endl;
-    CheckFile<<"phase_logistic_sel   = "<<phase_logistic_sel<<endl;
-    CheckFile<<"sel_som              = "<<sel_som<<endl;
+    baseM_msx(IMMATURE,NEW_SHELL,FEMALE) = baseM_Imm(FEMALE);
+    baseM_msx(IMMATURE,NEW_SHELL,  MALE) = baseM_Imm(  MALE);
+    baseM_msx(IMMATURE,OLD_SHELL,FEMALE) = baseM_Imm(FEMALE);
+    baseM_msx(IMMATURE,OLD_SHELL,  MALE) = baseM_Imm(  MALE);
+    baseM_msx(  MATURE,NEW_SHELL,FEMALE) = baseM_MatNS(FEMALE);
+    baseM_msx(  MATURE,NEW_SHELL,  MALE) = baseM_MatNS(  MALE);
+    baseM_msx(  MATURE,OLD_SHELL,FEMALE) = baseM_MatOS(FEMALE);
+    baseM_msx(  MATURE,OLD_SHELL,  MALE) = baseM_MatOS(  MALE);
+    CHECK1(baseM_Imm);
+    CHECK1(baseM_MatNS);
+    CHECK1(baseM_MatOS);
  END_CALCS
             
-    init_vector wt_like(1,8)              // weights for selectivity likelihoods 1 fishery female, 2 survey female, 3 fishery male, 4 survey male
+    !!CheckFile<<"##--miscellaneous"<<endl;
+    init_number mate_ratio            // mating ratio (USED)
+    init_number fraction_new_error    // accounts for shell error
+    init_int nages                    // number of ages to track for mature old shell 
+    !!CHECK1(mate_ratio);
+    !!CHECK1(fraction_new_error);
+    !!CHECK1(nages);
+    
+    !!CheckFile<<"#---------------------------------------------------"<<endl;
+    !!CheckFile<<"#likeilihood weights"<<endl;
+    !!CheckFile<<"#---------------------------------------------------"<<endl;
     init_vector like_wght(1,NUM_LEN_LIKE) // likelihood weights for size composition data
     init_number like_wght_CatchBio        // likelihood weight for fishery catch biomass fits [was like_wght_(6)]
     init_number like_wght_fbio            // likelihood weight for female biomass fit [was like_wght(5)]
     init_number like_wght_mbio            // likelihood weight for male biomass fit
     init_number like_wght_rec         // ??
-    init_number like_wght_recf        // ??
-    init_number like_wght_sexr        // ??
-    init_number like_wght_sel50       // ??
-    !!CheckFile<<"wt_like            = "<<wt_like<<endl;
-    !!CheckFile<<"like_wght          = "<<like_wght<<endl;
-    !!CheckFile<<"like_wght_CatchBio = "<<like_wght_CatchBio<<endl;
-    !!CheckFile<<"like_wght_fbio     = "<<like_wght_fbio<<endl;
-    !!CheckFile<<"like_wght_mbio     = "<<like_wght_mbio<<endl;
-    !!CheckFile<<"like_wght_rec      = "<<like_wght_rec<<endl;
-    !!CheckFile<<"like_wght_recf     = "<<like_wght_recf<<endl;
-    !!CheckFile<<"like_wght_sexr     = "<<like_wght_sexr<<endl;
-    !!CheckFile<<"like_wght_sel50    = "<<like_wght_sel50<<endl;
+    init_number llwSelTCFM_devsZ50 //likelihood weight for penalty on pSelTCFM_devsZ50 (originally 0))
+    init_number bndSelTCFM_devsZ50 //upper/lower bounds on pSelTCFM_devsZ50 deviations (originally 0.5)
+ LOCAL_CALCS
+    CheckFile<<"##--Size composition weights"<<endl;
+    CHECK1(like_wght);
+    CheckFile<<"##--aggregated abundance/biomass weights"<<endl;
+    CHECK1(like_wght_CatchBio);
+    CHECK1(like_wght_fbio);
+    CHECK1(like_wght_mbio);
+    CheckFile<<"##--penalty weights"<<endl;
+    CHECK1(like_wght_rec);
+    CHECK1(llwSelTCFM_devsZ50);    
+    CHECK1(bndSelTCFM_devsZ50);  
+ END_CALCS
     
-    init_number hm_pot                                                // fraction of pot discards that die (.5)
-    init_number hm_trawl                                               // fraction of trawl discards that die(.8)
-    !!CheckFile<<"hm_pot   = "<<hm_pot<<endl;
-    !!CheckFile<<"hm_trawl = "<<hm_trawl<<endl;
-    
-    init_number mate_ratio                                            // mating ratio (USED)
-    init_number fraction_new_error                                    // accounts for shell error
-    init_number maturity_switch                                       // Set > 0 for logistic maturity instead of fractions by year (males)
-    init_int nages                                                    // number of ages to track for mature old shell 
-    init_number wght_total_catch                                      // weight for total catch biomass (WHY here!) (UNUSED except for output)
-    init_number wght_female_potcatch                                  // weight for female pot bycatch              (UNUSED except for output)
-    init_number wt_lmlike
-    !!CheckFile<<"fraction_new_error   = "<<fraction_new_error<<endl;
-    !!CheckFile<<"mate_ratio           = "<<mate_ratio<<endl;
-    !!CheckFile<<"maturity_switch      = "<<maturity_switch<<endl;
-    !!CheckFile<<"nages                = "<<nages<<endl;
-    !!CheckFile<<"wght_total_catch     = "<<wght_total_catch<<endl;
-    !!CheckFile<<"wght_female_potcatch = "<<wght_female_potcatch<<endl;
-    !!CheckFile<<"wt_lmlike            = "<<wt_lmlike<<endl;
-    
+    !!CheckFile<<"##--priors"<<endl;
     init_number srv3_qPriorWgt        //likelihood multiplier for survey q prior (off=0)
     init_number srv3_qPriorMean       //prior mean
     init_number srv3_qPriorStD        //prior variance
     init_number srv3_qFemPriorWgt     //likelihood multiplier for survey female q prior (off=0)
     init_number srv3_qFemPriorMean    //prior mean
     init_number srv3_qFemPriorStD     //prior variance
-    init_int mort_switch                                            // extra mort on 1, off 0
-    init_int mort_switch2                                           // apply mort_switch correctly (1), or as in 2012 (0)
-    init_int lyr_mort                                               // start yr extra mort
-    init_int uyr_mort                                               //end yr extra mort
-    !!CheckFile<<"srv3_qPriorWgt  = "<<srv3_qPriorWgt<<endl;
-    !!CheckFile<<"srv3_qPriorMean = "<<srv3_qPriorMean<<endl;
-    !!CheckFile<<"srv3_qPriorStD  = "<<srv3_qPriorStD<<endl;
-    !!CheckFile<<"srv3_qFemPriorWgt  = "<<srv3_qFemPriorWgt<<endl;
-    !!CheckFile<<"srv3_qFemPriorMean = "<<srv3_qFemPriorMean<<endl;
-    !!CheckFile<<"srv3_qFemPriorStD  = "<<srv3_qFemPriorStD<<endl;
-    !!CheckFile<<"mort_switch    = "<<mort_switch<<endl;
-    !!CheckFile<<"mort_switch2   = "<<mort_switch2<<endl;
-    !!CheckFile<<"lyr_mort       = "<<lyr_mort<<endl;
-    !!CheckFile<<"uyr_mort       ="<<uyr_mort<<endl;
+    !!CHECK1(srv3_qPriorWgt);
+    !!CHECK1(srv3_qPriorMean);
+    !!CHECK1(srv3_qPriorStD);
+    !!CHECK1(srv3_qFemPriorWgt);
+    !!CHECK1(srv3_qFemPriorMean);
+    !!CHECK1(srv3_qFemPriorStD);
     
-    init_int doPenRed           //flag (0/1) to reduce penalties on fishing-related devs by phase
-    init_int phsFmRKF           //phase to turn on RKF fishing estimation (originally -4 or 5)
-    init_number llwSelTCFM_devsZ50 //llw for penalty on pSelTCFM_devsZ50 (originally 0))
-    init_number bndSelTCFM_devsZ50 //upper/lower bounds on pSelTCFM_devsZ50 deviations (originally 0.5)
-    !!CheckFile<<"doPenRed = "<<doPenRed<<endl;    
-    !!CheckFile<<"phsFmRKF = "<<phsFmRKF<<endl;    
-    !!CheckFile<<"llwSelTCFM_devsZ50 = "<<llwSelTCFM_devsZ50<<endl;    
-    !!CheckFile<<"bndSelTCFM_devsZ50 = "<<bndSelTCFM_devsZ50<<endl;  
-    
-    //new 20150318
+    !!CheckFile<<"#---------------------------------------------------"<<endl;
+    !!CheckFile<<"#options"<<endl;
+    !!CheckFile<<"#---------------------------------------------------"<<endl;
+    //population process-related
+    !!CheckFile<<"##--options for estimating recruitment"<<endl;
+    init_int mnYrRecDevsHist; //year to start estimating "historic" rec devs
+    init_int mnYrRecCurr;     //year to start estimating "current" recruitment
+    !!if (mnYrRecDevsHist<=0) mnYrRecDevsHist = mnYr;
+    !!CHECK1(mnYrRecDevsHist);
+    !!CHECK1(mnYrRecCurr);
+    !!CheckFile<<"##--options for estimating natural mortality"<<endl;
+    init_int mort_switch              // extra mort on 1, off 0
+    init_int mort_switch2             // apply mort_switch correctly (1), or as in 2012 (0)
+    init_int lyr_mort                 // start yr extra mort
+    init_int uyr_mort                 //end yr extra mort
+    !!CHECK1(mort_switch);
+    !!CHECK1(mort_switch2);
+    !!CHECK1(lyr_mort);
+    !!CHECK1(uyr_mort);
+    !!CheckFile<<"##--options for using maturity info and estimating prM2M"<<endl;
+    init_int optInitM2M  ///<option to initialize prM2M(MALE)
+    !!CHECK1(optInitM2M);
+    init_int optMatForSrvOSM  ///<option to use maturity ogive to determine maturity status
+    !!CHECK1(optMatForSrvOSM);
+    init_int optPrM2M  ///< option for parameterizing prM2M, the probability of molt to maturity
+    number lbPrM2M     ///< lower bound on PrM2M parameters (if optPrM2M==0)
+    number ubPrM2M     ///< lower bound on PrM2M parameters (if optPrM2M==0)
+ LOCAL_CALCS
+    CHECK1(optPrM2M);
+    if (optPrM2M==0) {
+        CheckFile<<"###--ln-scale parameterization selected for pPrM2M's"<<endl;
+        lbPrM2M = -15.0;
+        ubPrM2M =   0.0;
+    }
+    if (optPrM2M==1){
+        CheckFile<<"###--logit-scale parameterization selected for pPrM2M's"<<endl;
+        lbPrM2M = -15.0;
+        ubPrM2M =  15.0;
+    }
+ END_CALCS
+    //selectivity-related options
+    !!CheckFile<<"#---options for survey selectivity"<<endl;
+    init_int useSomertonOtto1  //use Somerton & Otto selectivity curve for survey period 1
+    init_int useSomertonOtto2  //use Somerton & Otto selectivity curve for survey period 2
+    init_int useSomertonOtto3  //use Somerton & Otto selectivity curve for survey period 3
+ LOCAL_CALCS
+    CHECK1(useSomertonOtto1);
+    CHECK1(useSomertonOtto2);
+    CHECK1(useSomertonOtto3);
+ END_CALCS
+    !!CheckFile<<"##--asymptotic selectivity options"<<endl;
+    init_int optFshSel;//option to force asymptote=1 for logistic fishery selectivity functions
+    init_int optSrvSel;//option to force asymptote=1 for logistic survey selectivity functions
+    !!if (optFshSel!=1) optFshSel = 0;//if not 1 (on), use old approach to normalization
+    !!if (optSrvSel!=1) optSrvSel = 0;//if not 1 (on), use old approach to normalization
+    !!CHECK1(optFshSel);
+    !!CHECK1(optSrvSel);
+    //fisheries-related options
+    !!CheckFile<<"##--fishing mortality model options"<<endl;
+    init_int optFM;//original (0) or gmacs (1) -like fishing mortality
+    !!if (optFM!=1) optFM = 0;//if gmacs not specified, then use original
+    !!CHECK1(optFM);
+    !!CheckFile<<"##--fishery catch likelihood options"<<endl;
     init_int optFshNLLs  //flag indicating error model for fishery catch data (0=norm2, 1=lognormal)
-    !!CheckFile<<"optFshNLLs = "<<optFshNLLs<<endl;    
+    !!CHECK1(optFshNLLs);    
     //the following obsErr are sd for normal error, cv for lognormal error
     init_number obsErrTCFR  //assumed observation error level for retained catch data
     init_number obsErrTCFD  //assumed observation error level for discard catch data in TCF
     init_number obsErrSCF   //assumed observation error level for discard catch data in SCF
     init_number obsErrRKF   //assumed observation error level for discard catch data in RKF
     init_number obsErrGTF   //assumed observation error level for discard catch data in GTF
-    !!CheckFile<<"obsErrTCFR = "<<obsErrTCFR<<endl;   
-    !!CheckFile<<"obsErrTCFD = "<<obsErrTCFD<<endl;   
-    !!CheckFile<<"obsErrSCF  = "<<obsErrSCF<<endl;   
-    !!CheckFile<<"obsErrRKF  = "<<obsErrRKF<<endl;   
-    !!CheckFile<<"obsErrGTF  = "<<obsErrGTF<<endl;   
-    
-    //new 20150601
-    init_int optFM;//original or gmacs-like fishing mortality
- LOCAL_CALCS
-    if (optFM!=1) optFM = 0;//if gmacs not specified, then use original
-    CheckFile<<"#---Fishing mortality model options"<<endl;
-    CheckFile<<"optFM = "<<optFM<<endl;
- END_CALCS
-    
-    //new 20150823: revised 20151005
-    init_int optFshSel;//option to force asymptote=1 for logistic fishery selectivity functions
-    init_int optSrvSel;//option to force asymptote=1 for logistic survey selectivity functions
- LOCAL_CALCS
-    if (optFshSel!=1) optFshSel = 0;//if not 1 (on), use old approach to normalization
-    if (optSrvSel!=1) optSrvSel = 0;//if not 1 (on), use old approach to normalization
-    CheckFile<<"#---Options for asymptotic behavior of selectivity functions"<<endl;
-    CheckFile<<"optFshSel = "<<optFshSel<<endl;
-    CheckFile<<"optSrvSel = "<<optSrvSel<<endl;
- END_CALCS
-    
-    //new 20160226: added female fishing mortality offsets
-    init_int phsTCFF;//phase to turn on estimation of female fishing mortality in TCF
-    init_int phsSCFF;//phase to turn on estimation of female fishing mortality in SCF
-    init_int phsRKFF;//phase to turn on estimation of female fishing mortality in RKF
-    init_int phsGTFF;//phase to turn on estimation of female fishing mortality in GTF
- LOCAL_CALCS
-    CheckFile<<"#---Phases for female fishing mortality"<<endl;
-    CheckFile<<"phsTCFF = "<<phsTCFF<<endl;
-    CheckFile<<"phsSCFF = "<<phsSCFF<<endl;
-    CheckFile<<"phsRKFF = "<<phsRKFF<<endl;
-    CheckFile<<"phsGTFF = "<<phsGTFF<<endl;
- END_CALCS
-            
-    //new 20160316: options for calculating size comps
+    !!CHECK1(obsErrTCFR);   
+    !!CHECK1(obsErrTCFD);   
+    !!CHECK1(obsErrSCF);   
+    !!CHECK1(obsErrRKF);   
+    !!CHECK1(obsErrGTF);   
+    !!CheckFile<<"##--options for fitting GTF size comps"<<endl;
     init_int optPrNatZ_GTF; //
- LOCAL_CALCS
-    CheckFile<<"#---Phases for female fishing mortality"<<endl;
-    CheckFile<<"optPrNatZ_GTF = "<<optPrNatZ_GTF<<endl;
- END_CALCS
-            
-    //new 20160324: set info for estimating "historic" recruitment
-    init_int    phsMnLnRecHist;  //phase to start estimating "historic" ln-scale mean recruitment (pMnLnRecHist)
-    init_int    phsRecDevsHist;  //phase to start estimating "historic" rec devs (pRecDevsHist)
-    init_number inpMnLnRecHist;  //initial value for "historic" ln-scale mean recruitment (pMnLnRecHist)
-    init_int    mnYrRecDevsHist; //year to start estimating "historic" rec devs
- LOCAL_CALCS
-    if (mnYrRecDevsHist<=0) mnYrRecDevsHist = mnYr;
-    CheckFile<<"#---'Historic' recruitment info"<<endl;
-    CheckFile<<"phsMnLnRecHist  = "<<phsMnLnRecHist <<tb<<"#---initial phase to estimate 'historic' mean ln-scale recruitment"<<endl;
-    CheckFile<<"phsRecDevsHist  = "<<phsRecDevsHist <<tb<<"#---initial phase to estimate 'historic' recruitment deviations"<<endl;
-    CheckFile<<"inpMnLnRecHist  = "<<inpMnLnRecHist <<tb<<"#---initial value for 'historic' mean ln-scale recruitment"<<endl;
-    CheckFile<<"mnYrRecDevsHist = "<<mnYrRecDevsHist<<tb<<"#---Start year for 'historic' recruitment deviations"<<endl;
- END_CALCS
-            
-    //new 20160324: set info for estimating "current" recruitment
-    init_int    phsMnLnRec;  //phase to start estimating "current" ln-scale mean recruitment (pMnLnRec)
-    init_int    phsRecDevs;  //phase to start estimating "current" rec devs (pRecDevs)
-    init_number inpMnLnRec;  //initial value for "current" ln-scale mean recruitment (pMnLnRec)
-    init_int    mnYrRecCurr; //year to start estimating "current" recruitment
- LOCAL_CALCS
-    CheckFile<<"#---'Current' recruitment info"<<endl;
-    CheckFile<<"phsMnLnRec  = "<<phsMnLnRec <<tb<<"#---initial phase to estimate 'current' mean ln-scale recruitment"<<endl;
-    CheckFile<<"phsRecDevs  = "<<phsRecDevs <<tb<<"#---initial phase to estimate 'current' recruitment deviations"<<endl;
-    CheckFile<<"inpMnLnRec  = "<<inpMnLnRec <<tb<<"#---initial value for 'current' mean ln-scale recruitment"<<endl;
-    CheckFile<<"mnYrRecCurr = "<<mnYrRecCurr<<tb<<"#---Start year for 'current' recruitment"<<endl;
- END_CALCS
-            
+    !!CHECK1(optPrNatZ_GTF);
     //new 20160323: options for fitting male mortality in TCF
+    !!CheckFile<<"##--options for fitting male mortality in TCF"<<endl;
     init_int optTCFMfit;
- LOCAL_CALCS
-    CheckFile<<"#---Option for fitting male mortality in TCF"<<endl;
-    CheckFile<<"optTCFMfit = "<<optTCFMfit<<endl;
- END_CALCS
- 
-    //new 20160324: options for fitting probability of molt to maturity
-    init_int phsPrM2M  ///< initial estimation phase for maturity parameters
-    init_int optPrM2M  ///< option for parameterizing prM2M, the probability of molt to maturity
-    number lbPrM2M     ///< lower bound on PrM2M parameters (if optPrM2M==0)
-    number ubPrM2M     ///< lower bound on PrM2M parameters (if optPrM2M==0)
- LOCAL_CALCS
-    CheckFile<<"#---Options for fitting pr(molt to maturity)"<<endl;
-    CheckFile<<"phsPrM2M = "<<phsPrM2M<<endl;
-    CheckFile<<"optPrM2M = "<<optPrM2M<<endl;
-    if (optPrM2M==0) {
-        CheckFile<<"ln-scale parameterization selected for pPrM2MF's"<<endl;
-        lbPrM2M = -15.0;
-        ubPrM2M =   0.0;
-    }
-    if (optPrM2M==1){
-        CheckFile<<"logit-scale parameterization selected for pPrM2MF's"<<endl;
-        lbPrM2M = -15.0;
-        ubPrM2M =  15.0;
-    }
- END_CALCS
- 
-    //new 20160324: options for extrapolating 
-    //fishery mortality/capture rate from effort
-//    init_int phsEffXtr_TCF  ///< initial estimation phase for TCF effort extrapolation
-    init_int phsEffXtr_SCF  ///< initial estimation phase for SCF effort extrapolation
-    init_int phsEffXtr_RKF  ///< initial estimation phase for RKF effort extrapolation
-//    init_int phsEffXtr_GTF  ///< initial estimation phase for GTF effort extrapolation
- LOCAL_CALCS
-    CheckFile<<"#---Options for extrapolating effort to fishing mortality"<<endl;
-//    CheckFile<<"phsEffXtr_TCF = "<<phsEffXtr_TCF<<endl;
-    CheckFile<<"phsEffXtr_SCF = "<<phsEffXtr_SCF<<endl;
-    CheckFile<<"phsEffXtr_RKF = "<<phsEffXtr_RKF<<endl;
-//    CheckFile<<"phsEffXtr_GTF = "<<phsEffXtr_GTF<<endl;
- END_CALCS
+    !!CHECK1(optTCFMfit);
+    !!CheckFile<<"##--options for penalty reduction on F devs"<<endl;
+    init_int doPenRed      //flag (0/1) to reduce penalties on fishing-related devs by phase
+    !!CHECK1(doPenRed);    
+    !!CheckFile<<"##--options for effort extrapolation"<<endl;
+    init_int optEffXtr_TCF
+    init_int optEffXtr_SCF
+    init_int optEffXtr_RKF
+    init_int optEffXtr_GTF
+    !!if (!optEffXtr_TCF) optEffXtr_TCF = 0; //option not implemented yet
+    !!if (!optEffXtr_GTF) optEffXtr_GTF = 0; //option not implemented yet
+    !!CHECK1(optEffXtr_TCF);
+    !!CHECK1(optEffXtr_SCF);
+    !!CHECK1(optEffXtr_RKF);
+    !!CHECK1(optEffXtr_GTF);
          
+        
+    //parameter estimation phases
+    !!CheckFile<<"#---------------------------------------------------"<<endl;
+    !!CheckFile<<"#parameter phases"<<endl;
+    !!CheckFile<<"#---------------------------------------------------"<<endl;
+    !!CheckFile<<"#-----recruitment"<<endl;
+    init_int phsMnLnRec      // mean ln-scale total recruitment
+    init_int phsRecDevs      // recruitment devs
+    !!CHECK1(phsMnLnRec);    
+    !!CHECK1(phsRecDevs);
+    //--natural mortality
+    !!CheckFile<<"#-----natural mortality"<<endl;
+    init_int phsM            // ordinary mortality
+    init_int phsBigM         // multipliers for high mortality period (1980-1984)                  
+    !!CHECK1(phsM);    
+    !!CHECK1(phsBigM);
+    //--growth
+    !!CheckFile<<"#-----growth"<<endl;
+    init_int phsGr           // growth
+    !!CHECK1(phsGr);
+    //--pr(molt-to-maturity)
+    !!CheckFile<<"#-----pr(molt-to-maturity)"<<endl;
+    init_int phsPrM2M        //molt to maturity
+    !!CHECK1(phsPrM2M);
+    //--surveys
+    !!CheckFile<<"#-----surveys"<<endl;
+    ////catchabilities
+    !!CheckFile<<"#-------catchabilities"<<endl;
+    init_int phsSrvQM1  //males
+    init_int phsSrvQM2  //males
+    init_int phsSrvQF1  //females
+    init_int phsSrvQF2  //females
+    !!CHECK1(phsSrvQM1);    
+    !!CHECK1(phsSrvQM2);
+    !!CHECK1(phsSrvQF1);    
+    !!CHECK1(phsSrvQF2);
+    ////selectivities
+    !!CheckFile<<"#-------selectivities"<<endl;
+    init_int phsSelSrvM1  //males
+    init_int phsSelSrvM2  //males
+    init_int phsSelSrvF1  //females
+    init_int phsSelSrvF2  //females
+    !!CHECK1(phsSelSrvM1);    
+    !!CHECK1(phsSelSrvM2);
+    !!CHECK1(phsSelSrvF1);    
+    !!CHECK1(phsSelSrvF2);
+    //--fisheries
+    !!CheckFile<<"#-----fisheries"<<endl;
+    ////fishing mortality or capture rates
+    !!CheckFile<<"#-------fishing mortality or capture rates"<<endl;
+    //--males
+    init_int phsTCFM // directed Tanner crab fishery
+    init_int phsSCFM // snow crab fishery bycatch
+    init_int phsRKFM // BBRKC fishery bycatch
+    init_int phsGTFM // groundfish fisheries bycatch
+    !!CHECK1(phsTCFM);    
+    !!CHECK1(phsSCFM);
+    !!CHECK1(phsRKFM);    
+    !!CHECK1(phsGTFM);
+    //--females
+    init_int phsTCFF ///< directed fishery bycatch
+    init_int phsSCFF ///< snow crab fishery bycatch
+    init_int phsRKFF ///< BBRKC fishery bycatch
+    init_int phsGTFF ///< groundfish fisheries bycatch
+    !!CHECK1(phsTCFF);    
+    !!CHECK1(phsSCFF);
+    !!CHECK1(phsRKFF);    
+    !!CHECK1(phsGTFF);
+    ////selectivity/retention functions
+    !!CheckFile<<"#-------retention function/selectivities"<<endl;
+    init_int phsRet_TCFM //retention
+    init_int phsSel_TCFM //directed fishery male total catch
+    init_int phsSel_TCFF //directed fishery female bycatch
+    init_int phsSel_SCFM //snow crab fishery male bycatch
+    init_int phsSel_SCFF //snow crab fishery female bycatch
+    init_int phsSel_RKFM //BBRKC fishery male bycatch
+    init_int phsSel_RKFF //BBRKC fishery female bycatch
+    init_int phsSel_GTFM //groundfish fisheries male bycatch
+    init_int phsSel_GTFF //groundfish fisheries female bycatch
+    !!CHECK1(phsRet_TCFM);
+    !!CHECK1(phsSel_TCFM);    
+    !!CHECK1(phsSel_TCFF);
+    !!CHECK1(phsSel_SCFM);    
+    !!CHECK1(phsSel_SCFF);
+    !!CHECK1(phsSel_RKFM);    
+    !!CHECK1(phsSel_RKFF);
+    !!CHECK1(phsSel_GTFM);    
+    !!CHECK1(phsSel_GTFF);
+    ////effort extrapolation
+    init_int phsEffXtr_TCF  ///< TCF effort extrapolation parameter
+    init_int phsEffXtr_SCF  ///< SCF effort extrapolation parameter
+    init_int phsEffXtr_RKF  ///< RKF effort extrapolation parameter
+    init_int phsEffXtr_GTF  ///< GTF effort extrapolation parameter
+    !!CHECK1(phsEffXtr_TCF);    
+    !!CHECK1(phsEffXtr_SCF);    
+    !!CHECK1(phsEffXtr_RKF);    
+    !!CHECK1(phsEffXtr_GTF);    
+ LOCAL_CALCS
+    if (useSomertonOtto1) {
+        //turn off associated logistic function parameters
+        phsSrvQM1   = -1;
+        phsSelSrvM1 = -1;
+        CheckFile<<"#--Using Somerton & Otto for survey period 1. TURNING male parameter estimation OFF--"<<endl;
+    }
+    if ((useSomertonOtto2)&&(useSomertonOtto3)) {
+        //turn off associated logistic function parameters
+        phsSrvQM2   = -1;
+        phsSelSrvM2 = -1;
+        CheckFile<<"#--Using Somerton & Otto for survey periods 2 & 3. TURNING male parameter estimation OFF--"<<endl;
+    }
+ END_CALCS
+        
+    //initial parameter values
+    !!CheckFile<<"#---parameter initial values"<<endl;
+    ////recruitment
+    !!CheckFile<<"#-----recruitment"<<endl;
+    init_number inpMnLnRecHist   // Mean ln-scale total "historic" recruitment
+    init_number inpMnLnRec       // Mean ln-scale total "current" recruitment
+    init_number inpRecAlpha      // Parameters related to fraction recruiting  //this is NOT estimated (why?)
+    init_number inpRecBeta       // Parameters related to fraction recruiting  //this is NOT estimated (why?)
+    !!CHECK1(inpMnLnRecHist);    
+    !!CHECK1(inpMnLnRec);    
+    !!CHECK1(inpRecAlpha);    
+    !!CHECK1(inpRecBeta);    
+    ////natural mortality
+    !!CheckFile<<"#-----natural mortality multipliers"<<endl;
+    init_number inpMfac_Imm      // natural mortality multiplier for immature females and males
+    init_number inpMfac_MatM     // natural mortality multiplier for mature males
+    init_number inpMfac_MatF     // natural mortality multiplier for mature females
+    init_vector inpMfac_Big(1,nSXs)  // natural mortality multipliers for mature crab, 1980-1984
+    !!CHECK1(inpMfac_Imm);    
+    !!CHECK1(inpMfac_MatM);    
+    !!CHECK1(inpMfac_Big);    
+    ////growth
+    !!CheckFile<<"#-----growth"<<endl;
+    init_number inpGrAF1       // Female growth-increment
+    init_number inpGrBF1       // Female growth-increment
+    init_number inpGrAM1       // Male growth-increment
+    init_number inpGrBM1       // Male growth-increment
+    init_vector inpGrBeta_x(1,nSXs)  // Growth beta
+    !!CHECK1(inpGrAF1);    
+    !!CHECK1(inpGrBF1);    
+    !!CHECK1(inpGrAM1);    
+    !!CHECK1(inpGrBM1);    
+    !!CHECK1(inpGrBeta_x);    
+    ////pr(molt-to-maturity)
+    !!CheckFile<<"#-----pr(molt-to-maturity)"<<endl;
+    !!CheckFile<<"#<none>"<<endl;
+    ////surveys
+    !!CheckFile<<"#-----surveys"<<endl;
+    //--catchabilities
+    !!CheckFile<<"#-------catchabilities"<<endl;
+    ////--males
+    init_number inpSrv1_QM
+    init_number inpSrv2_QM
+    !!CHECK1(inpSrv1_QM);    
+    !!CHECK1(inpSrv2_QM);    
+    ////--females
+    init_number inpSrv1_QF
+    init_number inpSrv2_QF
+    !!CHECK1(inpSrv1_QF);    
+    !!CHECK1(inpSrv2_QF);    
+    ////--selectivities
+    !!CheckFile<<"#-------selectivities"<<endl;
+    //////--males
+    init_number inpSrv1M_z50
+    init_number inpSrv1M_dz5095
+    !!CHECK1(inpSrv1M_z50);    
+    !!CHECK1(inpSrv1M_dz5095);    
+    //////--1982+
+    init_number inpSrv2M_z50   
+    init_number inpSrv2M_dz5095
+    !!CHECK1(inpSrv2M_z50);    
+    !!CHECK1(inpSrv2M_dz5095);    
+    //--females
+    ////--1974-1981
+    init_number inpSrv1F_z50
+    init_number inpSrv1F_dz5095    
+    !!CHECK1(inpSrv1F_z50);    
+    !!CHECK1(inpSrv1F_dz5095);    
+    ////--1982+
+    init_number inpSrv2F_z50
+    init_number inpSrv2F_dz5095
+    !!CHECK1(inpSrv2F_z50);    
+    !!CHECK1(inpSrv2F_dz5095);    
+    //fisheries
+    !!CheckFile<<"#-----fisheries"<<endl;
+    //--log-scale fishing mortality or capture rates
+    !!CheckFile<<"#-------fishing mortality/capture rates"<<endl;
+    init_number inpAvgLnF_TCF // directed Tanner crab fishery
+    init_number inpAvgLnF_SCF // snow crab fishery bycatch
+    init_number inpAvgLnF_RKF // BBRKC fishery bycatch
+    init_number inpAvgLnF_GTF // groundfish fisheries bycatch
+    !!CHECK1(inpAvgLnF_TCF);    
+    !!CHECK1(inpAvgLnF_SCF);
+    !!CHECK1(inpAvgLnF_RKF);    
+    !!CHECK1(inpAvgLnF_GTF);
+    ////--log-scale offsets for females
+    init_number inpAvgLnF_TCFF  ///< female offset to ln-scale mean fishing mortality in directed fishery
+    init_number inpAvgLnF_SCFF  ///< female offset to ln-scale mean fishing mortality in snow crab fishery
+    init_number inpAvgLnF_RKFF  ///< female offset to ln-scale mean fishing mortality in BBRKC fishery
+    init_number inpAvgLnF_GTFF  ///< female offset to ln-scale mean fishing mortality in groundfish trawl fisheries
+    !!CHECK1(inpAvgLnF_TCFF);    
+    !!CHECK1(inpAvgLnF_SCFF);
+    !!CHECK1(inpAvgLnF_RKFF);    
+    !!CHECK1(inpAvgLnF_GTFF);
+    //directed fishery selectivity and retention
+    // Retention functions
+    !!CheckFile<<"#-------retention functions"<<endl;
+    //-- styr-1990
+    init_number inpRetTCFM_slpA1
+    init_number inpRetTCFM_z50A1
+    //-- 1991+  
+    init_number inpRetTCFM_slpA2
+    init_number inpRetTCFM_z50A2
+    !!CHECK1(inpRetTCFM_slpA1);    
+    !!CHECK1(inpRetTCFM_z50A1);
+    !!CHECK1(inpRetTCFM_slpA2);    
+    !!CHECK1(inpRetTCFM_z50A2);
+    // Selectivity functions
+    !!CheckFile<<"#-------selectivities"<<endl;
+    !!CheckFile<<"###--TCF"<<endl;
+    //--males, styr-1996
+    init_number inpSelTCFM_slpA1      
+    //--males, 2005+
+    init_number inpSelTCFM_slpA2      
+    init_number inpSelTCFM_mnLnZ50A2
+    !!CHECK1(inpSelTCFM_slpA1);    
+    !!CHECK1(inpSelTCFM_slpA2);    
+    !!CHECK1(inpSelTCFM_mnLnZ50A2);
+    //--females, styr+
+    init_number inpSelTCFF_slp
+    init_number inpSelTCFF_z50
+    !!CHECK1(inpSelTCFF_slp);    
+    !!CHECK1(inpSelTCFF_z50);
+    // snow crab fishery bycatch selectivity
+    !!CheckFile<<"###--SCF"<<endl;
+    //--males styr-1996
+    init_number inpSelSCFM_slpA1 
+    init_number inpSelSCFM_z50A1
+    init_number inpSelSCFM_slpD1
+    init_number inpSelSCFM_lnZ50D1
+    !!CHECK1(inpSelSCFM_slpA1);    
+    !!CHECK1(inpSelSCFM_z50A1);
+    !!CHECK1(inpSelSCFM_slpD1);    
+    !!CHECK1(inpSelSCFM_lnZ50D1);
+    //--males, 1997-2004
+    init_number inpSelSCFM_slpA2  
+    init_number inpSelSCFM_z50A2
+    init_number inpSelSCFM_slpD2
+    init_number inpSelSCFM_lnZ50D2
+    !!CHECK1(inpSelSCFM_slpA2);    
+    !!CHECK1(inpSelSCFM_z50A2);
+    !!CHECK1(inpSelSCFM_slpD2);    
+    !!CHECK1(inpSelSCFM_lnZ50D2);
+    //--males, 2005+
+    init_number inpSelSCFM_slpA3
+    init_number inpSelSCFM_z50A3
+    init_number inpSelSCFM_slpD3
+    init_number inpSelSCFM_lnZ50D3  
+    !!CHECK1(inpSelSCFM_slpA3);    
+    !!CHECK1(inpSelSCFM_z50A3);
+    !!CHECK1(inpSelSCFM_slpD3);    
+    !!CHECK1(inpSelSCFM_lnZ50D3);
+    //females, styr-1996
+    init_number inpSelSCFF_slpA1 
+    init_number inpSelSCFF_z50A1
+    //--females, 1997-2004
+    init_number inpSelSCFF_slpA2 
+    init_number inpSelSCFF_z50A2
+    //--females, 2005+
+    init_number inpSelSCFF_slpA3 
+    init_number inpSelSCFF_z50A3
+    !!CHECK1(inpSelSCFF_slpA1);    
+    !!CHECK1(inpSelSCFF_z50A1);
+    !!CHECK1(inpSelSCFF_slpA2);    
+    !!CHECK1(inpSelSCFF_z50A2);
+    !!CHECK1(inpSelSCFF_slpA3);    
+    !!CHECK1(inpSelSCFF_z50A3);
+    // BBRKC fishery bycatch selectivity
+    !!CheckFile<<"###--RKF"<<endl;
+    //--males, styr-1996
+    init_number inpSelRKFM_slpA1  
+    init_number inpSelRKFM_z50A1
+    //--males, 1997-2004
+    init_number inpSelRKFM_slpA2  
+    init_number inpSelRKFM_z50A2
+    //--males, 2005+
+    init_number inpSelRKFM_slpA3  
+    init_number inpSelRKFM_z50A3
+    //--females, styr-1996
+    init_number inpSelRKFF_slpA1 
+    init_number inpSelRKFF_z50A1 
+    //--females, 1997-2004
+    init_number inpSelRKFF_slpA2 
+    init_number inpSelRKFF_z50A2 
+    //--females, 2005+
+    init_number inpSelRKFF_slpA3
+    init_number inpSelRKFF_z50A3 
+    !!CHECK1(inpSelRKFM_slpA1);    
+    !!CHECK1(inpSelRKFM_z50A1);
+    !!CHECK1(inpSelRKFM_slpA2);    
+    !!CHECK1(inpSelRKFM_z50A2);
+    !!CHECK1(inpSelRKFM_slpA3);    
+    !!CHECK1(inpSelRKFM_z50A3);
+    !!CHECK1(inpSelRKFF_slpA1);    
+    !!CHECK1(inpSelRKFF_z50A1);
+    !!CHECK1(inpSelRKFF_slpA2);    
+    !!CHECK1(inpSelRKFF_z50A2);
+    !!CHECK1(inpSelRKFF_slpA3);    
+    !!CHECK1(inpSelRKFF_z50A3);
+    // groundfish fisheries bycatch selectivity 
+    !!CheckFile<<"###--GTF"<<endl;
+    //--males, 1973-1987
+    init_number inpSelGTFM_slpA1
+    init_number inpSelGTFM_z50A1
+    //--males, 1988-1996
+    init_number inpSelGTFM_slpA2
+    init_number inpSelGTFM_z50A2
+    //--males, 1997+
+    init_number inpSelGTFM_slpA3
+    init_number inpSelGTFM_z50A3
+    //--females, 1973-1987
+    init_number inpSelGTFF_slpA1
+    init_number inpSelGTFF_z50A1
+    //--females, 1988-1996
+    init_number inpSelGTFF_slpA2
+    init_number inpSelGTFF_z50A2 
+    //females, 1997+
+    init_number inpSelGTFF_slpA3
+    init_number inpSelGTFF_z50A3
+    !!CHECK1(inpSelGTFM_slpA1);    
+    !!CHECK1(inpSelGTFM_z50A1);
+    !!CHECK1(inpSelGTFM_slpA2);    
+    !!CHECK1(inpSelGTFM_z50A2);
+    !!CHECK1(inpSelGTFM_slpA3);    
+    !!CHECK1(inpSelGTFM_z50A3);
+    !!CHECK1(inpSelGTFF_slpA1);    
+    !!CHECK1(inpSelGTFF_z50A1);
+    !!CHECK1(inpSelGTFF_slpA2);    
+    !!CHECK1(inpSelGTFF_z50A2);
+    !!CHECK1(inpSelGTFF_slpA3);    
+    !!CHECK1(inpSelGTFF_z50A3);
+
+    //effort extrapolation parameters
+    init_number inpEffXtr_TCF  ///< TCF effort extrapolation parameter
+    init_number inpEffXtr_SCF  ///< SCF effort extrapolation parameter
+    init_number inpEffXtr_RKF  ///< RKF effort extrapolation parameter
+    init_number inpEffXtr_GTF  ///< GTF effort extrapolation parameter
+    !!CHECK1(inpEffXtr_TCF);
+    !!CHECK1(inpEffXtr_SCF);
+    !!CHECK1(inpEffXtr_RKF);
+    !!CHECK1(inpEffXtr_GTF);
+         
+    !!CheckFile<<"#--end of file check!"<<endl;
+    init_int chkEOF
+    !!CHECK1(chkEOF);
+ LOCAL_CALCS
+    if (chkEOF!=999){
+        cout<<"Problem reading control file!!"<<endl;
+        cout<<"chkEOF = "<<chkEOF<<endl;
+        cout<<"Should be '999'"<<endl;
+        cout<<"Exiting..."<<endl;
+        exit(-1);
+    }
+ END_CALCS
     //Finished reading control file
-    !!CheckFile<<"Finished reading control file."<<endl;
+    !!CheckFile<<"--Finished reading control file."<<endl;
     !!CheckFile<<"--------------------------------------"<<endl;
+    //TEMPORARY VARIABLES
+    int phase_logistic_sel
+    !!phase_logistic_sel = phsRet_TCFM;
+    int survsel1_phase
+    !!survsel1_phase = phsSelSrvM1;
+    int survsel_phase
+    !!survsel_phase = phsSelSrvM2;
+    int maturity_switch
+    !!maturity_switch = optInitM2M;
+    
     // the rest are working variables 
     
     matrix obsDscBioMortTCF_xn(1,nSXs,1,nObsDscTCF)   // observed discard MORTALITY in TCF (1000's tons)
@@ -1141,9 +1469,6 @@ DATA_SECTION
     vector obsSrvNum_y(styr,endyr)                   // Total survey numbers, all years
     matrix obsSrvBio_xy(1,nSXs,styr,endyr)           // Survey biomass, by sex
     vector obsSrvBio_y(styr,endyr)                   // Total survey biomass
-    
-    int phsBigM;
-    !!if (mort_switch==1) phsBigM = phsM+1; else phsBigM = -8;
     
     number mnEff_SCF; ///< mean effort in SCF over period with observed bycatch data
     number mnEff_RKF; ///< mean effort in RKF over period with observed bycatch data
@@ -1225,11 +1550,11 @@ PARAMETER_SECTION
     init_bounded_number pRecAlpha(11.49,11.51,-8)              // Parameters related to fraction recruiting  //this is NOT estimated (why?)
     init_bounded_number pRecBeta(3.99,4.01,-8)                 // Parameters related to fraction recruiting  //this is NOT estimated (why?)
     
-    init_number pMnLnRec(phsMnLnRec)                                                         // Mean ln-scale total "current" recruitment
-    init_bounded_dev_vector pRecDevs(mnYrRecCurr,endyr,-15,15,phsRecDevs)                    // "current" ln-scale total recruitment devs
-    init_number pMnLnRecHist(phsMnLnRecHist)                                                 // Mean ln-scale total "historic" recruitment
-    init_bounded_dev_vector pRecDevsHist(mnYrRecDevsHist,mnYrRecCurr-1,-15,15,phsRecDevsHist)// "historic" ln-scale total recruitment devs
-    vector rec_y(styr,endyr)                                                                 //arithmetic-scale total recruitment (millions)
+    init_number pMnLnRec(phsMnLnRec)                                                     // Mean ln-scale total "current" recruitment
+    init_bounded_dev_vector pRecDevs(mnYrRecCurr,endyr,-15,15,phsRecDevs)                // "current" ln-scale total recruitment devs
+    init_number pMnLnRecHist(phsMnLnRec)                                                 // Mean ln-scale total "historic" recruitment
+    init_bounded_dev_vector pRecDevsHist(mnYrRecDevsHist,mnYrRecCurr-1,-15,15,phsRecDevs)// "historic" ln-scale total recruitment devs
+    vector rec_y(styr,endyr)                                                             //arithmetic-scale total recruitment (millions)
     
     //20150601: changed ...Fm... to ...F_... because of ambiguity as to whether
     //they represent fishing mortality (original model) of capture (gmacs) rates
@@ -1246,8 +1571,8 @@ PARAMETER_SECTION
 //    init_bounded_number pAvgLnF_RKF(-10,5,5)                   // fishing mortality red king crab fishery discards //IMPORTANT CHANGE: now estimated
 //    init_bounded_dev_vector pF_DevsRKF(1,nObsDscRKF,-15,15,6) //this is NOT estimated (why?)  IMPORTANT CHANGE: now estimated!
     //wts:implemented 20140823 (estimation phase now set in control file)
-    init_bounded_number pAvgLnF_RKF(-10,5,phsFmRKF)                           // fishing mortality red king crab fishery discards
-    init_bounded_dev_vector pF_DevsRKF(1,nObsDscRKF,-15,15,phsFmRKF+1) // 
+    init_bounded_number pAvgLnF_RKF(-10,5,phsRKFM)                           // fishing mortality red king crab fishery discards
+    init_bounded_dev_vector pF_DevsRKF(1,nObsDscRKF,-15,15,phsRKFM+1) // 
     
     // Retention function
     // init_bounded_number fish_fit_slope_mn(.250,1.001,phase_logistic_sel)
@@ -1536,13 +1861,11 @@ PARAMETER_SECTION
     number nat_penalty
     number penal_rec         // Recruitment
     number fpen              // Penalties (misc)
-    number sel_50m_penal     // Penalties on selectivity
     number af_penal          // Prior on af 
     number srv3q_penalty
     number am_penal          // Prior on am
     number bf_penal          // Prior on bf
     number bm_penal          // Prior on bm
-    number penal_sexr        // Penalty of sex ratio of recruitment            
     
     // Likelihood components
     vector zsRetMortBio_TCFR_y(styr,endyr-1)        ///< z-scores for fit to retained male catch mortality in directed TCF 
@@ -1609,22 +1932,6 @@ PARAMETER_SECTION
     
     objective_function_value f
     
- LOCAL_CALCS
-    CheckFile << "Phase: Moulting probabilities:       " << phsPrMolt_MatureMale << endl;
-    CheckFile << "Phase: Logistic selectivity pattern: " << phase_logistic_sel << endl;
-    CheckFile << "Phase: Dome-shaped selectivity:      " << phase_fishsel << endl;
-    CheckFile << "Phase: Survey selectivity #1         " << survsel1_phase << endl;
-    CheckFile << "Phase: Survey selectivity #2         " << survsel_phase << endl;
-    CheckFile << "Maturity switch:                     " << maturity_switch << endl;
-    cout << "Phase: Moulting probabilities:       " << phsPrMolt_MatureMale     << endl;
-    cout << "Phase: Logistic selectivity pattern: " << phase_logistic_sel << endl;
-    cout << "Phase: Dome-shaped selectivity:      " << phase_fishsel      << endl;
-    cout << "Phase: Survey selectivity #1         " << survsel1_phase     << endl;
-    cout << "Phase: Survey selectivity #2         " << survsel_phase      << endl;
-    cout << "Maturity switch:                     " << maturity_switch    << endl;
- END_CALCS
-    
-
 //========================================================================
 //========================================================================
 PRELIMINARY_CALCS_SECTION
@@ -3310,21 +3617,13 @@ FUNCTION evaluate_the_objective_function    //wts: revising
     penal_rec.initialize();
     if (active(pRecDevs)) {        
         //recruitment likelihood - norm2 is sum of square values   
-        penal_rec = 1.0*like_wght_recf*norm2(pRecDevs); //+ like_wght_rec*norm2(rec_devm);
+        penal_rec = 1.0*like_wght_rec*norm2(pRecDevs);
         //   penalty on devs in historic period     
         //penal_rec += 1.0*norm2(pRecDevsHist);
         //   penalty on dev first differences in historic period     
         penal_rec += 1.0*norm2(first_difference(pRecDevsHist));
         
         f += penal_rec; objfOut(1) = penal_rec; likeOut(1) = penal_rec; wgtsOut(1) = 1;
-        
-//         // Deviations on difference between make and female recruites (not used)
-//         penal_sexr.initialize();
-//         if (active(rec_devm)) {
-// //            for(int i=styr;i<endyr;i++) penal_sexr += like_wght_sexr*square((mnLnRec_x(FEMALE)+pRecDevs(i))-(mnLnRec_x(MALE)+rec_devm(i)));
-//             penal_sexr += like_wght_sexr*norm2((mnLnRec_x(FEMALE)+pRecDevs)-(mnLnRec_x(MALE)+rec_devm));
-//         }
-//         objfOut(2) = penal_sexr; f += penal_sexr; likeOut(2) = penal_sexr; wgtsOut(2) = 1;
     } 
     
     //nat Mort. penalty
@@ -3394,13 +3693,6 @@ FUNCTION evaluate_the_objective_function    //wts: revising
         lkPrM2M = norm2(first_difference(first_difference(pPrM2MM)));//wts: why different weights? 1.0 vs. 0.5?
         f += 0.5*lkPrM2M; objfOut(13)= 0.5*lkPrM2M; likeOut(13) = lkPrM2M; wgtsOut(13) = 0.5;
     }
-    
-    //jim said take the log
-    sel_50m_penal.initialize();
-//    if(active(log_sel50_dev_mn)) {
-        //sel_50m_penal = like_wght_sel50*norm2(first_difference(log_sel50_dev_mn));
-        f += sel_50m_penal; objfOut(14) = sel_50m_penal; likeOut(14) = 0.0; wgtsOut(14) = 0.0;
-//    }
     
     // various penalties
     // =================
