@@ -105,8 +105,10 @@
 //--20160708: 1. Switched to using "inp" values from control file to set initial parameter values.
 //                  The orig.chk test yielded same final objective function value (2049.13) 
 //                  but the max gradient was smaller than previously.
-//--20160709: 1. Removed all INITIALIZATION_SECTION values EXCEPT for pPrM2MF, pPrM2MM. orig.chk passed
-//                  as in 20160708.
+//--20160709: 1. Removed all INITIALIZATION_SECTION values EXCEPT for pPrM2MF, pPrM2MM. 
+//                  orig.chk passed as in 20160708.
+//--20160711: 1. Changed estimation phases for all parameters to those from control file.
+//                  orig,chk passed as in 20160709 (and 08).
 //
 //IMPORTANT: 2013-09 assessment model had RKC params for 1992+ discard mortality TURNED OFF. 
 //           THE ESTIMATION PHASE FOR RKC DISCARD MORTALITY IS NOW SET IN THE CONTROLLER FILE!
@@ -1500,19 +1502,22 @@ INITIALIZATION_SECTION
 // =======================================================================
 PARAMETER_SECTION
     
-    init_bounded_number pGrAF1(0.4,0.7,7)                     // Female growth-increment
-    init_bounded_number pGrBF1(0.6,1.2,7)                     // Female growth-increment
-    init_bounded_number pGrAM1(0.3,0.6,7)                     // Male growth-increment
-    init_bounded_number pGrBM1(0.7,1.2,7)                     // Male growth-increment
-    init_bounded_vector pGrBeta_x(1,nSXs,0.75000,0.75001,-2)  // Growth beta:  NOT estimated
+    //growth
+    init_bounded_number pGrAF1(0.4,0.7,phsGr)      // Female growth-increment
+    init_bounded_number pGrBF1(0.6,1.2,phsGr)      // Female growth-increment
+    init_bounded_number pGrAM1(0.3,0.6,phsGr)      // Male growth-increment
+    init_bounded_number pGrBM1(0.7,1.2,phsGr)      // Male growth-increment
+    init_bounded_vector pGrBeta_x(1,nSXs,0.5,1.0,-1)  // Growth beta:  NOT estimated
 
+    //natural mortality
     init_bounded_number pMfac_Imm(0.2,2.0,phsM)                // natural mortality multiplier for immature females and males
     init_bounded_number pMfac_MatM(0.1,1.9,phsM)               // natural mortality multiplier for mature males
     init_bounded_number pMfac_MatF(0.1,1.9,phsM)               // natural mortality multiplier for mature females
-    init_bounded_vector pMfac_Big(1,nSXs,0.1,10.0,phsBigM)     // mult. on 1980-1984 M for mature males and females                     
-    init_bounded_number pRecAlpha(11.49,11.51,-8)              // Parameters related to fraction recruiting  //this is NOT estimated (why?)
-    init_bounded_number pRecBeta(3.99,4.01,-8)                 // Parameters related to fraction recruiting  //this is NOT estimated (why?)
-    
+    init_bounded_vector pMfac_Big(1,nSXs,0.1,10.0,phsBigM)     // mult. on 1980-1984 M for mature males and females  
+
+    //recruitment
+    init_bounded_number pRecAlpha(11.0,12.0,-1)              // Parameters related to fraction recruiting  //this is NOT estimated (why?)
+    init_bounded_number pRecBeta(3.0,5.0,-1)                 // Parameters related to fraction recruiting  //this is NOT estimated (why?)
     init_number pMnLnRec(phsMnLnRec)                                                     // Mean ln-scale total "current" recruitment
     init_bounded_dev_vector pRecDevs(mnYrRecCurr,endyr,-15,15,phsRecDevs)                // "current" ln-scale total recruitment devs
     init_number pMnLnRecHist(phsMnLnRec)                                                 // Mean ln-scale total "historic" recruitment
@@ -1521,136 +1526,122 @@ PARAMETER_SECTION
     
     //20150601: changed ...Fm... to ...F_... because of ambiguity as to whether
     //they represent fishing mortality (original model) of capture (gmacs) rates
-    init_number pAvgLnF_TCF(1)                                        //log-scale mean directed fishing mortality
-    init_bounded_dev_vector pF_DevsTCF(1,nYrsTCF,-15,15,2)//log-scale directed fishing mortality devs IMPORTANT CHANGE: USED TO BE "1966,endyr-12"
-    init_number pAvgLnF_GTF(2)                                        // fishing mortality (trawl)
-    init_bounded_dev_vector pF_DevsGTF(1973,endyr-1,-15,15,3)         // trawl fishery f-devs       (IMPORTANT CHANGE: used to be "endyr") 1973 seems OK
-    init_number pAvgLnF_SCF(3)                                        // fishing mortality snow crab fishery discards
-    init_bounded_dev_vector pF_DevsSCF(1992,endyr-1,-15,15,4)         // snow crab fishery f-devs   (IMPORTANT CHANGE: used to be "endyr")  1992 is OK
-    //wts:following lines were used in 2013 assessment (i.e., RKF Fm NOT estimated)
-//    init_bounded_number pAvgLnF_RKF(-5.25,-5.25,-4)                   // fishing mortality red king crab fishery discards //this is NOT estimated (why?)
-//    init_bounded_dev_vector pF_DevsRKF(1,nObsDscRKF,-15,15,-5) //this is NOT estimated (why?)  IMPORTANT CHANGEA: was nObsDscRKF-1.  why -1 in "nObsDscRKF-1"
-//    //wts:following lines turn ON Fm for RKF
-//    init_bounded_number pAvgLnF_RKF(-10,5,5)                   // fishing mortality red king crab fishery discards //IMPORTANT CHANGE: now estimated
-//    init_bounded_dev_vector pF_DevsRKF(1,nObsDscRKF,-15,15,6) //this is NOT estimated (why?)  IMPORTANT CHANGE: now estimated!
-    //wts:implemented 20140823 (estimation phase now set in control file)
-    init_bounded_number pAvgLnF_RKF(-10,5,phsRKFM)                           // fishing mortality red king crab fishery discards
-    init_bounded_dev_vector pF_DevsRKF(1,nObsDscRKF,-15,15,phsRKFM+1) // 
+    init_number pAvgLnF_TCF(phsTCFM)                                 //log-scale mean directed fishing mortality
+    init_bounded_dev_vector pF_DevsTCF(1,nYrsTCF,-15,15,phsTCFM+1)   //log-scale directed fishing mortality devs IMPORTANT CHANGE: USED TO BE "1966,endyr-12"
+    init_number pAvgLnF_GTF(phsGTFM)                                 // fishing mortality (trawl)
+    init_bounded_dev_vector pF_DevsGTF(1973,endyr-1,-15,15,phsGTFM+1)// trawl fishery f-devs       (IMPORTANT CHANGE: used to be "endyr") 1973 seems OK
+    init_number pAvgLnF_SCF(phsSCFM)                                 // fishing mortality snow crab fishery discards
+    init_bounded_dev_vector pF_DevsSCF(1992,endyr-1,-15,15,phsSCFM+1)// snow crab fishery f-devs   (IMPORTANT CHANGE: used to be "endyr")  1992 is OK
+    init_bounded_number pAvgLnF_RKF(-10,5,phsRKFM)                   // fishing mortality red king crab fishery discards
+    init_bounded_dev_vector pF_DevsRKF(1,nObsDscRKF,-15,15,phsRKFM+1)// 
     
     // Retention function
-    // init_bounded_number fish_fit_slope_mn(.250,1.001,phase_logistic_sel)
-    // init_bounded_number fish_fit_sel50_mn(85.0,160.0,phase_logistic_sel)
     // 1981 - 1992
-    init_bounded_number pRetTCFM_slpA1(00.250,001.001,phase_logistic_sel)
-    init_bounded_number pRetTCFM_z50A1(85.000,160.000,phase_logistic_sel)
+    init_bounded_number pRetTCFM_slpA1(00.250,001.001,phsRet_TCFM)
+    init_bounded_number pRetTCFM_z50A1(85.000,160.000,phsRet_TCFM)
     // 2005-endyr  
-    init_bounded_number pRetTCFM_slpA2(00.250,002.001,phase_logistic_sel)
-    init_bounded_number pRetTCFM_z50A2(85.000,160.000,phase_logistic_sel)
+    init_bounded_number pRetTCFM_slpA2(00.250,002.001,phsRet_TCFM)
+    init_bounded_number pRetTCFM_z50A2(85.000,160.000,phsRet_TCFM)
     
     // Directed fishery selectivity pattern for period-1: 1993-1996
-    init_bounded_number pSelTCFM_slpA1(00.05,000.75,phase_logistic_sel)      
+    init_bounded_number pSelTCFM_slpA1(00.05,000.75,phsSel_TCFM)      
     
     // Directed fishery selectivity pattern changing by year for period-3: 2005-P
-    init_bounded_number pSelTCFM_slpA2(0.1,0.4,phase_logistic_sel)      
-    init_bounded_number pSelTCFM_mnLnZ50A2(4.0,5.0,phase_logistic_sel)
-    init_bounded_dev_vector pSelTCFM_devsZ50(1,nSelTCFM_devsZ50,-bndSelTCFM_devsZ50,bndSelTCFM_devsZ50,phase_logistic_sel) //Fixed index (why 2000?) (IMPORTANT CHANGE: used to be "endyr-2000")
+    init_bounded_number pSelTCFM_slpA2(0.1,0.4,phsSel_TCFM)      
+    init_bounded_number pSelTCFM_mnLnZ50A2(4.0,5.0,phsSel_TCFM)
+    init_bounded_dev_vector pSelTCFM_devsZ50(1,nSelTCFM_devsZ50,-bndSelTCFM_devsZ50,bndSelTCFM_devsZ50,phsSel_TCFM) //Fixed index (why 2000?) (IMPORTANT CHANGE: used to be "endyr-2000")
     
     // Female discards
-    init_bounded_number pSelTCFF_slp(00.1,000.4,phase_logistic_sel)
-    init_bounded_number pSelTCFF_z50(80.0,150.0,phase_logistic_sel)
+    init_bounded_number pSelTCFF_slp(00.1,000.4,phsSel_TCFF)
+    init_bounded_number pSelTCFF_z50(80.0,150.0,phsSel_TCFF)
     
     // snow fishery female discards for period-1: 1989-1996
-    init_bounded_number pSelSCFF_slpA1(00.05,000.5,phase_logistic_sel+1) //add 1 to phase
-    init_bounded_number pSelSCFF_z50A1(50.00,150.0,phase_logistic_sel+1)
+    init_bounded_number pSelSCFF_slpA1(00.05,000.5,phsSel_SCFF) //add 1 to phase
+    init_bounded_number pSelSCFF_z50A1(50.00,150.0,phsSel_SCFF)
     
     // snow fishery female discards for period-2: 1997-2004
-    init_bounded_number pSelSCFF_slpA2(00.05,000.5,phase_logistic_sel+1) //add 1 to phase
-    init_bounded_number pSelSCFF_z50A2(50.00,120.0,phase_logistic_sel+1)
+    init_bounded_number pSelSCFF_slpA2(00.05,000.5,phsSel_SCFF) //add 1 to phase
+    init_bounded_number pSelSCFF_z50A2(50.00,120.0,phsSel_SCFF)
     
     // snow fishery female discards for period-3: 2005-P
-    init_bounded_number pSelSCFF_slpA3(00.05,000.5,phase_logistic_sel+1) //add 1 to phase
-    init_bounded_number pSelSCFF_z50A3(50.00,120.0,phase_logistic_sel+1)
+    init_bounded_number pSelSCFF_slpA3(00.05,000.5,phsSel_SCFF) //add 1 to phase
+    init_bounded_number pSelSCFF_z50A3(50.00,120.0,phsSel_SCFF)
     
     // snow fishery male discards for period-1: 1989-1996
-    init_bounded_number pSelSCFM_slpA1(00.1,000.5,phase_logistic_sel+1)  //add 1 to phase
-    init_bounded_number pSelSCFM_z50A1(40.0,140.0,phase_logistic_sel+1)
-    init_bounded_number pSelSCFM_slpD1(00.1,000.5,phase_logistic_sel+1)
-    init_bounded_number pSelSCFM_lnZ50D1(2,4.5,phase_logistic_sel+1)
+    init_bounded_number pSelSCFM_slpA1(00.1,000.5,phsSel_SCFM)  //add 1 to phase
+    init_bounded_number pSelSCFM_z50A1(40.0,140.0,phsSel_SCFM)
+    init_bounded_number pSelSCFM_slpD1(00.1,000.5,phsSel_SCFM)
+    init_bounded_number pSelSCFM_lnZ50D1(2,4.5,phsSel_SCFM)
     
     // snow fishery male discards for period-2: 1997-2004
-    init_bounded_number pSelSCFM_slpA2(00.1,000.5,phase_logistic_sel+1)  //add 1 to phase
-    init_bounded_number pSelSCFM_z50A2(40.0,140.0,phase_logistic_sel+1)
-    init_bounded_number pSelSCFM_slpD2(00.1,000.5,phase_logistic_sel+1)
-    init_bounded_number pSelSCFM_lnZ50D2(2,4.5,phase_logistic_sel+1)
+    init_bounded_number pSelSCFM_slpA2(00.1,000.5,phsSel_SCFM)  //add 1 to phase
+    init_bounded_number pSelSCFM_z50A2(40.0,140.0,phsSel_SCFM)
+    init_bounded_number pSelSCFM_slpD2(00.1,000.5,phsSel_SCFM)
+    init_bounded_number pSelSCFM_lnZ50D2(2,4.5,phsSel_SCFM)
     
     // snow fishery male discards for period-3: 2005-P
-    init_bounded_number pSelSCFM_slpA3(00.1,000.5,phase_logistic_sel+1)  //add 1 to phase
-    init_bounded_number pSelSCFM_z50A3(40.0,140.0,phase_logistic_sel+1)
-    init_bounded_number pSelSCFM_slpD3(00.1,000.5,phase_logistic_sel+1)
-    init_bounded_number pSelSCFM_lnZ50D3(2,4.5,phase_logistic_sel+1)  
+    init_bounded_number pSelSCFM_slpA3(00.1,000.5,phsSel_SCFM)  //add 1 to phase
+    init_bounded_number pSelSCFM_z50A3(40.0,140.0,phsSel_SCFM)
+    init_bounded_number pSelSCFM_slpD3(00.1,000.5,phsSel_SCFM)
+    init_bounded_number pSelSCFM_lnZ50D3(2,4.5,phsSel_SCFM)  
     
     // red king fishery female discards
-    init_bounded_number pSelRKFF_slpA1(00.05,000.5,phase_logistic_sel) //add 2 to phase
-    init_bounded_number pSelRKFF_z50A1(50.00,150.0,phase_logistic_sel) //add 2 to phase
-    init_bounded_number pSelRKFF_slpA2(00.05,000.5,phase_logistic_sel) //add 2 to phase
-    init_bounded_number pSelRKFF_z50A2(50.00,150.0,phase_logistic_sel) //add 2 to phase
-    init_bounded_number pSelRKFF_slpA3(00.05,000.5,phase_logistic_sel) //add 2 to phase
-    init_bounded_number pSelRKFF_z50A3(50.00,170.0,phase_logistic_sel) //add 2 to phase
+    init_bounded_number pSelRKFF_slpA1(00.05,000.5,phsSel_RKFF) //add 2 to phase
+    init_bounded_number pSelRKFF_z50A1(50.00,150.0,phsSel_RKFF) //add 2 to phase
+    init_bounded_number pSelRKFF_slpA2(00.05,000.5,phsSel_RKFF) //add 2 to phase
+    init_bounded_number pSelRKFF_z50A2(50.00,150.0,phsSel_RKFF) //add 2 to phase
+    init_bounded_number pSelRKFF_slpA3(00.05,000.5,phsSel_RKFF) //add 2 to phase
+    init_bounded_number pSelRKFF_z50A3(50.00,170.0,phsSel_RKFF) //add 2 to phase
     
     // red king fishery male discards
-    init_bounded_number pSelRKFM_slpA1(.01,.50,phase_logistic_sel)          //add 2 to phase
-    init_bounded_number pSelRKFM_z50A1(95.0,150.0,phase_logistic_sel)
-    init_bounded_number pSelRKFM_slpA2(.01,.50,phase_logistic_sel)          //add 2 to phase
-    init_bounded_number pSelRKFM_z50A2(95.0,150.0,phase_logistic_sel)
-    init_bounded_number pSelRKFM_slpA3(.01,.50,phase_logistic_sel)          //add 2 to phase
-    init_bounded_number pSelRKFM_z50A3(95.0,150.0,phase_logistic_sel)
+    init_bounded_number pSelRKFM_slpA1(.01,.50,phsSel_RKFM)          //add 2 to phase
+    init_bounded_number pSelRKFM_z50A1(95.0,150.0,phsSel_RKFM)
+    init_bounded_number pSelRKFM_slpA2(.01,.50,phsSel_RKFM)          //add 2 to phase
+    init_bounded_number pSelRKFM_z50A2(95.0,150.0,phsSel_RKFM)
+    init_bounded_number pSelRKFM_slpA3(.01,.50,phsSel_RKFM)          //add 2 to phase
+    init_bounded_number pSelRKFM_z50A3(95.0,150.0,phsSel_RKFM)
     
-    // Trawl fishery selectivity female, 1973-1987
-    init_bounded_number pSelGTFF_slpA1(0.01,0.5,phase_logistic_sel)
-    init_bounded_number pSelGTFF_z50A1(40.0,125.01,phase_logistic_sel)
-    // Trawl fishery selectivity female, 1988-1996
-    init_bounded_number pSelGTFF_slpA2(0.005,0.5,phase_logistic_sel)
-    init_bounded_number pSelGTFF_z50A2(40.0,250.01,phase_logistic_sel) 
-    // Trawl fishery selectivity female, 1997-P
-    init_bounded_number pSelGTFF_slpA3(0.01,0.5,phase_logistic_sel)
-    init_bounded_number pSelGTFF_z50A3(40.0,150.01,phase_logistic_sel)
-    // Trawl fishery selectivity male, 1973-1987
-    init_bounded_number pSelGTFM_slpA1(0.01,0.5,phase_logistic_sel)
-    init_bounded_number pSelGTFM_z50A1(40.0,120.01,phase_logistic_sel)
-    // Trawl fishery selectivity male, 1988-1996
-    init_bounded_number pSelGTFM_slpA2(0.01,0.5,phase_logistic_sel)
-    init_bounded_number pSelGTFM_z50A2(40.0,120.01,phase_logistic_sel)
-    // Trawl fishery selectivity male, 1997-P
-    init_bounded_number pSelGTFM_slpA3(0.01,0.5,phase_logistic_sel)
-    init_bounded_number pSelGTFM_z50A3(40.0,120.01,phase_logistic_sel)
-    // Tanner 1968 to 2008 use these to estimate survey selectivities - same for males and females
-    // put negative for phase for q's, change to positive when use som and otto because input a negative phase 
-    //  init_bounded_number srv1_slope(.01,.4,-1)
-    //1969 to 1973  
-    //  init_bounded_number srv1_q(0.20,1.001,survsel1_phase)
-    //  init_bounded_number srv1_sel95(140,200.01,survsel1_phase)
-    //    init_bounded_number srv1_sel50(108.334,108.33401,-survsel1_phase)
-    //    init_bounded_number srv1_sel50(20.0,140.01,survsel1_phase)
+    // Groundfish fisheries selectivity 
+    ///female, 1973-1987
+    init_bounded_number pSelGTFF_slpA1(0.01,0.5,phsSel_GTFF)
+    init_bounded_number pSelGTFF_z50A1(40.0,125.01,phsSel_GTFF)
+    ///female, 1988-1996
+    init_bounded_number pSelGTFF_slpA2(0.005,0.5,phsSel_GTFF)
+    init_bounded_number pSelGTFF_z50A2(40.0,250.01,phsSel_GTFF) 
+    ///female, 1997-P
+    init_bounded_number pSelGTFF_slpA3(0.01,0.5,phsSel_GTFF)
+    init_bounded_number pSelGTFF_z50A3(40.0,150.01,phsSel_GTFF)
+    ///male, 1973-1987
+    init_bounded_number pSelGTFM_slpA1(0.01,0.5,phsSel_GTFM)
+    init_bounded_number pSelGTFM_z50A1(40.0,120.01,phsSel_GTFM)
+    ///male, 1988-1996
+    init_bounded_number pSelGTFM_slpA2(0.01,0.5,phsSel_GTFM)
+    init_bounded_number pSelGTFM_z50A2(40.0,120.01,phsSel_GTFM)
+    ///male, 1997-P
+    init_bounded_number pSelGTFM_slpA3(0.01,0.5,phsSel_GTFM)
+    init_bounded_number pSelGTFM_z50A3(40.0,120.01,phsSel_GTFM)
+
+    //Survey-related parameters
     //1974 to 1981 
-    init_bounded_number pSrv1_QM(0.50,1.001,survsel1_phase)
-    init_bounded_number pSrv1M_dz5095(0.0,100.0,survsel1_phase)
-    init_bounded_number pSrv1M_z50(0.0,90.0,survsel1_phase)
+    init_bounded_number pSrv1_QM(0.50,1.001,phsSrvQM1)
+    init_bounded_number pSrv1M_dz5095(0.0,100.0,phsSelSrvM1)
+    init_bounded_number pSrv1M_z50(0.0,90.0,phsSelSrvM1)
     //1982-P
     //max of the underbag at 182.5 mm is 0.873
-    init_bounded_number pSrv2_QM(0.2,2.0,survsel1_phase)
-    init_bounded_number pSrv2M_dz5095(0.0,100.0,survsel1_phase)
-    init_bounded_number pSrv2M_z50(0.0,69.0,survsel_phase)    
+    init_bounded_number pSrv2_QM(0.2,2.0,phsSrvQM2)
+    init_bounded_number pSrv2M_dz5095(0.0,100.0,phsSelSrvM2)
+    init_bounded_number pSrv2M_z50(0.0,69.0,phsSelSrvM2)    
     
     init_bounded_vector pPrM2MF(1,16,lbPrM2M,ubPrM2M,phsPrM2M)
     init_bounded_vector pPrM2MM(1,nZBs,lbPrM2M,ubPrM2M,phsPrM2M)
     
-    init_bounded_number pSrv1_QF(0.5,1.001,survsel1_phase)
-    init_bounded_number pSrv1F_dz5095(0.0,100.0,survsel1_phase)    
-    init_bounded_number pSrv1F_z50(-200.0,100.01,survsel1_phase)
+    init_bounded_number pSrv1_QF(0.5,1.001,phsSrvQF1)
+    init_bounded_number pSrv1F_dz5095(0.0,100.0,phsSelSrvF1)    
+    init_bounded_number pSrv1F_z50(-200.0,100.01,phsSelSrvF1)
     
-    init_bounded_number pSrv2_QF(0.2,1.0,survsel1_phase)
-    init_bounded_number pSrv2F_dz5095(0.0,100.0,survsel1_phase)
-    init_bounded_number pSrv2F_z50(-50.0,69.0,survsel1_phase)
+    init_bounded_number pSrv2_QF(0.2,1.0,phsSrvQF2)
+    init_bounded_number pSrv2F_dz5095(0.0,100.0,phsSelSrvF2)
+    init_bounded_number pSrv2F_z50(-50.0,69.0,phsSelSrvF2)
     
     init_bounded_number pAvgLnF_TCFF(-5.0,5.0,phsTCFF)  ///< female offset to ln-scale mean fishing mortality in directed fishery
     init_bounded_number pAvgLnF_SCFF(-5.0,5.0,phsSCFF)  ///< female offset to ln-scale mean fishing mortality in snow crab fishery
