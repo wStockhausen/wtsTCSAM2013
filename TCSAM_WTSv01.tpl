@@ -111,6 +111,8 @@
 //                  orig,chk passed as in 20160709 (and 08).
 //            2. Added comments, moved some definitions of dvar-type quantities (NOT parameters) around.
 //                  orig,chk passed as previously.
+//            3. Revised order in "writeParameters".
+//                  orig,chk passed as previously.
 //
 //IMPORTANT: 2013-09 assessment model had RKC params for 1992+ discard mortality TURNED OFF. 
 //           THE ESTIMATION PHASE FOR RKC DISCARD MORTALITY IS NOW SET IN THE CONTROLLER FILE!
@@ -2464,10 +2466,11 @@ PROCEDURE_SECTION                                          //wts: revised
 // ----------------------------------------------------------------------
 // ----------------------------------------------------------------------
 FUNCTION runPopMod
-    // growth estimated in prelimn calcs if growth parameters estimated in the model
-    // then will redo growth matrix, otherwise not
+    // growth matrix initially calculated in prelimn calcs. 
+    // recalculate only if growth parameters are estimated
     if(active(pGrAM1) || active(pGrBM1) || active(pGrAF1) || active(pGrBF1) || active(pGrBeta_x)) {
         get_growth1();//only option now
+//        cout<<" growth "<<endl;
     }
     
     get_maturity();
@@ -2485,32 +2488,56 @@ FUNCTION runPopMod
 // ----------------------------------------------------------------------
 FUNCTION void writeParameters(ofstream& os,int toR, int willBeActive)                        //wts: new
     os<<"index, phase, idx.mn, idx.mx, min, max, value, name, type"<<endl;
-    wts::writeParameter(os,pGrAF1,toR,willBeActive);      
-    wts::writeParameter(os,pGrBF1,toR,willBeActive);      
-    wts::writeParameter(os,pGrAM1,toR,willBeActive);      
-    wts::writeParameter(os,pGrBM1,toR,willBeActive);      
-    
-    wts::writeParameter(os,pGrBeta_x,toR,willBeActive);      
-    wts::writeParameter(os,pMfac_Imm,toR,willBeActive);      
-    wts::writeParameter(os,pMfac_MatM,toR,willBeActive);      
-    wts::writeParameter(os,pMfac_MatF,toR,willBeActive);      
-    wts::writeParameter(os,pMfac_Big,toR,willBeActive);      
-    wts::writeParameter(os,pRecAlpha,toR,willBeActive);      
-    wts::writeParameter(os,pRecBeta,toR,willBeActive);      
-    
     wts::writeParameter(os,pMnLnRec,toR,willBeActive);      
     wts::writeParameter(os,pRecDevs,toR,willBeActive);      
     wts::writeParameter(os,pMnLnRecHist,toR,willBeActive); 
     wts::writeParameter(os,pRecDevsHist,toR,willBeActive); 
+    wts::writeParameter(os,pRecAlpha,toR,willBeActive);      
+    wts::writeParameter(os,pRecBeta,toR,willBeActive);      
+    
+    wts::writeParameter(os,pMfac_Imm,toR,willBeActive);      
+    wts::writeParameter(os,pMfac_MatM,toR,willBeActive);      
+    wts::writeParameter(os,pMfac_MatF,toR,willBeActive);      
+    wts::writeParameter(os,pMfac_Big,toR,willBeActive);      
+    
+    wts::writeParameter(os,pPrM2MF,toR,willBeActive); 
+    wts::writeParameter(os,pPrM2MM,toR,willBeActive); 
+    
+    wts::writeParameter(os,pGrAF1,toR,willBeActive);      
+    wts::writeParameter(os,pGrBF1,toR,willBeActive);      
+    wts::writeParameter(os,pGrAM1,toR,willBeActive);      
+    wts::writeParameter(os,pGrBM1,toR,willBeActive);      
+    wts::writeParameter(os,pGrBeta_x,toR,willBeActive);  
+    
+    wts::writeParameter(os,pSrv1_QM,toR,willBeActive);       
+    wts::writeParameter(os,pSrv2_QM,toR,willBeActive);       
+    wts::writeParameter(os,pSrv1_QF,toR,willBeActive);      
+    wts::writeParameter(os,pSrv2_QF,toR,willBeActive); 
+    
+    wts::writeParameter(os,pSrv1M_dz5095,toR,willBeActive); 
+    wts::writeParameter(os,pSrv1M_z50,toR,willBeActive);   
+    wts::writeParameter(os,pSrv2M_dz5095,toR,willBeActive); 
+    wts::writeParameter(os,pSrv2M_z50,toR,willBeActive);   
+    
+    wts::writeParameter(os,pSrv1F_dz5095,toR,willBeActive); 
+    wts::writeParameter(os,pSrv1F_z50,toR,willBeActive);   
+    wts::writeParameter(os,pSrv2F_dz5095,toR,willBeActive); 
+    wts::writeParameter(os,pSrv2F_z50,toR,willBeActive);
     
     wts::writeParameter(os,pAvgLnF_TCF,toR,willBeActive);   
-    wts::writeParameter(os,pF_DevsTCF,toR,willBeActive);    
-    wts::writeParameter(os,pAvgLnF_GTF,toR,willBeActive);   
-    wts::writeParameter(os,pF_DevsGTF,toR,willBeActive);    
     wts::writeParameter(os,pAvgLnF_SCF,toR,willBeActive);   
-    wts::writeParameter(os,pF_DevsSCF,toR,willBeActive);    
     wts::writeParameter(os,pAvgLnF_RKF,toR,willBeActive);   
+    wts::writeParameter(os,pAvgLnF_GTF,toR,willBeActive);   
+    
+    wts::writeParameter(os,pAvgLnF_TCFF,toR,willBeActive);
+    wts::writeParameter(os,pAvgLnF_SCFF,toR,willBeActive);
+    wts::writeParameter(os,pAvgLnF_RKFF,toR,willBeActive);
+    wts::writeParameter(os,pAvgLnF_GTFF,toR,willBeActive);
+    
+    wts::writeParameter(os,pF_DevsTCF,toR,willBeActive);    
+    wts::writeParameter(os,pF_DevsSCF,toR,willBeActive);    
     wts::writeParameter(os,pF_DevsRKF,toR,willBeActive);    
+    wts::writeParameter(os,pF_DevsGTF,toR,willBeActive);    
     
     wts::writeParameter(os,pRetTCFM_slpA1,toR,willBeActive);   
     wts::writeParameter(os,pRetTCFM_z50A1,toR,willBeActive);    
@@ -2578,29 +2605,10 @@ FUNCTION void writeParameters(ofstream& os,int toR, int willBeActive)           
     wts::writeParameter(os,pSelGTFM_slpA3,toR,willBeActive);   
     wts::writeParameter(os,pSelGTFM_z50A3,toR,willBeActive);   
     
-    wts::writeParameter(os,pSrv1_QM,toR,willBeActive);       
-    wts::writeParameter(os,pSrv1M_dz5095,toR,willBeActive); 
-    wts::writeParameter(os,pSrv1M_z50,toR,willBeActive);   
-
-    wts::writeParameter(os,pSrv2_QM,toR,willBeActive);       
-    wts::writeParameter(os,pSrv2M_dz5095,toR,willBeActive); 
-    wts::writeParameter(os,pSrv2M_z50,toR,willBeActive);   
-
-    wts::writeParameter(os,pPrM2MF,toR,willBeActive); 
-    wts::writeParameter(os,pPrM2MM,toR,willBeActive); 
-    
-    wts::writeParameter(os,pSrv1_QF,toR,willBeActive);      
-    wts::writeParameter(os,pSrv1F_dz5095,toR,willBeActive); 
-    wts::writeParameter(os,pSrv1F_z50,toR,willBeActive);   
-    
-    wts::writeParameter(os,pSrv2_QF,toR,willBeActive);      
-    wts::writeParameter(os,pSrv2F_dz5095,toR,willBeActive); 
-    wts::writeParameter(os,pSrv2F_z50,toR,willBeActive);
-    
-    wts::writeParameter(os,pAvgLnF_TCFF,toR,willBeActive);
-    wts::writeParameter(os,pAvgLnF_SCFF,toR,willBeActive);
-    wts::writeParameter(os,pAvgLnF_RKFF,toR,willBeActive);
-    wts::writeParameter(os,pAvgLnF_GTFF,toR,willBeActive);
+    wts::writeParameter(os,pLnEffXtr_TCF,toR,willBeActive);      
+    wts::writeParameter(os,pLnEffXtr_SCF,toR,willBeActive);      
+    wts::writeParameter(os,pLnEffXtr_RKF,toR,willBeActive);      
+    wts::writeParameter(os,pLnEffXtr_GTF,toR,willBeActive);      
     
 // ----------------------------------------------------------------------
 FUNCTION void jitterParameters(double fac)   //wts: new 2014-05-10
@@ -2756,27 +2764,21 @@ FUNCTION openMCMCFile                                     //wts: new
     
 // ----------------------------------------------------------------------
 // ----------------------------------------------------------------------
-FUNCTION closeMCMCFile                                     //wts: new
+FUNCTION closeMCMCFile
     mcmc<<"dummy=0)"<<endl;
     mcmc.close();
     
 // ----------------------------------------------------------------------
 // ----------------------------------------------------------------------
-FUNCTION WriteMCMC                                     //wts: checked
+FUNCTION WriteMCMC
     post<<
-    // srv1_slope <<","<<
-    // srv1_sel50 <<","<<
-    // fish_fit_slope_mn <<","<<
-    // fish_fit_sel50_mn <<","<<
-    pSelTCFF_slp <<","<<
-    pSelTCFF_z50 <<","<<
-    //pSelGTFF_slpA <<","<<
-    //pSelGTFF_z50A <<","<<
+        pSelTCFF_slp <<","<<
+        pSelTCFF_z50 <<","<<
     endl;
 
 // --------------------------------------------------------------------------
 // --------------------------------------------------------------------------
-FUNCTION get_maturity                                  //wts: revised
+FUNCTION get_maturity
     //prMoltToMaturity(female|size)
     if(active(pPrM2MF)){
         //prM2M(females> zBs(16)) assumed = 1
