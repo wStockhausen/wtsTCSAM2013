@@ -117,6 +117,8 @@
 //                  orig.chk resulted in obj fun = 2423.12!
 //            5. Converted "exp" to "mfexp" in all instances EXCEPT gamma function calc.s (prGr_xzz, prRec_z).
 //                  orig.chk passed as previously.
+//            6. Rearranged survey selectivity calculations PRIOR to using useSomertonOtto flags.
+//                  orig.chk passed as previously.
 //
 //IMPORTANT: 2013-09 assessment model had RKC params for 1992+ discard mortality TURNED OFF. 
 //           THE ESTIMATION PHASE FOR RKC DISCARD MORTALITY IS NOW SET IN THE CONTROLLER FILE!
@@ -2956,28 +2958,6 @@ FUNCTION get_selectivity                  //wts: revised
     selGTF_cxz(3,MALE)=1./(1.+mfexp(-1.*pSelGTFM_slpA3*(zBs-pSelGTFM_z50A3)));
 //    cout<<"get_sel: 2d"<<endl;
         
-    selSrv1_xz.initialize();
-    selSrv2_xz.initialize();
-    selSrv3_xz.initialize();
-//    // somerton and otto curve for survey selectivities
-//    if (survsel_phase<0)
-//        selSrv3_xz(MALE) = sel_som(1)/(1.+sel_som(2)*mfexp(-1.*sel_som(3)*zBs));
-//    else
-//        selSrv3_xz(MALE) = pSrv2_QM*1./(1.+mfexp(-1.*log(19.)*(zBs-pSrv2M_z50)/(pSrv2M_dz5095)));
-//    // this sets time periods 1 and 2 survey selectivities to somerton otto as well
-//    if (survsel1_phase < 0)
-//        selSrv1_xz(MALE) = selSrv3_xz(MALE);
-//    else { 
-//        selSrv1_xz(MALE)  = pSrv1_QM*1./(1.+mfexp(-1.*log(19.)*(zBs-pSrv1M_z50)/(pSrv1M_dz5095)));
-//        selSrv2_xz(MALE) = pSrv2_QM*1./(1.+mfexp(-1.*log(19.)*(zBs-pSrv2M_z50)/(pSrv2M_dz5095)));
-//    }
-//        
-//    //set male and female equal unless estimating qFem
-//    selSrv1_xz(FEMALE)  = pSrv1_QF*1./(1.+mfexp(-1.*log(19.)*(zBs-pSrv1F_z50)/(pSrv1F_dz5095)));
-//    selSrv2_xz(FEMALE) = pSrv2_QF*1./(1.+mfexp(-1.*log(19.)*(zBs-pSrv2F_z50)/(pSrv2F_dz5095)));
-//    selSrv3_xz(FEMALE)  = pSrv2_QF*1./(1.+mfexp(-1.*log(19.)*(zBs-pSrv2F_z50)/(pSrv2F_dz5095)));
-//    cout<<"get_sel: 3"<<endl;
-//    
     dvariable maxsel;
     selTCFR_syz.initialize();
     for(int iy=styr;iy<endyr;iy++){          //used to be iy<=endyr
@@ -2990,17 +2970,6 @@ FUNCTION get_selectivity                  //wts: revised
     }
 //    cout<<"get_sel: 4"<<endl;
 //    cout<<"done"<<endl;
-    
-    //new 20150901-->
-    //calculate survey selectivities
-    selSrv1_xz( MALE) = 1./(1.+mfexp(-1.*log(19.)*(zBs-pSrv1M_z50)/(pSrv1M_dz5095)));
-    selSrv2_xz(MALE) = 1./(1.+mfexp(-1.*log(19.)*(zBs-pSrv2M_z50)/(pSrv2M_dz5095)));
-    selSrv3_xz( MALE) = 1./(1.+mfexp(-1.*log(19.)*(zBs-pSrv2M_z50)/(pSrv2M_dz5095)));
-        
-    selSrv1_xz( FEMALE) = 1./(1.+mfexp(-1.*log(19.)*(zBs-pSrv1F_z50)/(pSrv1F_dz5095)));
-    selSrv2_xz(FEMALE) = 1./(1.+mfexp(-1.*log(19.)*(zBs-pSrv2F_z50)/(pSrv2F_dz5095)));
-    selSrv3_xz( FEMALE) = 1./(1.+mfexp(-1.*log(19.)*(zBs-pSrv2F_z50)/(pSrv2F_dz5095)));
-//    cout<<"get_sel: 3"<<endl;
     
      if (optFshSel==1){//set logistic selectivity = 1 in largest size bin
         //TCFM and retFcn_syz
@@ -3032,14 +3001,27 @@ FUNCTION get_selectivity                  //wts: revised
         selGTF_cxz(3,FEMALE) /= selGTF_cxz(3,FEMALE,nZBs);
      }
     
+    //calculate survey selectivities
+    selSrv1_xz.initialize();
+    selSrv2_xz.initialize();
+    selSrv3_xz.initialize();
+    selSrv1_xz(MALE) = 1./(1.+mfexp(-1.*log(19.)*(zBs-pSrv1M_z50)/(pSrv1M_dz5095)));
+    selSrv2_xz(MALE) = 1./(1.+mfexp(-1.*log(19.)*(zBs-pSrv2M_z50)/(pSrv2M_dz5095)));
+    selSrv3_xz(MALE) = 1./(1.+mfexp(-1.*log(19.)*(zBs-pSrv2M_z50)/(pSrv2M_dz5095)));
+        
+    selSrv1_xz(FEMALE) = 1./(1.+mfexp(-1.*log(19.)*(zBs-pSrv1F_z50)/(pSrv1F_dz5095)));
+    selSrv2_xz(FEMALE) = 1./(1.+mfexp(-1.*log(19.)*(zBs-pSrv2F_z50)/(pSrv2F_dz5095)));
+    selSrv3_xz(FEMALE) = 1./(1.+mfexp(-1.*log(19.)*(zBs-pSrv2F_z50)/(pSrv2F_dz5095)));
+//    cout<<"get_sel: 3"<<endl;
+    
     //survey selectivities
      if (optSrvSel==1){//set logistic selectivity = 1 in largest size bin
-        selSrv1_xz(   MALE) /= selSrv1_xz(   MALE,nZBs);
+        selSrv1_xz(  MALE) /= selSrv1_xz(  MALE,nZBs);
         selSrv2_xz(  MALE) /= selSrv2_xz(  MALE,nZBs);
-        selSrv3_xz(   MALE) /= selSrv3_xz(   MALE,nZBs);
-        selSrv1_xz( FEMALE) /= selSrv1_xz( FEMALE,nZBs);
+        selSrv3_xz(  MALE) /= selSrv3_xz(  MALE,nZBs);
+        selSrv1_xz(FEMALE) /= selSrv1_xz(FEMALE,nZBs);
         selSrv2_xz(FEMALE) /= selSrv2_xz(FEMALE,nZBs);
-        selSrv3_xz( FEMALE) /= selSrv3_xz( FEMALE,nZBs);
+        selSrv3_xz(FEMALE) /= selSrv3_xz(FEMALE,nZBs);
     }
     
     if (survsel_phase<0)
