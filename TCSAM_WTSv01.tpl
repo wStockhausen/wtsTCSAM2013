@@ -109,6 +109,8 @@
 //                  orig.chk passed as in 20160708.
 //--20160711: 1. Changed estimation phases for all parameters to those from control file.
 //                  orig,chk passed as in 20160709 (and 08).
+//            2. Added comments, moved some definitions of dvar-type quantities (NOT parameters) around.
+//                  orig,chk passed as previously.
 //
 //IMPORTANT: 2013-09 assessment model had RKC params for 1992+ discard mortality TURNED OFF. 
 //           THE ESTIMATION PHASE FOR RKC DISCARD MORTALITY IS NOW SET IN THE CONTROLLER FILE!
@@ -1522,7 +1524,6 @@ PARAMETER_SECTION
     init_bounded_dev_vector pRecDevs(mnYrRecCurr,endyr,-15,15,phsRecDevs)                // "current" ln-scale total recruitment devs
     init_number pMnLnRecHist(phsMnLnRec)                                                 // Mean ln-scale total "historic" recruitment
     init_bounded_dev_vector pRecDevsHist(mnYrRecDevsHist,mnYrRecCurr-1,-15,15,phsRecDevs)// "historic" ln-scale total recruitment devs
-    vector rec_y(styr,endyr)                                                             //arithmetic-scale total recruitment (millions)
     
     //20150601: changed ...Fm... to ...F_... because of ambiguity as to whether
     //they represent fishing mortality (original model) of capture (gmacs) rates
@@ -1536,118 +1537,130 @@ PARAMETER_SECTION
     init_bounded_dev_vector pF_DevsRKF(1,nObsDscRKF,-15,15,phsRKFM+1)// 
     
     // Retention function
-    // 1981 - 1992
+    //-- styr-1990
     init_bounded_number pRetTCFM_slpA1(00.250,001.001,phsRet_TCFM)
     init_bounded_number pRetTCFM_z50A1(85.000,160.000,phsRet_TCFM)
-    // 2005-endyr  
+    //-- 1991+  
     init_bounded_number pRetTCFM_slpA2(00.250,002.001,phsRet_TCFM)
     init_bounded_number pRetTCFM_z50A2(85.000,160.000,phsRet_TCFM)
     
-    // Directed fishery selectivity pattern for period-1: 1993-1996
+    //Directed fishery male selectivity pattern
+    //-- styr-1996
     init_bounded_number pSelTCFM_slpA1(00.05,000.75,phsSel_TCFM)      
-    
-    // Directed fishery selectivity pattern changing by year for period-3: 2005-P
+    //-- 2005+
     init_bounded_number pSelTCFM_slpA2(0.1,0.4,phsSel_TCFM)      
     init_bounded_number pSelTCFM_mnLnZ50A2(4.0,5.0,phsSel_TCFM)
-    init_bounded_dev_vector pSelTCFM_devsZ50(1,nSelTCFM_devsZ50,-bndSelTCFM_devsZ50,bndSelTCFM_devsZ50,phsSel_TCFM) //Fixed index (why 2000?) (IMPORTANT CHANGE: used to be "endyr-2000")
+    //-- 1991+
+    init_bounded_dev_vector pSelTCFM_devsZ50(1,nSelTCFM_devsZ50,-bndSelTCFM_devsZ50,bndSelTCFM_devsZ50,phsSel_TCFM)
     
-    // Female discards
+    // Directed fishery female bycatch selectivity pattern
+    //-- styr+
     init_bounded_number pSelTCFF_slp(00.1,000.4,phsSel_TCFF)
     init_bounded_number pSelTCFF_z50(80.0,150.0,phsSel_TCFF)
     
-    // snow fishery female discards for period-1: 1989-1996
-    init_bounded_number pSelSCFF_slpA1(00.05,000.5,phsSel_SCFF) //add 1 to phase
+    // Snow crab fishery female bycatch selectivity pattern
+    //-- 1989-1996
+    init_bounded_number pSelSCFF_slpA1(00.05,000.5,phsSel_SCFF)
     init_bounded_number pSelSCFF_z50A1(50.00,150.0,phsSel_SCFF)
-    
-    // snow fishery female discards for period-2: 1997-2004
-    init_bounded_number pSelSCFF_slpA2(00.05,000.5,phsSel_SCFF) //add 1 to phase
+    //-- 1997-2004
+    init_bounded_number pSelSCFF_slpA2(00.05,000.5,phsSel_SCFF)
     init_bounded_number pSelSCFF_z50A2(50.00,120.0,phsSel_SCFF)
-    
-    // snow fishery female discards for period-3: 2005-P
-    init_bounded_number pSelSCFF_slpA3(00.05,000.5,phsSel_SCFF) //add 1 to phase
+    //-- 2005+
+    init_bounded_number pSelSCFF_slpA3(00.05,000.5,phsSel_SCFF)
     init_bounded_number pSelSCFF_z50A3(50.00,120.0,phsSel_SCFF)
     
-    // snow fishery male discards for period-1: 1989-1996
-    init_bounded_number pSelSCFM_slpA1(00.1,000.5,phsSel_SCFM)  //add 1 to phase
+    // Snow crab fishery male bycatch selectivity pattern
+    //-- 1989-1996
+    init_bounded_number pSelSCFM_slpA1(00.1,000.5,phsSel_SCFM)  
     init_bounded_number pSelSCFM_z50A1(40.0,140.0,phsSel_SCFM)
     init_bounded_number pSelSCFM_slpD1(00.1,000.5,phsSel_SCFM)
     init_bounded_number pSelSCFM_lnZ50D1(2,4.5,phsSel_SCFM)
-    
-    // snow fishery male discards for period-2: 1997-2004
-    init_bounded_number pSelSCFM_slpA2(00.1,000.5,phsSel_SCFM)  //add 1 to phase
+    //-- 1997-2004
+    init_bounded_number pSelSCFM_slpA2(00.1,000.5,phsSel_SCFM)
     init_bounded_number pSelSCFM_z50A2(40.0,140.0,phsSel_SCFM)
     init_bounded_number pSelSCFM_slpD2(00.1,000.5,phsSel_SCFM)
     init_bounded_number pSelSCFM_lnZ50D2(2,4.5,phsSel_SCFM)
-    
-    // snow fishery male discards for period-3: 2005-P
-    init_bounded_number pSelSCFM_slpA3(00.1,000.5,phsSel_SCFM)  //add 1 to phase
+    //-- 2005+
+    init_bounded_number pSelSCFM_slpA3(00.1,000.5,phsSel_SCFM)
     init_bounded_number pSelSCFM_z50A3(40.0,140.0,phsSel_SCFM)
     init_bounded_number pSelSCFM_slpD3(00.1,000.5,phsSel_SCFM)
     init_bounded_number pSelSCFM_lnZ50D3(2,4.5,phsSel_SCFM)  
     
-    // red king fishery female discards
-    init_bounded_number pSelRKFF_slpA1(00.05,000.5,phsSel_RKFF) //add 2 to phase
-    init_bounded_number pSelRKFF_z50A1(50.00,150.0,phsSel_RKFF) //add 2 to phase
-    init_bounded_number pSelRKFF_slpA2(00.05,000.5,phsSel_RKFF) //add 2 to phase
-    init_bounded_number pSelRKFF_z50A2(50.00,150.0,phsSel_RKFF) //add 2 to phase
-    init_bounded_number pSelRKFF_slpA3(00.05,000.5,phsSel_RKFF) //add 2 to phase
-    init_bounded_number pSelRKFF_z50A3(50.00,170.0,phsSel_RKFF) //add 2 to phase
+    // Red king crab fishery female bycatch selectivity pattern
+    //-- 
+    init_bounded_number pSelRKFF_slpA1(00.05,000.5,phsSel_RKFF) 
+    init_bounded_number pSelRKFF_z50A1(50.00,150.0,phsSel_RKFF) 
+    //-- 
+    init_bounded_number pSelRKFF_slpA2(00.05,000.5,phsSel_RKFF) 
+    init_bounded_number pSelRKFF_z50A2(50.00,150.0,phsSel_RKFF) 
+    //-- 
+    init_bounded_number pSelRKFF_slpA3(00.05,000.5,phsSel_RKFF) 
+    init_bounded_number pSelRKFF_z50A3(50.00,170.0,phsSel_RKFF) 
     
-    // red king fishery male discards
-    init_bounded_number pSelRKFM_slpA1(.01,.50,phsSel_RKFM)          //add 2 to phase
+    // Red king crab fishery male bycatch selectivity pattern
+    //-- 
+    init_bounded_number pSelRKFM_slpA1(.01,.50,phsSel_RKFM)          
     init_bounded_number pSelRKFM_z50A1(95.0,150.0,phsSel_RKFM)
-    init_bounded_number pSelRKFM_slpA2(.01,.50,phsSel_RKFM)          //add 2 to phase
+    //-- 
+    init_bounded_number pSelRKFM_slpA2(.01,.50,phsSel_RKFM)          
     init_bounded_number pSelRKFM_z50A2(95.0,150.0,phsSel_RKFM)
-    init_bounded_number pSelRKFM_slpA3(.01,.50,phsSel_RKFM)          //add 2 to phase
+    //-- 
+    init_bounded_number pSelRKFM_slpA3(.01,.50,phsSel_RKFM)          
     init_bounded_number pSelRKFM_z50A3(95.0,150.0,phsSel_RKFM)
     
-    // Groundfish fisheries selectivity 
-    ///female, 1973-1987
+    // Groundfish fisheries female bycatch selectivity pattern
+    //-- 1973-1987
     init_bounded_number pSelGTFF_slpA1(0.01,0.5,phsSel_GTFF)
     init_bounded_number pSelGTFF_z50A1(40.0,125.01,phsSel_GTFF)
-    ///female, 1988-1996
+    //-- 1988-1996
     init_bounded_number pSelGTFF_slpA2(0.005,0.5,phsSel_GTFF)
     init_bounded_number pSelGTFF_z50A2(40.0,250.01,phsSel_GTFF) 
-    ///female, 1997-P
+    //-- 1997+
     init_bounded_number pSelGTFF_slpA3(0.01,0.5,phsSel_GTFF)
     init_bounded_number pSelGTFF_z50A3(40.0,150.01,phsSel_GTFF)
-    ///male, 1973-1987
+
+    // Groundfish fisheries male bycatch selectivity pattern
+    ///-- styr-1987
     init_bounded_number pSelGTFM_slpA1(0.01,0.5,phsSel_GTFM)
     init_bounded_number pSelGTFM_z50A1(40.0,120.01,phsSel_GTFM)
-    ///male, 1988-1996
+    //-- 1988-1996
     init_bounded_number pSelGTFM_slpA2(0.01,0.5,phsSel_GTFM)
     init_bounded_number pSelGTFM_z50A2(40.0,120.01,phsSel_GTFM)
-    ///male, 1997-P
+    //-- 1997+
     init_bounded_number pSelGTFM_slpA3(0.01,0.5,phsSel_GTFM)
     init_bounded_number pSelGTFM_z50A3(40.0,120.01,phsSel_GTFM)
 
-    //Survey-related parameters
-    //1974 to 1981 
+    //Survey-related parameters for males
+    //-- males: pre-1982 
     init_bounded_number pSrv1_QM(0.50,1.001,phsSrvQM1)
     init_bounded_number pSrv1M_dz5095(0.0,100.0,phsSelSrvM1)
     init_bounded_number pSrv1M_z50(0.0,90.0,phsSelSrvM1)
-    //1982-P
-    //max of the underbag at 182.5 mm is 0.873
+    //--males: 1982+
     init_bounded_number pSrv2_QM(0.2,2.0,phsSrvQM2)
     init_bounded_number pSrv2M_dz5095(0.0,100.0,phsSelSrvM2)
     init_bounded_number pSrv2M_z50(0.0,69.0,phsSelSrvM2)    
+
+    //Probability of molt-to-maturity parameters 
+    init_bounded_vector pPrM2MF(1,16,lbPrM2M,ubPrM2M,phsPrM2M)  //females
+    init_bounded_vector pPrM2MM(1,nZBs,lbPrM2M,ubPrM2M,phsPrM2M)//males
     
-    init_bounded_vector pPrM2MF(1,16,lbPrM2M,ubPrM2M,phsPrM2M)
-    init_bounded_vector pPrM2MM(1,nZBs,lbPrM2M,ubPrM2M,phsPrM2M)
-    
+    //Survey-related parameters for females
+    //-- females: pre-1982 
     init_bounded_number pSrv1_QF(0.5,1.001,phsSrvQF1)
     init_bounded_number pSrv1F_dz5095(0.0,100.0,phsSelSrvF1)    
     init_bounded_number pSrv1F_z50(-200.0,100.01,phsSelSrvF1)
-    
+    //--females: 1982+
     init_bounded_number pSrv2_QF(0.2,1.0,phsSrvQF2)
     init_bounded_number pSrv2F_dz5095(0.0,100.0,phsSelSrvF2)
     init_bounded_number pSrv2F_z50(-50.0,69.0,phsSelSrvF2)
     
+    //Offsets to fully-selected male fishing mortality/fishery capture rate for females
     init_bounded_number pAvgLnF_TCFF(-5.0,5.0,phsTCFF)  ///< female offset to ln-scale mean fishing mortality in directed fishery
     init_bounded_number pAvgLnF_SCFF(-5.0,5.0,phsSCFF)  ///< female offset to ln-scale mean fishing mortality in snow crab fishery
     init_bounded_number pAvgLnF_RKFF(-5.0,5.0,phsRKFF)  ///< female offset to ln-scale mean fishing mortality in BBRKC fishery
     init_bounded_number pAvgLnF_GTFF(-5.0,5.0,phsGTFF)  ///< female offset to ln-scale mean fishing mortality in groundfish trawl fisheries
 
+    //Effort extrapolation parameters
     init_bounded_number pLnEffXtr_TCF(-5.0,5.0,phsLnEffXtr_TCF)  ///< TCF effort extrapolation parameter
     init_bounded_number pLnEffXtr_SCF(-5.0,5.0,phsLnEffXtr_SCF)  ///< SCF effort extrapolation parameter
     init_bounded_number pLnEffXtr_RKF(-5.0,5.0,phsLnEffXtr_RKF)  ///< RKF effort extrapolation parameter
@@ -1662,19 +1675,17 @@ PARAMETER_SECTION
     3darray selRKF_cxz(1,3,1,nSXs,1,nZBs)      // 3D array to accommodate 3 selectivity periods 
     3darray selGTF_cxz(1,3,1,nSXs,1,nZBs)      // 3D array to accommodate 3 selectivity periods
     
-    matrix selSrv1_xz(1,nSXs,1,nZBs)  // Survey selectivity 2
-    matrix selSrv2_xz(1,nSXs,1,nZBs) // Survey selectivity 2a
-    matrix selSrv3_xz(1,nSXs,1,nZBs)  // Survey selectivity 3
+    matrix selSrv1_xz(1,nSXs,1,nZBs) // Survey selectivity 1 pre 1982
+    matrix selSrv2_xz(1,nSXs,1,nZBs) // Survey selectivity 2 1982-1987
+    matrix selSrv3_xz(1,nSXs,1,nZBs) // Survey selectivity 3 1988+
         
     3darray M_msx(1,nMSs,1,nSCs,1,nSXs);//natural mortality rates
     
-    vector modPopNum_y(styr,endyr)   // Total population numbers on July 1, endyr (output)
+    vector modPopNum_y(styr,endyr) // Total population numbers on July 1, endyr (output)
     vector modPopBio_y(styr,endyr) // Predicted biomass (determines sdrDepletion) 
     
     vector fspbio(styr,endyr)                       // Predicted female spawning biomass on July 1
     vector mspbio(styr,endyr)                       // Predicted   male spawning biomass on July 1  
-//    vector fspbio_srv1(styr,endyr)                  // Predicted female spawning biomass at survey time, as seen by survey
-//    vector mspbio_srv1(styr,endyr)                  // Predicted   male spawning biomass at survey time, as seen by survey
     matrix modSrvImmBio_xy(1,nSXs,styr,endyr)          // Predicted immature biomass at survey time, as seen by survey
     matrix modSrvMatBio_xy(1,nSXs,styr,endyr)          // Predicted mature biomass at survey time, as seen by survey
     3darray modSrvImmNum_xsy(1,nSXs,1,nSCs,styr,endyr) // Predicted survey numbers for immature crab by sex, shell condition (output)
@@ -1688,7 +1699,6 @@ PARAMETER_SECTION
     vector modSrvNumLegal_y(styr,endyr)                // Survey-selected legal-sized males   
     matrix modSrvNumLegal_sy(1,nSCs,styr,endyr)        // Survey-selected legal-sized males, by shell condition  
     vector modSrvBioLegal_y(styr,endyr)                // Survey-selected legal male biomass  
-//    matrix biom_tmp(1,nSXs,styr,endyr);              // Predicted survey indices        
     3darray modSrvNum_xyz(1,nSXs,styr,endyr,1,nZBs)    // Predicted survey abundance by length bin       
     4darray modSrvPrNatZ_NS_mxyz(1,nMSs,1,nSXs,styr,endyr,1,nZBs) // Predicted new shell length-frequency 
     4darray modSrvPrNatZ_OS_mxyz(1,nMSs,1,nSXs,styr,endyr,1,nZBs) // Predicted old shell length-frequency
@@ -1711,14 +1721,16 @@ PARAMETER_SECTION
     3darray natl_old_fishtime(1,nSXs,styr,endyr,1,nZBs)           // Numbers-at-length (old shell)    
     5darray modFT_PopNum_yxmsz(styr,endyr,1,nSXs,1,nMSs,1,nSCs,1,nZBs)  // Numbers-at-length at fishing time          
     
-    3darray prGr_xzz(1,nSXs,1,nZBs,1,nZBs)                    // length to length growth array
-    matrix prMoltImm_xz(1,nSXs,1,nZBs)                               // molting probabilities for female, male by length bin 
-    matrix prMoltMat_xz(1,nSXs,1,nZBs)                           // molting probs for mature female, male by length bin
-    matrix meanPostMoltSize(1,nSXs,1,nZBs)                         // Predicted post-moult sizes
+    //--growth-related quantities
+    3darray prGr_xzz(1,nSXs,1,nZBs,1,nZBs)    // length to length growth array
+    matrix prMoltImm_xz(1,nSXs,1,nZBs)        // molting probabilities for female, male by length bin 
+    matrix prMoltMat_xz(1,nSXs,1,nZBs)        // molting probs for mature female, male by length bin
+    matrix meanPostMoltSize(1,nSXs,1,nZBs)    // Predicted mean post-moult sizes
     
-    vector prRec_z(1,nZBs)             // Recruitment size frequency
-    
-    vector modPopXR_y(styr,endyr)                             // Population sex-ratio - output
+    //--recruitment-related quantities
+    vector rec_y(styr,endyr)      //arithmetic-scale total recruitment (millions)
+    vector prRec_z(1,nZBs)        // Recruitment size frequency
+    vector modPopXR_y(styr,endyr) // Population sex-ratio - output
     
     //changed endyr to endyr-1
     //20150601: changed fm... to f... because these could be fishing mortality OR capture rates
