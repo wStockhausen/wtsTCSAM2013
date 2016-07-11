@@ -108,11 +108,15 @@
 //--20160709: 1. Removed all INITIALIZATION_SECTION values EXCEPT for pPrM2MF, pPrM2MM. 
 //                  orig.chk passed as in 20160708.
 //--20160711: 1. Changed estimation phases for all parameters to those from control file.
-//                  orig,chk passed as in 20160709 (and 08).
+//                  orig.chk passed as in 20160709 (and 08).
 //            2. Added comments, moved some definitions of dvar-type quantities (NOT parameters) around.
-//                  orig,chk passed as previously.
+//                  orig.chk passed as previously.
 //            3. Revised order in "writeParameters".
-//                  orig,chk passed as previously.
+//                  orig.chk passed as previously.
+//            4. Converted "exp" to "mfexp" in all instances. <-ROLLED THIS BACK!!
+//                  orig.chk resulted in obj fun = 2423.12!
+//            5. Converted "exp" to "mfexp" in all instances EXCEPT gamma function calc.s (prGr_xzz, prRec_z).
+//                  orig.chk passed as previously.
 //
 //IMPORTANT: 2013-09 assessment model had RKC params for 1992+ discard mortality TURNED OFF. 
 //           THE ESTIMATION PHASE FOR RKC DISCARD MORTALITY IS NOW SET IN THE CONTROLLER FILE!
@@ -2872,7 +2876,7 @@ FUNCTION get_selectivity                  //wts: revised
     
     selTCFM_syz.initialize();
     retFcn_syz.initialize();
-    dvariable tmpSel50 = mean(exp(pSelTCFM_mnLnZ50A2+pSelTCFM_devsZ50(1,6)));
+    dvariable tmpSel50 = mean(mfexp(pSelTCFM_mnLnZ50A2+pSelTCFM_devsZ50(1,6)));
     for(int iy=styr;iy<=1990;iy++){ 
         selTCFM_syz(NEW_SHELL,iy) = 1./(1.+mfexp(-1.*pSelTCFM_slpA1*(zBs-tmpSel50)));    
         retFcn_syz(NEW_SHELL, iy) = 1./(1.+mfexp(-1.*pRetTCFM_slpA1*(zBs-pRetTCFM_z50A1)));
@@ -2883,7 +2887,7 @@ FUNCTION get_selectivity                  //wts: revised
     for(int iy=1991;iy<=1996;iy++){ 
         if (hasDirectedFishery_y(iy)) {
 //            cout<<"yr = "<<iy<<".  ctr = "<<ctr<<endl;
-            selTCFM_syz(NEW_SHELL,iy)=1./(1.+mfexp(-1.*pSelTCFM_slpA1*(zBs-exp(pSelTCFM_mnLnZ50A2+pSelTCFM_devsZ50(ctr++)))));//ctr was iy-1990
+            selTCFM_syz(NEW_SHELL,iy)=1./(1.+mfexp(-1.*pSelTCFM_slpA1*(zBs-mfexp(pSelTCFM_mnLnZ50A2+pSelTCFM_devsZ50(ctr++)))));//ctr was iy-1990
         } else {
 //            cout<<"yr = "<<iy<<".  no fishery."<<endl;
         }
@@ -2893,10 +2897,10 @@ FUNCTION get_selectivity                  //wts: revised
     for(int iy=1997;iy<endyr;iy++){ 
         if (hasDirectedFishery_y(iy)) {
 //            cout<<"yr = "<<iy<<".  ctr = "<<ctr<<endl;
-            selTCFM_syz(NEW_SHELL,iy)=1./(1.+mfexp(-1.*pSelTCFM_slpA2*(zBs-exp(pSelTCFM_mnLnZ50A2+pSelTCFM_devsZ50(ctr++)))));//ctr was iy-1998
+            selTCFM_syz(NEW_SHELL,iy)=1./(1.+mfexp(-1.*pSelTCFM_slpA2*(zBs-mfexp(pSelTCFM_mnLnZ50A2+pSelTCFM_devsZ50(ctr++)))));//ctr was iy-1998
         } else {
 //            cout<<"yr = "<<iy<<".  no fishery."<<endl;
-            selTCFM_syz(NEW_SHELL,iy)=1./(1.+mfexp(-1.*pSelTCFM_slpA2*(zBs-exp(pSelTCFM_mnLnZ50A2))));
+            selTCFM_syz(NEW_SHELL,iy)=1./(1.+mfexp(-1.*pSelTCFM_slpA2*(zBs-mfexp(pSelTCFM_mnLnZ50A2))));
         }
     }
 //    cout<<"get_sel: 1d"<<endl;
@@ -3119,7 +3123,7 @@ FUNCTION get_mortality
     } else {
         dvar_vector f_RKF1(1,nObsDscRKF);   //was nObsDscRKF-1
         f_RKF1 = mfexp(pAvgLnF_RKF+pF_DevsRKF);
-        qRKF = mean(1-exp(-f_RKF1));
+        qRKF = mean(1-mfexp(-f_RKF1));
     }
 //    cout<<"4a"<<endl;
     fRKF_xy.initialize();
