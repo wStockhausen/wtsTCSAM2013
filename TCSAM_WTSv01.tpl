@@ -120,6 +120,8 @@
 //            6. Rearranged survey selectivity calculations PRIOR to using useSomertonOtto flags.
 //                  orig.chk passed as previously.
 //--20160712: 1. Added checks for command line inputs '-ainp' and '-binp' indicating non-standard pin files.
+//            6. Implemented useSomertonOtto flags. New approach to orig.chk testing (using
+//                  a pin file and only running last phase) passed!
 //
 //IMPORTANT: 2013-09 assessment model had RKC params for 1992+ discard mortality TURNED OFF. 
 //           THE ESTIMATION PHASE FOR RKC DISCARD MORTALITY IS NOW SET IN THE CONTROLLER FILE!
@@ -3040,21 +3042,14 @@ FUNCTION get_selectivity                  //wts: revised
         selSrv3_xz(FEMALE) /= selSrv3_xz(FEMALE,nZBs);
     }
     
-    if (survsel_phase<0)
-        // use somerton and otto curve for survey selectivities
-        selSrv3_xz(MALE) = sel_som(1)/(1.+sel_som(2)*mfexp(-1.*sel_som(3)*zBs));
-    else
-        //scale survey selectivity by survey catchability
+    selSrv1_xz(MALE) *= pSrv1_QM;
+    selSrv2_xz(MALE) *= pSrv2_QM;
     selSrv3_xz(MALE) *= pSrv2_QM;
-        
-    if (survsel1_phase < 0)
-        // this sets time periods 1 and 2 survey selectivities to somerton otto as well
-        selSrv1_xz(MALE) = selSrv3_xz(MALE);
-    else { 
-        //scale survey selectivity by survey catchability
-        selSrv1_xz(MALE)  *= pSrv1_QM;
-        selSrv2_xz(MALE) *= pSrv2_QM;
-    }
+    
+    // use somerton and otto curve for survey selectivities, as required
+    if (useSomertonOtto1) selSrv1_xz(MALE) = selSO_z;
+    if (useSomertonOtto2) selSrv2_xz(MALE) = selSO_z;
+    if (useSomertonOtto3) selSrv3_xz(MALE) = selSO_z;
         
     //scale survey selectivity by survey catchability
     selSrv1_xz(FEMALE)  *= pSrv1_QF;
