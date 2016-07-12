@@ -119,6 +119,7 @@
 //                  orig.chk passed as previously.
 //            6. Rearranged survey selectivity calculations PRIOR to using useSomertonOtto flags.
 //                  orig.chk passed as previously.
+//--20160712: 1. Added checks for command line inputs '-ainp' and '-binp' indicating non-standard pin files.
 //
 //IMPORTANT: 2013-09 assessment model had RKC params for 1992+ discard mortality TURNED OFF. 
 //           THE ESTIMATION PHASE FOR RKC DISCARD MORTALITY IS NOW SET IN THE CONTROLLER FILE!
@@ -291,12 +292,17 @@ DATA_SECTION
     //pin file use
     if ((on=option_match(ad_comm::argc,ad_comm::argv,"-pin"))>-1) {
         usePin=1;
-        echo<<"#pin file used"<<endl;
+        echo<<"#using default pin file"<<endl;
         flg = 1;
     }
-    if ((on=option_match(ad_comm::argc,ad_comm::argv,"-bpin"))>-1) {
+    if ((on=option_match(ad_comm::argc,ad_comm::argv,"-ainp"))>-1) {
         usePin=1;
-        echo<<"#pin file used"<<endl;
+        echo<<"#using pin file "<<ad_comm::argv[on+1]<<endl;
+        flg = 1;
+    }
+   if ((on=option_match(ad_comm::argc,ad_comm::argv,"-binp"))>-1) {
+        usePin=1;
+        echo<<"#using pin file "<<ad_comm::argv[on+1]<<endl;
         flg = 1;
     }
     //recruitment lag
@@ -1418,13 +1424,19 @@ DATA_SECTION
     !!CheckFile<<"--------------------------------------"<<endl;
     //TEMPORARY VARIABLES
     int phase_logistic_sel
-    !!phase_logistic_sel = phsRet_TCFM;
     int survsel1_phase
-    !!survsel1_phase = phsSelSrvM1;
     int survsel_phase
-    !!survsel_phase = phsSelSrvM2;
     int maturity_switch
-    !!maturity_switch = optInitM2M;
+ LOCAL_CALCS
+    phase_logistic_sel = phsRet_TCFM;
+    survsel1_phase = phsSelSrvM1;
+    survsel_phase = phsSelSrvM2;
+    maturity_switch = optInitM2M;
+    CHECK1(phase_logistic_sel);
+    CHECK1(survsel1_phase);
+    CHECK1(survsel_phase);
+    CHECK1(maturity_switch);
+ END_CALCS
     
     // the rest are working variables 
     
@@ -1489,6 +1501,10 @@ DATA_SECTION
     
     number mnEff_SCF; ///< mean effort in SCF over period with observed bycatch data
     number mnEff_RKF; ///< mean effort in RKF over period with observed bycatch data
+    
+    vector selSO_z(1,nZBs); //Somerton & Otto survey selectivity function
+    !!selSO_z = sel_som(1)/(1.+sel_som(2)*mfexp(-1.*sel_som(3)*zBs));
+    !!CheckFile<<"selSO_z"<<endl<<selSO_z<<endl;
     
  LOCAL_CALCS
     dmX   = "x=c("+qt+STR_FEMALE+qt    +cc+ qt+STR_MALE+qt+")";
@@ -3029,8 +3045,8 @@ FUNCTION get_selectivity                  //wts: revised
         selSrv3_xz(MALE) = sel_som(1)/(1.+sel_som(2)*mfexp(-1.*sel_som(3)*zBs));
     else
         //scale survey selectivity by survey catchability
-        selSrv3_xz(MALE) *= pSrv2_QM;
-    
+    selSrv3_xz(MALE) *= pSrv2_QM;
+        
     if (survsel1_phase < 0)
         // this sets time periods 1 and 2 survey selectivities to somerton otto as well
         selSrv1_xz(MALE) = selSrv3_xz(MALE);
@@ -5759,10 +5775,10 @@ RUNTIME_SECTION
 // ===============================================================================
 // ===============================================================================
 TOP_OF_MAIN_SECTION
-  arrmblsize = 9000000;
-  gradient_structure::set_GRADSTACK_BUFFER_SIZE(4000000); // this may be incorrect in the AUTODIF manual.
+  arrmblsize = 10000000;
+  gradient_structure::set_GRADSTACK_BUFFER_SIZE(5000000);
   gradient_structure::set_CMPDIF_BUFFER_SIZE(150000000);
-  gradient_structure::set_NUM_DEPENDENT_VARIABLES(6000);
+  gradient_structure::set_NUM_DEPENDENT_VARIABLES(7000);
   time(&start);
   CheckFile.open("CheckFile.dat");
   
