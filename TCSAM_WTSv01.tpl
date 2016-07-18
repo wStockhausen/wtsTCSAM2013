@@ -121,7 +121,7 @@
 //                  orig.chk passed as previously.
 //--20160712: 1. Added checks for command line inputs '-ainp' and '-binp' indicating non-standard pin files.
 //            6. Implemented useSomertonOtto flags. New approach to orig.chk testing (using
-//                  a pin file and only running last phase) passed!
+//--20160715: 1. Started to implement Francis method for re-weighting size comps.
 //
 //IMPORTANT: 2013-09 assessment model had RKC params for 1992+ discard mortality TURNED OFF. 
 //           THE ESTIMATION PHASE FOR RKC DISCARD MORTALITY IS NOW SET IN THE CONTROLLER FILE!
@@ -4145,6 +4145,25 @@ FUNCTION evaluate_the_objective_function    //wts: revising
 //     cout <<"phase = "<< current_phase() << " call = " << call_no << " Total Like = " << f << endl;
 
 //    cout<<"done"<<endl;
+    
+// ==========================================================================
+// ==========================================================================
+//Effective N for size comps using the McAllister-Ianelli approach
+FUNCTION double effN_McIan(dvector& obsPr, dvar_vector& modPr)
+    dvariable num = modPr*(1-modPr);//note dot product
+    dvariable den = norm2(obsPr-modPr);
+    double effN = value(num/den);
+    return effN;
+    
+// ==========================================================================
+// ==========================================================================
+//Effective z-score for size comps using the Francis mean size approach
+FUNCTION double effZ_Francis(dvector& obsPr, dvar_vector& modPr, double inpSS)
+    double obsMnZ = zBs*obsPr;
+    double modMnZ = value(zBs*modPr);
+    double modSeZ = sqrt(value(modPr*elem_prod(zBs-modMnZ,zBs-modMnZ))/inpSS);
+    double effZ = (obsMnZ-modMnZ)/modSeZ;
+    return effZ;
     
 // ==========================================================================
 // ==========================================================================

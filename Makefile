@@ -45,6 +45,7 @@
 
 
 # Environment 
+DEBUG_TPL=-debug
 PLATFORM=MAC
 ADMB_HOME_WIN=C:/Programs/admb/build/dist
 ADMB_HOME_MAC=/Users/WilliamStockhausen/Programs/admb/build/dist
@@ -57,10 +58,10 @@ CCADMIN=CCadmin
 .PRECIOUS: %.cpp %.htp
 	
 %.cpp: %.tpl
-	"${ADMB_HOME}/bin/tpl2cpp" $*
+	"${ADMB_HOME}/bin/tpl2cpp" ${DEBUG_TPL} $*
 	
 %.htp: %.tpl
-	"${ADMB_HOME}/bin/tpl2cpp" $*
+	"${ADMB_HOME}/bin/tpl2cpp" ${DEBUG_TPL} $*
 
 # build
 build: .build-post
@@ -73,7 +74,7 @@ build: .build-post
 	@echo " "
 	@echo " ----------------------------------------------------------"
 	@echo " Creating ${TPL} from .tpl"
-	"${ADMB_HOME}/bin/tpl2cpp" ${TPL}
+	"${ADMB_HOME}/bin/tpl2cpp" ${DEBUG_TPL} ${TPL}
 	@echo " ----------------------------------------------------------"
 	@echo " "
 
