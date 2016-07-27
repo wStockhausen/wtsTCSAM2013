@@ -46,8 +46,8 @@ OBJECTFILES= \
 CFLAGS=
 
 # CC Compiler Flags
-CCFLAGS=-O3
-CXXFLAGS=-O3
+CCFLAGS=
+CXXFLAGS=
 
 # Fortran Compiler Flags
 FFLAGS=
@@ -68,7 +68,7 @@ ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/tcsam2013alta: /Users/WilliamStockhau
 
 ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/tcsam2013alta: ${OBJECTFILES}
 	${MKDIR} -p ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}
-	${LINK.cc} -o ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/tcsam2013alta ${OBJECTFILES} ${LDLIBSOPTIONS}
+	${LINK.cc} -o ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/tcsam2013alta ${OBJECTFILES} ${LDLIBSOPTIONS} -g
 
 ${OBJECTDIR}/FisheryData.o: FisheryData.cpp 
 	${MKDIR} -p ${OBJECTDIR}

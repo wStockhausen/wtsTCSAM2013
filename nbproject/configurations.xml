@@ -52,7 +52,6 @@
             <pElem>/Users/WilliamStockhausen/Programs/admb/build/dist/contrib/include</pElem>
             <pElem>/Users/WilliamStockhausen/StockAssessments-Crab/AssessmentModelDevelopment/wtsADMB/include</pElem>
           </incDir>
-          <commandLine>-O3</commandLine>
         </ccTool>
         <asmTool>
           <commandLine>-static</commandLine>
@@ -67,6 +66,7 @@
             <linkerLibLibItem>wtsadmb</linkerLibLibItem>
             <linkerLibFileItem>/Users/WilliamStockhausen/Programs/admb/build/dist/lib/libadmb-contrib.a</linkerLibFileItem>
           </linkerLibItems>
+          <commandLine>-g</commandLine>
         </linkerTool>
       </compileType>
       <item path="FisheryData.cpp" ex="false" tool="1" flavor2="0">
