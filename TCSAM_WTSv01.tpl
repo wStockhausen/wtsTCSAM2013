@@ -138,6 +138,8 @@
 //--20160726: 1. Added description string to writeParameter(...) functions in writePrameters(...).
 //            2. Updated model version to 20160726.
 //            3. Renamed pMnLnRecHist and pRecDevsHist as pMnLnRecInit and pRecDevsInit.
+//--20160727: 1. Revised sd_report variables (sdr...) to reduce duplication. Added sdrMeanGrowthF/M output.
+//--20160730: 1. Changed csv file for objective function components to "TCSAM2013.final_likelihood_components.csv".
 //
 //IMPORTANT: 2013-09 assessment model had RKC params for 1992+ discard mortality TURNED OFF. 
 //           THE ESTIMATION PHASE FOR RKC DISCARD MORTALITY IS NOW SET IN THE CONTROLLER FILE!
@@ -1923,23 +1925,23 @@ PARAMETER_SECTION
     vector modTotBioMortLegal_TCFM_y(styr,endyr-1)     //(IMPORTANT CHANGE: used to be "endyr")
     vector modTotNumMortLegal_TCFM_y(styr,endyr-1)  //(IMPORTANT CHANGE: used to be "endyr")
     
-    sdreport_vector sdrSpBioF(mnYrRecCurr,endyr)                                // Sd_report stuff
-    sdreport_vector sdrSpBioM(mnYrRecCurr,endyr)                       //male spawning biomass (1000's t)
-    sdreport_vector sdrPopNumLegal(mnYrRecCurr,endyr)
-    sdreport_vector sdrRecEarly(styr,mnYrRecCurr-1)
-    sdreport_vector sdrRecF(mnYrRecCurr,endyr)  //was endyr-1
-    sdreport_vector sdrRecM(mnYrRecCurr,endyr)  //was endyr-1
     sdreport_number sdrDepletion
     
-    sdreport_matrix sdrNatMortImm(1,nSXs,styr,endyr);//natural mortality by year on immatures
-    sdreport_matrix sdrNatMortNS(1,nSXs,styr,endyr);
-    sdreport_matrix sdrNatMortOS(1,nSXs,styr,endyr);
+    sdreport_vector sdrNatMort_INF(styr,endyr);//natural mortality by year on immature new shell females
+    sdreport_vector sdrNatMort_INM(styr,endyr);//natural mortality by year on immature new shell   males
+    sdreport_vector sdrNatMort_MNF(styr,endyr);//natural mortality by year on   mature new shell females
+    sdreport_vector sdrNatMort_MNM(styr,endyr);//natural mortality by year on   mature new shell   males
+    sdreport_vector sdrNatMort_MOF(styr,endyr);//natural mortality by year on   mature old shell females
+    sdreport_vector sdrNatMort_MOM(styr,endyr);//natural mortality by year on   mature old shell   males
     
+    sdreport_vector sdrPrM2M_F(1,nZBs);//female prM2M
+    sdreport_vector sdrPrM2M_M(1,nZBs);//  male prM2M
+    sdreport_vector sdrMnGrw_F(1,nZBs);//mean female growth
+    sdreport_vector sdrMnGrw_M(1,nZBs);//mean   male growth
       
-    sdreport_vector sdrMMB(styr,endyr-1);          //MMB at fertilization time
-    sdreport_vector sdrLnRecMMB(styr,endyr-recLag);//ln(rec[yr+recLag]/MMB[yr])  at fertilization
-    sdreport_vector sdrLnRec(styr,endyr-recLag);   //rec[yr+recLag] at fertilization
-    sdreport_vector sdrRec(styr,endyr-recLag);     //rec[yr+recLag] at fertilization
+    sdreport_vector sdrMMB(styr,endyr-1);   //MMB (at time of mating, so final year not included)
+    sdreport_vector sdrMFB(styr,endyr-1);   //MFB (at time of mating, so final year not included)
+    sdreport_vector sdrLnRec(styr,endyr);   //recruitment (NOTE: no lag to fertilization year!)
     
     objective_function_value f
     
@@ -3339,18 +3341,6 @@ FUNCTION get_numbers_at_len                                    //wts: revised
 //     cout<<"mort_switch = "<<mort_switch<<endl;
 //     cout<<"pMfac_Big = "<<pMfac_Big<<endl;
     if (sd_phase()){
-        for (int x=1;x<=nSXs;x++){
-            for (int yr=sdrNatMortImm(x).indexmin();yr<=sdrNatMortImm(x).indexmax();yr++) {
-                sdrNatMortImm(x,yr) = M_msx(IMMATURE,NEW_SHELL,x);
-                if((lyr_mort<=yr) && (yr<=uyr_mort) && (mort_switch==1)) {
-                    sdrNatMortNS(x,yr) = M_msx(MATURE,NEW_SHELL,x)*pMfac_Big(x);
-                    sdrNatMortOS(x,yr) = M_msx(MATURE,OLD_SHELL,x)*pMfac_Big(x);
-                } else {
-                    sdrNatMortNS(x,yr) = M_msx(MATURE,NEW_SHELL,x);
-                    sdrNatMortOS(x,yr) = M_msx(MATURE,OLD_SHELL,x);
-                }
-            }
-        }
     }
     
     for (int x=1;x<=nSXs;x++) {  
@@ -3517,14 +3507,6 @@ FUNCTION get_numbers_at_len                                    //wts: revised
 //    }
     //  cout<<"6"<<endl;
     
-    if (sd_phase()){
-        sdrDepletion = modPopBio_y(endyr) / modPopBio_y(styr);
-        sdrSpBioF   = fspbio(sdrSpBioF.indexmin(),sdrSpBioF.indexmax());
-        sdrSpBioM   = mspbio(sdrSpBioM.indexmin(),sdrSpBioM.indexmax());
-        sdrRecEarly   = rec_y(sdrRecEarly.indexmin(),sdrRecEarly.indexmax());
-        sdrRecF       = 0.5*rec_y(sdrRecF.indexmin(),sdrRecF.indexmax());//was "endyr-1"
-        sdrRecM       = 0.5*rec_y(sdrRecM.indexmin(),sdrRecM.indexmax());//was "endyr-1"
-    }
     //  cout<<" to end of number at len "<<endl;
     //  cout<<"done"<<endl;
 
@@ -4208,9 +4190,6 @@ FUNCTION Misc_output
            }//s
        }//m
     }//yr loop
-    if (sd_phase()){
-        sdrPopNumLegal = modPopNumLegal_y(sdrPopNumLegal.indexmin(),sdrPopNumLegal.indexmax()); 
-    }
     
     if (debug) cout<<" to eff N "<<endl;
     // Effective N's                    //can these be vectorized?
@@ -4450,23 +4429,25 @@ FUNCTION Misc_output
     if (debug) cout<<"before sd"<<endl;
     if(sd_phase()){
         sdrDepletion = modPopBio_y(endyr) / modPopBio_y(styr);
-        sdrSpBioF    = fspbio(sdrSpBioF.indexmin(),sdrSpBioF.indexmax());
-        sdrSpBioM    = mspbio(sdrSpBioM.indexmin(),sdrSpBioM.indexmax());
-        //cout<<"0"<<endl;
-        sdrPopNumLegal = modPopNumLegal_y(sdrPopNumLegal.indexmin(),sdrPopNumLegal.indexmax());
-        //cout<<"1"<<endl;
-        sdrRecEarly = rec_y(styr,mnYrRecCurr-1);
-        sdrRecF     = 0.5*rec_y(mnYrRecCurr,endyr);//was endyr-1
-        sdrRecM     = 0.5*rec_y(mnYrRecCurr,endyr);//was endyr-1
         //cout<<"2"<<endl;
-        sdrMMB      = modSpBioMateTime_xy(MALE)(styr,endyr-1);
-        //cout<<"3"<<endl;
-        for (int i=styr;i<=(endyr-recLag);i++) {
-            sdrRec(i)      = rec_y(i+recLag);
-            sdrLnRec(i)    = log(rec_y(i+recLag));
-            if (sdrMMB(i)>0.0){
-                sdrLnRecMMB(i) = log(rec_y(i+recLag))-log(sdrMMB(i));
-            }
+        sdrMMB      = modSpBioMateTime_xy( MALE)(styr,endyr-1);
+        sdrMFB      = modSpBioMateTime_xy(FEMALE)(styr,endyr-1);
+        sdrLnRec    = log(rec_y);
+        sdrPrM2M_F = modPrM2M(FEMALE);
+        sdrPrM2M_M = modPrM2M(  MALE);
+        sdrMnGrw_F = meanPostMoltSize(FEMALE);
+        sdrMnGrw_M = meanPostMoltSize(  MALE);
+        sdrNatMort_INF(styr,endyr) = M_msx(IMMATURE,NEW_SHELL,FEMALE);
+        sdrNatMort_INM(styr,endyr) = M_msx(IMMATURE,NEW_SHELL,  MALE);
+        sdrNatMort_MNF(styr,endyr) = M_msx(  MATURE,NEW_SHELL,FEMALE);
+        sdrNatMort_MNM(styr,endyr) = M_msx(  MATURE,NEW_SHELL,  MALE);
+        sdrNatMort_MOF(styr,endyr) = M_msx(  MATURE,OLD_SHELL,FEMALE);
+        sdrNatMort_MOM(styr,endyr) = M_msx(  MATURE,OLD_SHELL,  MALE);
+        if (mort_switch==1){
+            sdrNatMort_MNF(lyr_mort,uyr_mort) *= pMfac_Big(FEMALE);
+            sdrNatMort_MNM(lyr_mort,uyr_mort) *= pMfac_Big(  MALE);
+            sdrNatMort_MOF(lyr_mort,uyr_mort) *= pMfac_Big(FEMALE);
+            sdrNatMort_MOM(lyr_mort,uyr_mort) *= pMfac_Big(  MALE);
         }
     }
     if (debug) cout<<"done MiscOutput"<<endl;
@@ -5736,7 +5717,7 @@ REPORT_SECTION
         writeParameters(os,0,1);
         os.close();
         
-        os.open("TCSAM_WTS.final_likelihood_components.csv");
+        os.open("TCSAM2013.final_likelihood_components.csv");
         writeLikelihoodComponents(os,0);
         os.close();
         
