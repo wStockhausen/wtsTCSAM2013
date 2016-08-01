@@ -140,6 +140,10 @@
 //            3. Renamed pMnLnRecHist and pRecDevsHist as pMnLnRecInit and pRecDevsInit.
 //--20160727: 1. Revised sd_report variables (sdr...) to reduce duplication. Added sdrMeanGrowthF/M output.
 //--20160730: 1. Changed csv file for objective function components to "TCSAM2013.final_likelihood_components.csv".
+//--20160731: 1. Added "category" column to csv file for objective function components.
+//            2. Added AR1 penalty on pSelTCFM_devsZ50, with weight set to llwSelTCFM_devsZ50. 
+//                  There had been an AR1 penalty on 'fish_sel50_mn' in old code, but it was never
+//                  calculated because estimation for fish_sel50_mn was never turned on in recent assessments. 
 //
 //IMPORTANT: 2013-09 assessment model had RKC params for 1992+ discard mortality TURNED OFF. 
 //           THE ESTIMATION PHASE FOR RKC DISCARD MORTALITY IS NOW SET IN THE CONTROLLER FILE!
@@ -264,48 +268,48 @@ DATA_SECTION
  
  LOCAL_CALCS
     int kf = 1;
-    strFOUT(kf++) = "recruitment penalty";
-    strFOUT(kf++) = "sex ratio penalty";
-    strFOUT(kf++) = "immatures natural mortality penalty";
-    strFOUT(kf++) = "mature male natural mortality penalty";
-    strFOUT(kf++) = "mature female natural mortality penalty";
+    strFOUT(kf++) = "penalty, recruitment penalty";
+    strFOUT(kf++) = "penalty, sex ratio penalty";
+    strFOUT(kf++) = "penalty, natural mortality penalty (immatures)";
+    strFOUT(kf++) = "penalty, natural mortality penalty (mature males)";
+    strFOUT(kf++) = "penalty, natural mortality penalty (immature females)";
 
-    strFOUT(kf++) = "survey q penalty";
-    strFOUT(kf++) = "female survey q penalty";
-    strFOUT(kf++) = "prior on female growth parameter a";
-    strFOUT(kf++) = "prior on female growth parameter b";
-    strFOUT(kf++) = "prior on male growth parameter a";
-    strFOUT(kf++) = "prior on male growth parameter b";
-    strFOUT(kf++) = "smoothing penalty on female maturity curve";
-    strFOUT(kf++) = "smoothing penalty on male maturity curve";
-    strFOUT(kf++) = "1st difference penalty on changes in male size at 50% selectivity in directed fishery";
-    strFOUT(kf++) = "penalty on F-devs in directed fishery";
-    strFOUT(kf++) = "penalty on F-devs in snow crab fishery";
-    strFOUT(kf++) = "penalty on F-devs in BBRKC fishery";
-    strFOUT(kf++) = "penalty on F-devs in groundfish fishery";
+    strFOUT(kf++) = "priors, survey q penalty";
+    strFOUT(kf++) = "priors, female survey q penalty";
+    strFOUT(kf++) = "priors, female growth parameter a";
+    strFOUT(kf++) = "priors, female growth parameter b";
+    strFOUT(kf++) = "priors, male growth parameter a";
+    strFOUT(kf++) = "priors, male growth parameter b";
+    strFOUT(kf++) = "penalty, maturity curve smoothness (females)";
+    strFOUT(kf++) = "penalty, maturity curve smoothness (males)";
+    strFOUT(kf++) = "penalty, z50 devs for male selectivity in TCF (AR1)";
+    strFOUT(kf++) = "penalty, penalty on F-devs in directed fishery";
+    strFOUT(kf++) = "penalty, penalty on F-devs in snow crab fishery";
+    strFOUT(kf++) = "penalty, penalty on F-devs in BBRKC fishery";
+    strFOUT(kf++) = "penalty, penalty on F-devs in groundfish fishery";
 
-    strFOUT(kf++) = "likelihood for  directed fishery: retained males";
-    strFOUT(kf++) = "likelihood for  directed fishery: total males";
-    strFOUT(kf++) = "likelihood for  directed fishery: discarded females";
-    strFOUT(kf++) = "likelihood for  snow crab fishery: discarded males";
-    strFOUT(kf++) = "likelihood for  snow crab fishery: discarded females";
-    strFOUT(kf++) = "likelihood for  BBRKC fishery: discarded males";
-    strFOUT(kf++) = "likelihood for  BBRKC fishery: discarded females";
-    strFOUT(kf++) = "likelihood for  groundfish fishery";
-    strFOUT(kf++) = "likelihood for  survey: immature males";
-    strFOUT(kf++) = "likelihood for  survey: mature males";
-    strFOUT(kf++) = "likelihood for  survey: immature females";
-    strFOUT(kf++) = "likelihood for  survey: mature females";
+    strFOUT(kf++) = "likelihood: size comps, fishery: TCF retained males";
+    strFOUT(kf++) = "likelihood: size comps, fishery: TCF total males";
+    strFOUT(kf++) = "likelihood: size comps, fishery: TCF discarded females";
+    strFOUT(kf++) = "likelihood: size comps, fishery: SCF males";
+    strFOUT(kf++) = "likelihood: size comps, fishery: SCF females";
+    strFOUT(kf++) = "likelihood: size comps, fishery: RKC males";
+    strFOUT(kf++) = "likelihood: size comps, fishery: RKC females";
+    strFOUT(kf++) = "likelihood: size comps, fishery: GTF males+females";
+    strFOUT(kf++) = "likelihood: size comps, survey: immature males";
+    strFOUT(kf++) = "likelihood: size comps, survey: mature males";
+    strFOUT(kf++) = "likelihood: size comps, survey: immature females";
+    strFOUT(kf++) = "likelihood: size comps, survey: mature females";
 
-    strFOUT(kf++) = "likelihood for survey: mature survey biomass";
-    strFOUT(kf++) = "likelihood for directed fishery: male retained catch biomass";
-    strFOUT(kf++) = "likelihood for directed fishery: male total catch biomass";
-    strFOUT(kf++) = "likelihood for directed fishery: female catch biomass";
-    strFOUT(kf++) = "likelihood for snow crab fishery: total catch biomass";
-    strFOUT(kf++) = "likelihood for BBRKC fishery: total catch biomass";
-    strFOUT(kf++) = "likelihood for groundfish fishery: total catch biomass";
+    strFOUT(kf++) = "likelihood: catch biomass, survey: mature crab";
+    strFOUT(kf++) = "likelihood: catch biomass, fishery: TCF retained males";
+    strFOUT(kf++) = "likelihood: catch biomass, fishery: TCF male total catch biomass";
+    strFOUT(kf++) = "likelihood: catch biomass, fishery: TCF female catch biomass";
+    strFOUT(kf++) = "likelihood: catch biomass, fishery: SCF total catch biomass";
+    strFOUT(kf++) = "likelihood: catch biomass, fishery: RKF total catch biomass";
+    strFOUT(kf++) = "likelihood: catch biomass, fishery: GTF total catch biomass";
 
-    strFOUT(kf++) = "penalty on sel50 devs for TCF";
+    strFOUT(kf++) = "penalty, z50 devs for male selectivity in TCF (norm2)";
  END_CALCS
  
  LOCAL_CALCS  
@@ -3801,6 +3805,12 @@ FUNCTION evaluate_the_objective_function    //wts: revising
         int phs = pSelTCFM_devsZ50.get_phase_start();
         llw = llwSelTCFM_devsZ50; 
 //        if (doPenRed) llw = pow(red,(current_phase()-phs)/max(1.0,1.0*(max_number_phases-phs)))*llw;
+        nextf = norm2(first_difference(pSelTCFM_devsZ50));
+        fpen += llw*nextf; objfOut(14) = llw*nextf; likeOut(14) = nextf; wgtsOut(14) = llw;           
+        
+        phs = pSelTCFM_devsZ50.get_phase_start();
+        llw = llwSelTCFM_devsZ50; 
+//        if (doPenRed) llw = pow(red,(current_phase()-phs)/max(1.0,1.0*(max_number_phases-phs)))*llw;
         nextf = norm2(pSelTCFM_devsZ50);
         fpen += llw*nextf; objfOut(38) = llw*nextf; likeOut(38) = nextf; wgtsOut(38) = llw;   //wts: need to turn this off in last phase?        
     }
@@ -5673,7 +5683,7 @@ FUNCTION void writeLikelihoodComponents(ostream& os, int toR)
     os<<"Likelihood components"<<endl;
     os<<"----------------------------------------------------------------------------"<<endl;
     os<<f<<cc<<tb<<"objective function value"<<endl;
-    os<<"idx,   weight,      likelihood,      objFun,    description"<<endl;
+    os<<"idx,   weight,      likelihood,      objFun,    category, description"<<endl;
     for (int i=1;i<=NUM_FOUT;i++){
         os<<i<<cc<<wgtsOut(i)<<cc<<likeOut(i)<<cc<<objfOut(i)<<cc<<tb<<strFOUT(i)<<endl;
     }
