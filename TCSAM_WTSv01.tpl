@@ -4889,6 +4889,8 @@ FUNCTION void writeToR_OLD(ofstream& R_out)
         //wts: 20150601: fc's are CAPTURE rates (ONLY calculated if using gmacs calculations)
         if (optFM==1){
             //max rates
+            R_out<<"$fsh.fcr.max.TCF.M"<<endl;//new shell, old shell same
+            for (int i=styr;i<=(endyr-1);i++) R_out << max(fcTCFM_syz(NEW_SHELL,i)) <<" "; R_out<< endl;
             R_out<<"$fsh.fcr.max.TCF.NM"<<endl;
             for (int i=styr;i<=(endyr-1);i++) R_out << max(fcTCFM_syz(NEW_SHELL,i)) <<" "; R_out<< endl;
             R_out<<"$fsh.fcr.max.TCF.OM"<<endl;
@@ -4908,6 +4910,8 @@ FUNCTION void writeToR_OLD(ofstream& R_out)
             R_out<<"$fsh.fcr.max.GTF.F"<<endl;
             for (int i=styr;i<=(endyr-1);i++) R_out << max(fcGTF_xyz(FEMALE,i)) <<" "; R_out<< endl;
             //mean rates
+            R_out<<"$fsh.fcr.mean.TCF.M"<<endl;//new shell, old shell rates same
+            for (int i=styr;i<=(endyr-1);i++) R_out << mean(fcTCFM_syz(NEW_SHELL,i)) <<" "; R_out<< endl;
             R_out<<"$fsh.fcr.mean.TCF.NM"<<endl;
             for (int i=styr;i<=(endyr-1);i++) R_out << mean(fcTCFM_syz(NEW_SHELL,i)) <<" "; R_out<< endl;
             R_out<<"$fsh.fcr.mean.TCF.OM"<<endl;
@@ -4929,6 +4933,8 @@ FUNCTION void writeToR_OLD(ofstream& R_out)
         }
 
         //max fishing MORTALITY RATES (changed f... to fm... to clarify: 20150601)
+        R_out<<"$fsh.fmr.max.TCF.M"<<endl; //new shell, old shell are identical
+        for (int i=styr;i<=(endyr-1);i++) R_out << max(fmTCFM_syz(NEW_SHELL,i)) <<" "; R_out<< endl;
         R_out<<"$fsh.fmr.max.TCF.NM"<<endl;
         for (int i=styr;i<=(endyr-1);i++) R_out << max(fmTCFM_syz(NEW_SHELL,i)) <<" "; R_out<< endl;
         R_out<<"$fsh.fmr.max.TCF.OM"<<endl;
@@ -4937,7 +4943,7 @@ FUNCTION void writeToR_OLD(ofstream& R_out)
         for (int i=styr;i<=(endyr-1);i++) R_out << max(fmTCFF_yz(i)) <<" "; R_out<< endl;
         R_out<<"$fsh.fmr.max.SCF.M"<<endl;
         for (int i=styr;i<=(endyr-1);i++) R_out << max(fmSCF_xyz(MALE,i)) <<" "; R_out<< endl;
-        R_out<<"$fsh.fmr.max.SCF.M"<<endl;
+        R_out<<"$fsh.fmr.max.SCF.F"<<endl;
         for (int i=styr;i<=(endyr-1);i++) R_out << max(fmSCF_xyz(FEMALE,i)) <<" "; R_out<< endl;
         R_out<<"$fsh.fmr.max.RKF.M"<<endl;
         for (int i=styr;i<=(endyr-1);i++) R_out << max(fmRKF_xyz(MALE,i)) <<" "; R_out<< endl;
@@ -4956,6 +4962,8 @@ FUNCTION void writeToR_OLD(ofstream& R_out)
         R_out<<"$fsh.fmr.max.TOT.OF"<<endl;
         for (int i=styr;i<=(endyr-1);i++) R_out << max(fmTOT_xsyz(FEMALE,OLD_SHELL,i)) <<" "; R_out<< endl;
         //mean fishing MORTALITY RATES (changed f... to fm... to clarify: 20150601)
+        R_out<<"$fsh.fmr.mean.TCF.M"<<endl;//new shell, old shell rates same
+        for (int i=styr;i<=(endyr-1);i++) R_out << mean(fmTCFM_syz(NEW_SHELL,i)) <<" "; R_out<< endl;
         R_out<<"$fsh.fmr.mean.TCF.NM"<<endl;
         for (int i=styr;i<=(endyr-1);i++) R_out << mean(fmTCFM_syz(NEW_SHELL,i)) <<" "; R_out<< endl;
         R_out<<"$fsh.fmr.mean.TCF.OM"<<endl;
