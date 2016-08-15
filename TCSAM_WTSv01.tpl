@@ -144,6 +144,8 @@
 //            2. Added AR1 penalty on pSelTCFM_devsZ50, with weight set to llwSelTCFM_devsZ50. 
 //                  There had been an AR1 penalty on 'fish_sel50_mn' in old code, but it was never
 //                  calculated because estimation for fish_sel50_mn was never turned on in recent assessments. 
+//--20160814: 1. Added pAvgLn_XXXF parameters, ln-scale female offsets to male fishing mortality, to projection model file
+//            2. Changed output projection model file from "TCProjMod2013.dat" to "TCSAM2013ProjMod.dat".
 //
 //IMPORTANT: 2013-09 assessment model had RKC params for 1992+ discard mortality TURNED OFF. 
 //           THE ESTIMATION PHASE FOR RKC DISCARD MORTALITY IS NOW SET IN THE CONTROLLER FILE!
@@ -4530,6 +4532,11 @@ FUNCTION void writeMyProjectionFile(ofstream& os)
       os<<mean(fRKF_xy(MALE)(endyr-5,endyr-1))<<tb<<tb<<"#inpFmRKF: input male F for BBRKC  fishing mortality"<<endl;
       os<<mean(fGTF_xy(MALE)(endyr-5,endyr-1))<<tb<<tb<<"#inpFmGTF: input male F for groundfish fishery fishing mortality"<<endl;
       
+      os<<pAvgLnF_TCFF<<tb<<tb<<"#pAvgLnF_TCFF: ln-scale offset to F for female bycatch in the directed Tanner crab fishery"<<endl;
+      os<<pAvgLnF_SCFF<<tb<<tb<<"#pAvgLnF_SCFF: ln-scale offset to F for female bycatch in the snow crab fishery"<<endl;
+      os<<pAvgLnF_RKFF<<tb<<tb<<"#pAvgLnF_RKFF: ln-scale offset to F for female bycatch in the BBRKC fishery"<<endl;
+      os<<pAvgLnF_GTFF<<tb<<tb<<"#pAvgLnF_GTFF: ln-scale offset to F for female bycatch in the groundfish fishery"<<endl;
+      
       os<<"#selTCF_TotMale(nSCs,nSXs): average of last 4 years selTCFM_syz total male new old shell"<<endl;
       os<<(selTCFM_syz(NEW_SHELL,endyr-4)+selTCFM_syz(NEW_SHELL,endyr-3)+selTCFM_syz(NEW_SHELL,endyr-2)+selTCFM_syz(NEW_SHELL,endyr-1))/4.0<<endl;
       os<<(selTCFM_syz(OLD_SHELL,endyr-4)+selTCFM_syz(OLD_SHELL,endyr-3)+selTCFM_syz(OLD_SHELL,endyr-2)+selTCFM_syz(OLD_SHELL,endyr-1))/4.0<<endl;
@@ -5724,7 +5731,7 @@ REPORT_SECTION
         writeToR_OLD(os);
         os.close();
         
-        os.open("TCProjMod2013.dat");
+        os.open("TCSAM2013ProjMod.dat");
         writeMyProjectionFile(os);
         os.close();
     
