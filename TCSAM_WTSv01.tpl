@@ -146,6 +146,10 @@
 //                  calculated because estimation for fish_sel50_mn was never turned on in recent assessments. 
 //--20160814: 1. Added pAvgLn_XXXF parameters, ln-scale female offsets to male fishing mortality, to projection model file
 //            2. Changed output projection model file from "TCProjMod2013.dat" to "TCSAM2013ProjMod.dat".
+//--20160820: 1. Added 20160820 as a possible model control version (verModelControlFile).
+//            2. Added ability to switch off minimum F's using control file flag optMinFs.
+//            3. Incremented model version to 20160820.
+//            4. Changed zLegal to 125 mm CL.
 //
 //IMPORTANT: 2013-09 assessment model had RKC params for 1992+ discard mortality TURNED OFF. 
 //           THE ESTIMATION PHASE FOR RKC DISCARD MORTALITY IS NOW SET IN THE CONTROLLER FILE!
@@ -174,10 +178,10 @@ GLOBALS_SECTION
     #include "FisheryData.hpp"
     #include "ModelData.hpp"
     
-    adstring version = "20160726";//model version
-    int verModelControlFile = 20160622;//model control file version
+    adstring version = "20160820";//model version
+    ivector verModelControlFile(1,2);  //model control file version
     
-    double zLegal = 128;//current (2015/16) legal size
+    double zLegal = 125;//current (2015/16) legal size
     int iZLegal = 0;    //index into size bins for legal size
 
     //model objects
@@ -269,6 +273,9 @@ DATA_SECTION
  END_CALCS
  
  LOCAL_CALCS
+    verModelControlFile[1] = 20160622;
+    verModelControlFile[2] = 20160820;
+    
     int kf = 1;
     strFOUT(kf++) = "penalty, recruitment penalty";
     strFOUT(kf++) = "penalty, sex ratio penalty";
@@ -894,11 +901,13 @@ DATA_SECTION
     init_int inpVerMCF   //input version number for control file
  LOCAL_CALCS
     CheckFile<<"Model ControlFile version = "<<inpVerMCF<<endl;
-    if (inpVerMCF!=verModelControlFile){
+    bool tst = false;
+    for (int i=1;i<=verModelControlFile.indexmax();i++) tst = tst|(inpVerMCF==verModelControlFile[i]);
+    if (!tst){
         cout<<"Model Control File version inconsistent with model."<<endl;
-        cout<<"Current version = "<<verModelControlFile<<endl;
+        cout<<"Current versions = "<<verModelControlFile<<endl;
         cout<<"Version in file = "<<inpVerMCF<<endl;
-        cout<<"Please use correct version."<<endl;
+        cout<<"Please use one of the current versions."<<endl;
         cout<<"Aborting..."<<endl;
         exit(-1);
     }
@@ -1070,6 +1079,12 @@ DATA_SECTION
     !!CheckFile<<"##--options for penalty reduction on F devs"<<endl;
     init_int doPenRed      //flag (0/1) to reduce penalties on fishing-related devs by phase
     !!CHECK1(doPenRed);    
+    !!CheckFile<<"##--options for minimum F's"<<endl;
+    int optMinFs;
+    !!optMinFs = 1;//min F's used (old style)
+    !!if (inpVerMCF>=20160820) (*(ad_comm::global_datafile))>>optMinFs;
+    !!if (optMinFs>0) optMinFs = 1;//make sure this is one, if turned on
+    !!CHECK1(optMinFs);
     !!CheckFile<<"##--options for effort extrapolation"<<endl;
     init_int optEffXtr_TCF
     init_int optEffXtr_SCF
@@ -3105,7 +3120,7 @@ FUNCTION get_mortality
     
     //first year retained catch 1965(1966 fishery) no fishery 1985, 1986 or 1997-2004 or 2010-2012
     fTCF_xy.initialize();
-    fTCF_xy(MALE)(styr,1964) = 0.05;//was 1965!!
+    fTCF_xy(MALE)(styr,1964) = optMinFs*0.05;//was 1965!!
 //    cout<<"0a"<<endl;
     int idx = 1;
     for(int iy =1965;iy<endyr;iy++){
@@ -3128,7 +3143,7 @@ FUNCTION get_mortality
     if (debug) cout<<"2"<<endl;
     
     fSCF_xy.initialize();
-    fSCF_xy(MALE)(styr,1977)= 0.01;
+    fSCF_xy(MALE)(styr,1977)= optMinFs*0.01;
 //    for(int iy=1978;iy<=1991;iy++) fSCF_xy(MALE)(iy) = qSCF*effSCF_y(iy);
     fSCF_xy(MALE)(1978,endyr-1) = qSCF*effSCF_y(1978,endyr-1)/mnEff_SCF;
     fSCF_xy(MALE)(1992,endyr-1) = mfexp(pAvgLnF_SCF+pF_DevsSCF);
@@ -3147,7 +3162,7 @@ FUNCTION get_mortality
     }
 //    cout<<"4a"<<endl;
     fRKF_xy.initialize();
-    fRKF_xy(MALE)(styr,1952)= 0.02; //qRKF*mean(rkccatch(1969,1973));
+    fRKF_xy(MALE)(styr,1952)= optMinFs*0.02; //qRKF*mean(rkccatch(1969,1973));
 //    cout<<"4a"<<endl;
 //    for (int iy=1953;iy<=1965;iy++) fRKF_xy(MALE)(iy) = -log(1-qRKF*effRKF_y(iy));//WTS: used to be rkceffortjap(iy)
 ////    cout<<"4a"<<endl;
@@ -3156,7 +3171,7 @@ FUNCTION get_mortality
 //    for (int iy=1973;iy<=1991;iy++) fRKF_xy(MALE)(iy) = -log(1-qRKF*effRKF_y(iy));
 ////    cout<<"4c"<<endl;
     fRKF_xy(MALE)(1953,endyr-1) = -log(1-qRKF*effRKF_y(1953,endyr-1)/(mean(effRKF_y(yrsObsDscRKF))));
-    for (int iy=1953;iy<=1991;iy++) if(fRKF_xy(MALE)(iy)< 0.01) fRKF_xy(MALE)(iy) = 0.01;       
+    if (optMinFs>0) {for (int iy=1953;iy<=1991;iy++) if(fRKF_xy(MALE)(iy)< 0.01) fRKF_xy(MALE)(iy) = 0.01;}
 //    cout<<"4d"<<endl;
     for (int iy=1984;iy<=1985;iy++) fRKF_xy(MALE)(iy) = 0.0;
 //    cout<<"4e"<<endl;
