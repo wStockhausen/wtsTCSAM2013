@@ -150,6 +150,8 @@
 //            2. Added ability to switch off minimum F's using control file flag optMinFs.
 //            3. Incremented model version to 20160820.
 //            4. Changed zLegal to 125 mm CL.
+//--20160825: 1. Revised penalty reductions for F devs so llw = 0 in last phase.
+//            2. Revised parameterization and options for effort extrapolation.
 //
 //IMPORTANT: 2013-09 assessment model had RKC params for 1992+ discard mortality TURNED OFF. 
 //           THE ESTIMATION PHASE FOR RKC DISCARD MORTALITY IS NOW SET IN THE CONTROLLER FILE!
@@ -1090,12 +1092,16 @@ DATA_SECTION
     init_int optEffXtr_SCF
     init_int optEffXtr_RKF
     init_int optEffXtr_GTF
-    !!if (!optEffXtr_TCF) optEffXtr_TCF = 0; //option not implemented yet
-    !!if (!optEffXtr_GTF) optEffXtr_GTF = 0; //option not implemented yet
-    !!CHECK1(optEffXtr_TCF);
-    !!CHECK1(optEffXtr_SCF);
-    !!CHECK1(optEffXtr_RKF);
-    !!CHECK1(optEffXtr_GTF);
+LOCAL_CALCS
+    optEffXtr_TCF = 0; //option not implemented yet
+    optEffXtr_GTF = 0; //option not implemented yet
+    optEffXtr_SCF = 1; //only option implemented for SCF is 1
+    if (optEffXtr_RKF==0) optEffXtr_RKF = 2;//old style is now 2 
+    CHECK1(optEffXtr_TCF);
+    CHECK1(optEffXtr_SCF);
+    CHECK1(optEffXtr_RKF);
+    CHECK1(optEffXtr_GTF);
+ END_CALCS
          
         
     //parameter estimation phases
@@ -1730,10 +1736,10 @@ PARAMETER_SECTION
     init_bounded_number pAvgLnF_GTFF(-5.0,5.0,phsGTFF)  ///< female offset to ln-scale mean fishing mortality in groundfish trawl fisheries
 
     //Effort extrapolation parameters
-    init_bounded_number pLnEffXtr_TCF(-5.0,5.0,phsLnEffXtr_TCF)  ///< TCF effort extrapolation parameter
-    init_bounded_number pLnEffXtr_SCF(-5.0,5.0,phsLnEffXtr_SCF)  ///< SCF effort extrapolation parameter
-    init_bounded_number pLnEffXtr_RKF(-5.0,5.0,phsLnEffXtr_RKF)  ///< RKF effort extrapolation parameter
-    init_bounded_number pLnEffXtr_GTF(-5.0,5.0,phsLnEffXtr_GTF)  ///< GTF effort extrapolation parameter
+    init_bounded_number pLnEffXtr_TCF(-20.0,0.0,phsLnEffXtr_TCF)  ///< TCF effort extrapolation parameter
+    init_bounded_number pLnEffXtr_SCF(-20.0,0.0,phsLnEffXtr_SCF)  ///< SCF effort extrapolation parameter
+    init_bounded_number pLnEffXtr_RKF(-20.0,0.0,phsLnEffXtr_RKF)  ///< RKF effort extrapolation parameter
+    init_bounded_number pLnEffXtr_GTF(-20.0,0.0,phsLnEffXtr_GTF)  ///< GTF effort extrapolation parameter
     ////end of estimated parameters///////////////
     
     3darray retFcn_syz(1,nSCs,styr,endyr-1,1,nZBs)    // Retention curve for males caught in directed fishery    (IMPORTANT CHANGE: used to be "endyr")
@@ -3133,8 +3139,8 @@ FUNCTION get_mortality
     //Fs in snow and BBRKC fishery are scalars need to multiply in projections by retained snow crab/average snow catch * fmTCFM_syz to get fmTCFM_syz.
     //20150601: ratio is now either mortality rate/effort OR fishing capture rate/effort
     //20160325: scaling factor can now be related to a model parameter
-    if (active(pLnEffXtr_SCF)){
-        qSCF = mfexp(pLnEffXtr_SCF);
+    if (pLnEffXtr_SCF.get_phase_start()>0){
+        qSCF = mfexp(pLnEffXtr_SCF);//parameter will be active
     } else {
         dvar_vector f_SCF1 = mfexp(pAvgLnF_SCF+pF_DevsSCF);
         qSCF = mean(f_SCF1);
@@ -3152,25 +3158,27 @@ FUNCTION get_mortality
     
     // need to have the devs 1992 to present
     //20150601: ratio is now either mortality rate/effort OR fishing capture rate/effort
-    //20160325: scaling factor can now be related to a model parameter
-    if (active(pLnEffXtr_RKF)){
-        qRKF = mfexp(pLnEffXtr_RKF);
-    } else {
-        dvar_vector f_RKF1(1,nObsDscRKF);   //was nObsDscRKF-1
-        f_RKF1 = mfexp(pAvgLnF_RKF+pF_DevsRKF);
-        qRKF = mean(1-mfexp(-f_RKF1));
-    }
 //    cout<<"4a"<<endl;
     fRKF_xy.initialize();
     fRKF_xy(MALE)(styr,1952)= optMinFs*0.02; //qRKF*mean(rkccatch(1969,1973));
 //    cout<<"4a"<<endl;
-//    for (int iy=1953;iy<=1965;iy++) fRKF_xy(MALE)(iy) = -log(1-qRKF*effRKF_y(iy));//WTS: used to be rkceffortjap(iy)
-////    cout<<"4a"<<endl;
-//    for (int iy=1966;iy<=1972;iy++) fRKF_xy(MALE)(iy) = -log(1-qRKF*effRKF_y(iy));//WTS: used to be effRKF_y(iy)+rkceffortjap(iy)
-////    cout<<"4b"<<endl;
-//    for (int iy=1973;iy<=1991;iy++) fRKF_xy(MALE)(iy) = -log(1-qRKF*effRKF_y(iy));
-////    cout<<"4c"<<endl;
-    fRKF_xy(MALE)(1953,endyr-1) = -log(1-qRKF*effRKF_y(1953,endyr-1)/(mean(effRKF_y(yrsObsDscRKF))));
+    //20160325: scaling factor can now be related to a model parameter
+    if (pLnEffXtr_RKF.get_phase_start()>0){
+        qRKF = mfexp(pLnEffXtr_RKF);
+    } else {
+        dvar_vector f_RKF1(1,nObsDscRKF);   //was nObsDscRKF-1
+        f_RKF1 = mfexp(pAvgLnF_RKF+pF_DevsRKF);
+        if (optEffXtr_RKF==1){
+            qRKF = mean(f_RKF1);
+        } else if (optEffXtr_RKF==2) {
+            qRKF = mean(1-mfexp(-f_RKF1));//old style
+        }
+    }
+    if (optEffXtr_RKF==1){
+        fRKF_xy(MALE)(1953,endyr-1) = qRKF*effRKF_y(1953,endyr-1)/mnEff_RKF;
+    } else if (optEffXtr_RKF==2) {
+        fRKF_xy(MALE)(1953,endyr-1) = -log(1-qRKF*effRKF_y(1953,endyr-1)/mnEff_RKF);//old style
+    }
     if (optMinFs>0) {for (int iy=1953;iy<=1991;iy++) if(fRKF_xy(MALE)(iy)< 0.01) fRKF_xy(MALE)(iy) = 0.01;}
 //    cout<<"4d"<<endl;
     for (int iy=1984;iy<=1985;iy++) fRKF_xy(MALE)(iy) = 0.0;
@@ -3834,14 +3842,20 @@ FUNCTION evaluate_the_objective_function    //wts: revising
     if (active(pF_DevsTCF)) { 
         int phs = pF_DevsTCF.get_phase_start();
         llw = 1.0; 
-        if (doPenRed) llw = pow(red,(current_phase()-phs)/max(1.0,1.0*(max_number_phases-phs)))*llw;
+        if (doPenRed) {
+            llw = pow(red,(current_phase()-phs)/max(1.0,1.0*(max_number_phases-phs)))*llw;
+            if (last_phase()) llw = 0.0;
+        }
         nextf = norm2(pF_DevsTCF);
         fpen += llw*nextf; objfOut(15) = llw*nextf; likeOut(15) = nextf; wgtsOut(15) = llw;   //wts: need to turn this off in last phase?        
     }
     if(active(pF_DevsSCF)) {
         int phs = pF_DevsSCF.get_phase_start();
         llw = 0.5; 
-        if (doPenRed) llw = pow(red,(current_phase()-phs)/max(1.0,1.0*(max_number_phases-phs)))*llw;
+        if (doPenRed) {
+            llw = pow(red,(current_phase()-phs)/max(1.0,1.0*(max_number_phases-phs)))*llw;
+            if (last_phase()) llw = 0.0;
+        }
         nextf = norm2(pF_DevsSCF);
         fpen += llw*nextf; objfOut(16) = llw*nextf; likeOut(16) = nextf; wgtsOut(16) = llw; //wts: need to turn this off in last phase? note that relative weights are hard-wired
         
@@ -3849,7 +3863,10 @@ FUNCTION evaluate_the_objective_function    //wts: revising
     if(active(pF_DevsRKF)) {
         int phs = pF_DevsRKF.get_phase_start();
         llw = 3.0; 
-        if (doPenRed) llw = pow(red,(current_phase()-phs)/max(1.0,1.0*(max_number_phases-phs)))*llw;
+        if (doPenRed) {
+            llw = pow(red,(current_phase()-phs)/max(1.0,1.0*(max_number_phases-phs)))*llw;
+            if (last_phase()) llw = 0.0;
+        }
         nextf = norm2(pF_DevsRKF);
         fpen += llw*nextf; objfOut(17) = llw*nextf; likeOut(17) = nextf; wgtsOut(17) = llw; //wts: need to turn this off in last phase?
         
@@ -3857,7 +3874,10 @@ FUNCTION evaluate_the_objective_function    //wts: revising
     if(active(pF_DevsGTF)) {
         int phs = pF_DevsGTF.get_phase_start();
         llw = 0.5; 
-        if (doPenRed) llw = pow(red,(current_phase()-phs)/max(1.0,1.0*(max_number_phases-phs)))*llw;
+        if (doPenRed) {
+            llw = pow(red,(current_phase()-phs)/max(1.0,1.0*(max_number_phases-phs)))*llw;
+            if (last_phase()) llw = 0.0;
+        }
         nextf = norm2(pF_DevsGTF);
         fpen += llw*nextf; objfOut(18) = llw*nextf; likeOut(18) = nextf; wgtsOut(18) = llw; //wts: need to turn this off in last phase?        
     }
@@ -4815,6 +4835,8 @@ FUNCTION void writeToR_OLD(ofstream& R_out)
         REP2R2(srv.mod.bio.LMs,modSrvBioLegal_y);        
         
         //Fisheries 
+        REP2R2(qSCF,qSCF);
+        REP2R2(qRKF,qRKF);
         //--TCF
         ivector yrs_ret(1965,endyr-1);
         yrs_ret.fill_seqadd(1965,1);
@@ -5723,8 +5745,8 @@ FUNCTION void writeLikelihoodComponents(ostream& os, int toR)
 REPORT_SECTION
     cout<<"starting REPORT_SECTION for phase "<<current_phase()<<endl;
     
-    cout<<"qSCF = "<<qSCF<<endl;
-    cout<<"qRKF = "<<qRKF<<endl;
+    cout<<"qSCF = "<<qSCF<<tb<<"ln(qSCF) = "<<log(qSCF)<<endl;
+    cout<<"qRKF = "<<qRKF<<tb<<"ln(qSCF) = "<<log(qRKF)<<endl;
     
     if (active(pSelTCFM_devsZ50)) { 
         double llw = 0.0;
@@ -5732,7 +5754,7 @@ REPORT_SECTION
         int max_number_phases = 8;
         int phs = pSelTCFM_devsZ50.get_phase_start();
         llw = 1.0; llw = pow(red,(current_phase()-phs)/max(1.0,1.0*(max_number_phases-phs)))*llw;
-        cout<<"llw for pSelTCFM_devsZ50"<<endl;
+        cout<<"llw for pSelTCFM_devsZ50:"<<endl;
         cout<<current_phase()<<tb<<phs<<tb<<max_number_phases<<endl;
         cout<<(current_phase()-phs)<<tb<<max(1.0,1.0*(max_number_phases-phs))<<endl;
         cout<<pow(red,(current_phase()-phs)/max(1.0,1.0*(max_number_phases-phs)))<<endl;
@@ -5773,15 +5795,6 @@ REPORT_SECTION
 // ===============================================================================
 // ===============================================================================
 BETWEEN_PHASES_SECTION
-    //current phase() = upcoming phase (?)
-    if (current_phase()==phsLnEffXtr_SCF){
-        //set initial value based on qSCF from last phase
-        pLnEffXtr_SCF = log(qSCF);
-    }
-    if (current_phase()==phsLnEffXtr_RKF){
-        //set initial value based on qRKF from last phase
-        pLnEffXtr_RKF = log(qRKF);
-    }
 // ===============================================================================
 // ===============================================================================
 RUNTIME_SECTION
