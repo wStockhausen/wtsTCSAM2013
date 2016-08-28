@@ -157,6 +157,7 @@
 //            3. Incremented model version to 20160828.
 //            4. Pre-data F levels are (again) turned on, regardless of optMinFs, which
 //                  now works only for RKC Fs where minF check is made.
+//            5. Revised sdrNatMort_ output to run stry to endyr-1.
 //
 //IMPORTANT: 2013-09 assessment model had RKC params for 1992+ discard mortality TURNED OFF. 
 //           THE ESTIMATION PHASE FOR RKC DISCARD MORTALITY IS NOW SET IN THE CONTROLLER FILE!
@@ -1968,12 +1969,12 @@ PARAMETER_SECTION
     
     sdreport_number sdrDepletion
     
-    sdreport_vector sdrNatMort_INF(styr,endyr);//natural mortality by year on immature new shell females
-    sdreport_vector sdrNatMort_INM(styr,endyr);//natural mortality by year on immature new shell   males
-    sdreport_vector sdrNatMort_MNF(styr,endyr);//natural mortality by year on   mature new shell females
-    sdreport_vector sdrNatMort_MNM(styr,endyr);//natural mortality by year on   mature new shell   males
-    sdreport_vector sdrNatMort_MOF(styr,endyr);//natural mortality by year on   mature old shell females
-    sdreport_vector sdrNatMort_MOM(styr,endyr);//natural mortality by year on   mature old shell   males
+    sdreport_vector sdrNatMort_INF(styr,endyr-1);//natural mortality by year on immature new shell females
+    sdreport_vector sdrNatMort_INM(styr,endyr-1);//natural mortality by year on immature new shell   males
+    sdreport_vector sdrNatMort_MNF(styr,endyr-1);//natural mortality by year on   mature new shell females
+    sdreport_vector sdrNatMort_MNM(styr,endyr-1);//natural mortality by year on   mature new shell   males
+    sdreport_vector sdrNatMort_MOF(styr,endyr-1);//natural mortality by year on   mature old shell females
+    sdreport_vector sdrNatMort_MOM(styr,endyr-1);//natural mortality by year on   mature old shell   males
     
     sdreport_vector sdrPrM2M_F(1,nZBs);//female prM2M
     sdreport_vector sdrPrM2M_M(1,nZBs);//  male prM2M
@@ -4497,12 +4498,12 @@ FUNCTION Misc_output
         sdrPrM2M_M = modPrM2M(  MALE);
         sdrMnGrw_F = meanPostMoltSize(FEMALE);
         sdrMnGrw_M = meanPostMoltSize(  MALE);
-        sdrNatMort_INF(styr,endyr) = M_msx(IMMATURE,NEW_SHELL,FEMALE);
-        sdrNatMort_INM(styr,endyr) = M_msx(IMMATURE,NEW_SHELL,  MALE);
-        sdrNatMort_MNF(styr,endyr) = M_msx(  MATURE,NEW_SHELL,FEMALE);
-        sdrNatMort_MNM(styr,endyr) = M_msx(  MATURE,NEW_SHELL,  MALE);
-        sdrNatMort_MOF(styr,endyr) = M_msx(  MATURE,OLD_SHELL,FEMALE);
-        sdrNatMort_MOM(styr,endyr) = M_msx(  MATURE,OLD_SHELL,  MALE);
+        sdrNatMort_INF(styr,endyr-1) = M_msx(IMMATURE,NEW_SHELL,FEMALE);
+        sdrNatMort_INM(styr,endyr-1) = M_msx(IMMATURE,NEW_SHELL,  MALE);
+        sdrNatMort_MNF(styr,endyr-1) = M_msx(  MATURE,NEW_SHELL,FEMALE);
+        sdrNatMort_MNM(styr,endyr-1) = M_msx(  MATURE,NEW_SHELL,  MALE);
+        sdrNatMort_MOF(styr,endyr-1) = M_msx(  MATURE,OLD_SHELL,FEMALE);
+        sdrNatMort_MOM(styr,endyr-1) = M_msx(  MATURE,OLD_SHELL,  MALE);
         if (mort_switch==1){
             sdrNatMort_MNF(lyr_mort,uyr_mort) *= pMfac_Big(FEMALE);
             sdrNatMort_MNM(lyr_mort,uyr_mort) *= pMfac_Big(  MALE);
