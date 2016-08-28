@@ -152,6 +152,11 @@
 //            4. Changed zLegal to 125 mm CL.
 //--20160825: 1. Revised penalty reductions for F devs so llw = 0 in last phase.
 //            2. Revised parameterization and options for effort extrapolation.
+//--20160828: 1. Revised penalty reductions for F devs so llw = 0 in phase 8 (can be modified setting -maxph to something else).
+//            2. Revised (again) implementation for effort extrapolation.
+//            3. Incremented model version to 20160828.
+//            4. Pre-data F levels are (again) turned on, regardless of optMinFs, which
+//                  now works only for RKC Fs where minF check is made.
 //
 //IMPORTANT: 2013-09 assessment model had RKC params for 1992+ discard mortality TURNED OFF. 
 //           THE ESTIMATION PHASE FOR RKC DISCARD MORTALITY IS NOW SET IN THE CONTROLLER FILE!
@@ -180,8 +185,10 @@ GLOBALS_SECTION
     #include "FisheryData.hpp"
     #include "ModelData.hpp"
     
-    adstring version = "20160820";//model version
+    adstring version = "20160828";//model version
     ivector verModelControlFile(1,2);  //model control file version
+    
+    int maxPhase = 8;//default max phase for penalty reduction
     
     double zLegal = 125;//current (2015/16) legal size
     int iZLegal = 0;    //index into size bins for legal size
@@ -382,6 +389,13 @@ DATA_SECTION
         echo<<iSeed<<"  #iSeed"<<endl;
         flg = 1;
     }
+    //maxPhase
+    if ((on=option_match(ad_comm::argc,ad_comm::argv,"-imaxph"))>-1) {
+        maxPhase=atoi(ad_comm::argv[on+1]);
+        rng.reinitialize(iSeed);
+        flg = 1;
+    }
+    echo<<maxPhase<<"  #maxPhase"<<endl;
  END_CALCS  
     int asmtYr; //assessment year
     int mnYr;   //min model year
@@ -1085,7 +1099,7 @@ DATA_SECTION
     int optMinFs;
     !!optMinFs = 1;//min F's used (old style)
     !!if (inpVerMCF>=20160820) (*(ad_comm::global_datafile))>>optMinFs;
-    !!if (optMinFs>0) optMinFs = 1;//make sure this is one, if turned on
+    !!if (optMinFs>0) {optMinFs = 1;} else {optMinFs = 0;}//make sure this is 1 if turned on, 0 if off
     !!CHECK1(optMinFs);
     !!CheckFile<<"##--options for effort extrapolation"<<endl;
     init_int optEffXtr_TCF
@@ -3126,7 +3140,7 @@ FUNCTION get_mortality
     
     //first year retained catch 1965(1966 fishery) no fishery 1985, 1986 or 1997-2004 or 2010-2012
     fTCF_xy.initialize();
-    fTCF_xy(MALE)(styr,1964) = optMinFs*0.05;//was 1965!!
+    fTCF_xy(MALE)(styr,1964) = 0.05;//was 1965!!
 //    cout<<"0a"<<endl;
     int idx = 1;
     for(int iy =1965;iy<endyr;iy++){
@@ -3139,8 +3153,8 @@ FUNCTION get_mortality
     //Fs in snow and BBRKC fishery are scalars need to multiply in projections by retained snow crab/average snow catch * fmTCFM_syz to get fmTCFM_syz.
     //20150601: ratio is now either mortality rate/effort OR fishing capture rate/effort
     //20160325: scaling factor can now be related to a model parameter
-    if (pLnEffXtr_SCF.get_phase_start()>0){
-        qSCF = mfexp(pLnEffXtr_SCF);//parameter will be active
+    if (active(pLnEffXtr_SCF)){
+        qSCF = mfexp(pLnEffXtr_SCF);//parameter being estimated
     } else {
         dvar_vector f_SCF1 = mfexp(pAvgLnF_SCF+pF_DevsSCF);
         qSCF = mean(f_SCF1);
@@ -3149,7 +3163,7 @@ FUNCTION get_mortality
     if (debug) cout<<"2"<<endl;
     
     fSCF_xy.initialize();
-    fSCF_xy(MALE)(styr,1977)= optMinFs*0.01;
+    fSCF_xy(MALE)(styr,1977)= 0.01;
 //    for(int iy=1978;iy<=1991;iy++) fSCF_xy(MALE)(iy) = qSCF*effSCF_y(iy);
     fSCF_xy(MALE)(1978,endyr-1) = qSCF*effSCF_y(1978,endyr-1)/mnEff_SCF;
     fSCF_xy(MALE)(1992,endyr-1) = mfexp(pAvgLnF_SCF+pF_DevsSCF);
@@ -3160,11 +3174,11 @@ FUNCTION get_mortality
     //20150601: ratio is now either mortality rate/effort OR fishing capture rate/effort
 //    cout<<"4a"<<endl;
     fRKF_xy.initialize();
-    fRKF_xy(MALE)(styr,1952)= optMinFs*0.02; //qRKF*mean(rkccatch(1969,1973));
+    fRKF_xy(MALE)(styr,1952)= 0.02; //qRKF*mean(rkccatch(1969,1973));
 //    cout<<"4a"<<endl;
     //20160325: scaling factor can now be related to a model parameter
-    if (pLnEffXtr_RKF.get_phase_start()>0){
-        qRKF = mfexp(pLnEffXtr_RKF);
+    if (active(pLnEffXtr_RKF)){
+        qRKF = mfexp(pLnEffXtr_RKF);//parameter being estimated
     } else {
         dvar_vector f_RKF1(1,nObsDscRKF);   //was nObsDscRKF-1
         f_RKF1 = mfexp(pAvgLnF_RKF+pF_DevsRKF);
@@ -3824,18 +3838,17 @@ FUNCTION evaluate_the_objective_function    //wts: revising
     // =================
     double llw = 0.0;
     double red = 0.01;
-    int max_number_phases = 8;
     fpen.initialize();
     if (active(pSelTCFM_devsZ50)) { 
         int phs = pSelTCFM_devsZ50.get_phase_start();
         llw = llwSelTCFM_devsZ50; 
-//        if (doPenRed) llw = pow(red,(current_phase()-phs)/max(1.0,1.0*(max_number_phases-phs)))*llw;
+//        if (doPenRed) llw = pow(red,(current_phase()-phs)/max(1.0,1.0*(maxPhase-phs)))*llw;
         nextf = norm2(first_difference(pSelTCFM_devsZ50));
         fpen += llw*nextf; objfOut(14) = llw*nextf; likeOut(14) = nextf; wgtsOut(14) = llw;           
         
         phs = pSelTCFM_devsZ50.get_phase_start();
         llw = llwSelTCFM_devsZ50; 
-//        if (doPenRed) llw = pow(red,(current_phase()-phs)/max(1.0,1.0*(max_number_phases-phs)))*llw;
+//        if (doPenRed) llw = pow(red,(current_phase()-phs)/max(1.0,1.0*(maxPhase-phs)))*llw;
         nextf = norm2(pSelTCFM_devsZ50);
         fpen += llw*nextf; objfOut(38) = llw*nextf; likeOut(38) = nextf; wgtsOut(38) = llw;   //wts: need to turn this off in last phase?        
     }
@@ -3843,8 +3856,8 @@ FUNCTION evaluate_the_objective_function    //wts: revising
         int phs = pF_DevsTCF.get_phase_start();
         llw = 1.0; 
         if (doPenRed) {
-            llw = pow(red,(current_phase()-phs)/max(1.0,1.0*(max_number_phases-phs)))*llw;
-            if (last_phase()) llw = 0.0;
+            llw = pow(red,(current_phase()-phs)/max(1.0,1.0*(maxPhase-phs)))*llw;
+            if (current_phase()>=maxPhase) llw = 0.0;
         }
         nextf = norm2(pF_DevsTCF);
         fpen += llw*nextf; objfOut(15) = llw*nextf; likeOut(15) = nextf; wgtsOut(15) = llw;   //wts: need to turn this off in last phase?        
@@ -3853,8 +3866,8 @@ FUNCTION evaluate_the_objective_function    //wts: revising
         int phs = pF_DevsSCF.get_phase_start();
         llw = 0.5; 
         if (doPenRed) {
-            llw = pow(red,(current_phase()-phs)/max(1.0,1.0*(max_number_phases-phs)))*llw;
-            if (last_phase()) llw = 0.0;
+            llw = pow(red,(current_phase()-phs)/max(1.0,1.0*(maxPhase-phs)))*llw;
+            if (current_phase()>=maxPhase) llw = 0.0;
         }
         nextf = norm2(pF_DevsSCF);
         fpen += llw*nextf; objfOut(16) = llw*nextf; likeOut(16) = nextf; wgtsOut(16) = llw; //wts: need to turn this off in last phase? note that relative weights are hard-wired
@@ -3864,8 +3877,8 @@ FUNCTION evaluate_the_objective_function    //wts: revising
         int phs = pF_DevsRKF.get_phase_start();
         llw = 3.0; 
         if (doPenRed) {
-            llw = pow(red,(current_phase()-phs)/max(1.0,1.0*(max_number_phases-phs)))*llw;
-            if (last_phase()) llw = 0.0;
+            llw = pow(red,(current_phase()-phs)/max(1.0,1.0*(maxPhase-phs)))*llw;
+            if (current_phase()>=maxPhase) llw = 0.0;
         }
         nextf = norm2(pF_DevsRKF);
         fpen += llw*nextf; objfOut(17) = llw*nextf; likeOut(17) = nextf; wgtsOut(17) = llw; //wts: need to turn this off in last phase?
@@ -3875,8 +3888,8 @@ FUNCTION evaluate_the_objective_function    //wts: revising
         int phs = pF_DevsGTF.get_phase_start();
         llw = 0.5; 
         if (doPenRed) {
-            llw = pow(red,(current_phase()-phs)/max(1.0,1.0*(max_number_phases-phs)))*llw;
-            if (last_phase()) llw = 0.0;
+            llw = pow(red,(current_phase()-phs)/max(1.0,1.0*(maxPhase-phs)))*llw;
+            if (current_phase()>=maxPhase) llw = 0.0;
         }
         nextf = norm2(pF_DevsGTF);
         fpen += llw*nextf; objfOut(18) = llw*nextf; likeOut(18) = nextf; wgtsOut(18) = llw; //wts: need to turn this off in last phase?        
@@ -5751,13 +5764,12 @@ REPORT_SECTION
     if (active(pSelTCFM_devsZ50)) { 
         double llw = 0.0;
         double red = 0.01;
-        int max_number_phases = 8;
         int phs = pSelTCFM_devsZ50.get_phase_start();
-        llw = 1.0; llw = pow(red,(current_phase()-phs)/max(1.0,1.0*(max_number_phases-phs)))*llw;
+        llw = 1.0; llw = pow(red,(current_phase()-phs)/max(1.0,1.0*(maxPhase-phs)))*llw;
         cout<<"llw for pSelTCFM_devsZ50:"<<endl;
-        cout<<current_phase()<<tb<<phs<<tb<<max_number_phases<<endl;
-        cout<<(current_phase()-phs)<<tb<<max(1.0,1.0*(max_number_phases-phs))<<endl;
-        cout<<pow(red,(current_phase()-phs)/max(1.0,1.0*(max_number_phases-phs)))<<endl;
+        cout<<current_phase()<<tb<<phs<<tb<<maxPhase<<endl;
+        cout<<(current_phase()-phs)<<tb<<max(1.0,1.0*(maxPhase-phs))<<endl;
+        cout<<pow(red,(current_phase()-phs)/max(1.0,1.0*(maxPhase-phs)))<<endl;
      }
     if (last_phase()) {
         ofstream os("TCSAM2013.NEWSTYLE.final.R", ios::trunc);    
