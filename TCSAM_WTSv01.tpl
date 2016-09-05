@@ -158,6 +158,9 @@
 //            4. Pre-data F levels are (again) turned on, regardless of optMinFs, which
 //                  now works only for RKC Fs where minF check is made.
 //            5. Revised sdrNatMort_ output to run stry to endyr-1.
+//--20160905: 1. Writing initial likelihood components to csv file "TCSAM2013.init_likelihood_components.csv".
+//            2. Revised PARAMETER_SECTION to better handle modPrM2M when pin file is used.
+//            3. Incremented model version to 20160905.
 //
 //IMPORTANT: 2013-09 assessment model had RKC params for 1992+ discard mortality TURNED OFF. 
 //           THE ESTIMATION PHASE FOR RKC DISCARD MORTALITY IS NOW SET IN THE CONTROLLER FILE!
@@ -186,7 +189,7 @@ GLOBALS_SECTION
     #include "FisheryData.hpp"
     #include "ModelData.hpp"
     
-    adstring version = "20160828";//model version
+    adstring version = "20160905";//model version
     ivector verModelControlFile(1,2);  //model control file version
     
     int maxPhase = 8;//default max phase for penalty reduction
@@ -2003,7 +2006,19 @@ PRELIMINARY_CALCS_SECTION
         modPrM2M(MALE) = obsPrMatureM_z;
     }
     
-    if (!usePin){//set initial values from control file inputs 
+    if (usePin) {
+        //need to recalculate modPrM2M values based on pin
+        //--prMoltToMaturity(female|size)
+        modPrM2M(FEMALE) = 1.0; //--prM2M(females> zBs(16)) assumed = 1
+        if (optPrM2M==0){
+            modPrM2M(FEMALE)(1,16) = mfexp(pPrM2MF);
+            modPrM2M(MALE) = mfexp(pPrM2MM);
+        } else {
+            modPrM2M(FEMALE)(1,16) = 1.0/(1.0+mfexp(-pPrM2MF));
+            modPrM2M(MALE) = 1.0/(1.0+mfexp(-pPrM2MM));
+        }
+    } else {
+        //set initial values from control file inputs 
         //recruitment
         pMnLnRecInit = inpMnLnRecInit;
         pMnLnRec     = inpMnLnRec;
@@ -2422,7 +2437,7 @@ PRELIMINARY_CALCS_SECTION
     runPopMod();
     
     //evaluate the objective function for initial parameter values
-    evaluate_the_objective_function();
+    evaluate_the_objective_function();        
     
     //write reports for initial model configuration
     ofstream initReptToR("TCSAM2013.NEWSTYLE.init.R");
@@ -2431,6 +2446,9 @@ PRELIMINARY_CALCS_SECTION
     ofstream initReptToR1("TCSAM2013.OLDSTYLE.init.R");
     writeToR_OLD(initReptToR1);
     initReptToR1.close();
+    ofstream initLLsToCSV("TCSAM2013.init_likelihood_components.csv");
+    writeLikelihoodComponents(initLLsToCSV,0);
+    initLLsToCSV.close();
     
     if (option_match(ad_comm::argc,ad_comm::argv,"-mceval")>-1) {
         openMCMCFile();
@@ -3756,7 +3774,7 @@ FUNCTION evaluate_the_objective_function    //wts: revising
     
     // Constraints on recruitment
     penal_rec.initialize();
-    if (active(pRecDevs)) {        
+//    if (active(pRecDevs)) {        
         //recruitment likelihood - norm2 is sum of square values   
         penal_rec = 1.0*like_wght_rec*norm2(pRecDevs);
         //   penalty on devs in historic period     
@@ -3765,21 +3783,21 @@ FUNCTION evaluate_the_objective_function    //wts: revising
         penal_rec += 1.0*norm2(first_difference(pRecDevsHist));
         
         f += penal_rec; objfOut(1) = penal_rec; likeOut(1) = penal_rec; wgtsOut(1) = 1;
-    } 
+//    } 
     
     //nat Mort. penalty
-    if(active(pMfac_Imm)) {
+//    if(active(pMfac_Imm)) {
         nat_penalty = 0.5 * square((pMfac_Imm - 1.0) / 0.05);                 //hard-wired
         f += nat_penalty; objfOut(3) = nat_penalty; likeOut(3) = nat_penalty; wgtsOut(3) = 1;
-    }
-    if(active(pMfac_MatM)) {  
+//    }
+//    if(active(pMfac_MatM)) {  
         nat_penalty = 0.5 * square((pMfac_MatM - 1.0) / 0.05);                     //hard-wired
         f += nat_penalty; objfOut(4) = nat_penalty; likeOut(4) = nat_penalty; wgtsOut(4) = 1;
-    }
-    if(active(pMfac_MatF)) {  
+//    }
+//    if(active(pMfac_MatF)) {  
         nat_penalty = 0.5 * square((pMfac_MatF - 1.0) / 0.05);                     //hard-wired
         f += nat_penalty; objfOut(5) = nat_penalty; likeOut(5) = nat_penalty; wgtsOut(5) = 1;
-    }
+//    }
     
     //penalty on survey Q
 //    if(active(pSrv2_QM) && srv3_qPriorWgt>0) {  
@@ -3794,53 +3812,54 @@ FUNCTION evaluate_the_objective_function    //wts: revising
 //        //    srv3q_penalty = 0.0 * square((pSrv2_QF - 0.88) / 0.05);
 //        f += srv3q_penalty; objfOut(7) = srv3q_penalty; likeOut(7) = srv3q_penalty; wgtsOut(7) = 1;
 //    }
-    if(active(pSrv2_QM) && srv3_qPriorWgt>=0) {  
+//    if(active(pSrv2_QM) && srv3_qPriorWgt>=0) {  
         //max of underbag at 182.5 mm is 0.873   
         srv3q_penalty = 0.5 * square((pSrv2_QM - srv3_qPriorMean) / srv3_qPriorStD);
         f += srv3_qPriorWgt*srv3q_penalty; objfOut(6) = srv3_qPriorWgt*srv3q_penalty; likeOut(6) = srv3q_penalty; wgtsOut(6) = srv3_qPriorWgt;
-    }
-    if(active(pSrv2_QF) && srv3_qFemPriorWgt>=0) {  
+//    }
+//    if(active(pSrv2_QF) && srv3_qFemPriorWgt>=0) {  
         //peak of females is at about 80mm underbag is 0.75 at this size - less uncertainty  
         srv3q_penalty = 0.5 * square((pSrv2_QF - srv3_qFemPriorMean) / srv3_qFemPriorStD);
         f += srv3_qFemPriorWgt*srv3q_penalty; objfOut(7) = srv3_qFemPriorWgt*srv3q_penalty; likeOut(7) = srv3q_penalty; wgtsOut(7) = srv3_qFemPriorWgt;
-    }
+//    }
     
     // bayesian part - likelihood on growth parameters af,am,bf,bm
     // not used in this case
     af_penal = 0; bf_penal = 0; am_penal = 0; bm_penal = 0;
-    if(active(pGrAF1)) {  
+//    if(active(pGrAF1)) {  
         af_penal = 0.5 * square((pGrAF1 - 0.56560241)/0.1);                  //hard-wired
         f += af_penal; objfOut(8) = af_penal; likeOut(8) = af_penal; wgtsOut(8) = 1;
-    }
-    if(active(pGrBF1)) {  
+//    }
+//    if(active(pGrBF1)) {  
         bf_penal = 0.5 * square((pGrBF1 - 0.9132661)/0.025);                    //hard-wired
         f += bf_penal; objfOut(9) = bf_penal; likeOut(9) = bf_penal; wgtsOut(9) = 1;
-    }
-    if(active(pGrAM1)) {
+//    }
+//    if(active(pGrAM1)) {
         am_penal   = 0.5 * square((pGrAM1 - 0.437941)/0.025);                     //hard-wired
         f += am_penal; objfOut(10) = am_penal; likeOut(10) = am_penal; wgtsOut(10) = 1;
-    }
-    if(active(pGrBM1)) {
+//    }
+//    if(active(pGrBM1)) {
         bm_penal = 0.5 * square((pGrBM1 - 0.9487)/0.1);                          //hard-wired
         f += bm_penal; objfOut(11) = bm_penal; likeOut(11) = bm_penal; wgtsOut(11) = 1;
-    }
+//    }
     
-    if(active(pPrM2MF)) {
+//    if(active(pPrM2MF)) {
         lkPrM2M = norm2(first_difference(first_difference(pPrM2MF)));
         f += 1.0*lkPrM2M; objfOut(12)= 1.0*lkPrM2M; likeOut(12) = lkPrM2M; wgtsOut(12) = 1;
-    }
+//    }
         
-    if(active(pPrM2MM)) {
+//    if(active(pPrM2MM)) {
         lkPrM2M = norm2(first_difference(first_difference(pPrM2MM)));//wts: why different weights? 1.0 vs. 0.5?
         f += 0.5*lkPrM2M; objfOut(13)= 0.5*lkPrM2M; likeOut(13) = lkPrM2M; wgtsOut(13) = 0.5;
-    }
+//    }
     
     // various penalties
     // =================
     double llw = 0.0;
     double red = 0.01;
     fpen.initialize();
-    if (active(pSelTCFM_devsZ50)) { 
+//    if (active(pSelTCFM_devsZ50)) 
+    { 
         int phs = pSelTCFM_devsZ50.get_phase_start();
         llw = llwSelTCFM_devsZ50; 
 //        if (doPenRed) llw = pow(red,(current_phase()-phs)/max(1.0,1.0*(maxPhase-phs)))*llw;
@@ -3853,7 +3872,8 @@ FUNCTION evaluate_the_objective_function    //wts: revising
         nextf = norm2(pSelTCFM_devsZ50);
         fpen += llw*nextf; objfOut(38) = llw*nextf; likeOut(38) = nextf; wgtsOut(38) = llw;   //wts: need to turn this off in last phase?        
     }
-    if (active(pF_DevsTCF)) { 
+//    if (active(pF_DevsTCF)) 
+    { 
         int phs = pF_DevsTCF.get_phase_start();
         llw = 1.0; 
         if (doPenRed) {
@@ -3863,7 +3883,8 @@ FUNCTION evaluate_the_objective_function    //wts: revising
         nextf = norm2(pF_DevsTCF);
         fpen += llw*nextf; objfOut(15) = llw*nextf; likeOut(15) = nextf; wgtsOut(15) = llw;   //wts: need to turn this off in last phase?        
     }
-    if(active(pF_DevsSCF)) {
+//    if(active(pF_DevsSCF)) 
+    {
         int phs = pF_DevsSCF.get_phase_start();
         llw = 0.5; 
         if (doPenRed) {
@@ -3874,7 +3895,8 @@ FUNCTION evaluate_the_objective_function    //wts: revising
         fpen += llw*nextf; objfOut(16) = llw*nextf; likeOut(16) = nextf; wgtsOut(16) = llw; //wts: need to turn this off in last phase? note that relative weights are hard-wired
         
     }
-    if(active(pF_DevsRKF)) {
+//    if(active(pF_DevsRKF)) 
+    {
         int phs = pF_DevsRKF.get_phase_start();
         llw = 3.0; 
         if (doPenRed) {
@@ -3885,7 +3907,8 @@ FUNCTION evaluate_the_objective_function    //wts: revising
         fpen += llw*nextf; objfOut(17) = llw*nextf; likeOut(17) = nextf; wgtsOut(17) = llw; //wts: need to turn this off in last phase?
         
     }
-    if(active(pF_DevsGTF)) {
+//    if(active(pF_DevsGTF)) 
+    {
         int phs = pF_DevsGTF.get_phase_start();
         llw = 0.5; 
         if (doPenRed) {
