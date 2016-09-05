@@ -161,6 +161,7 @@
 //--20160905: 1. Writing initial likelihood components to csv file "TCSAM2013.init_likelihood_components.csv".
 //            2. Revised PARAMETER_SECTION to better handle modPrM2M when pin file is used.
 //            3. Incremented model version to 20160905.
+//            4. Corrected labels in writeParameters for male survey selectivity parameters.
 //
 //IMPORTANT: 2013-09 assessment model had RKC params for 1992+ discard mortality TURNED OFF. 
 //           THE ESTIMATION PHASE FOR RKC DISCARD MORTALITY IS NOW SET IN THE CONTROLLER FILE!
@@ -2622,10 +2623,10 @@ FUNCTION void writeParameters(ofstream& os,int toR, int willBeActive)
     wts::writeParameter(os,pSrv1_QF,toR,willBeActive,"surveys, surveys, -1981 \\nfemale Q, females [-1981]");      
     wts::writeParameter(os,pSrv2_QF,toR,willBeActive,"surveys, surveys, 1982+ \\nfemale Q, females [1982+]"); 
     
-    wts::writeParameter(os,pSrv1M_z50,toR,willBeActive,   "surveys, surveys, -1981 \\nmale z50,     male size at 50%-selected [-1981]");   
-    wts::writeParameter(os,pSrv1M_dz5095,toR,willBeActive,"surveys, surveys, -1981 \\nmale z95-z50, male offset to 95%-selected [-1981]"); 
-    wts::writeParameter(os,pSrv2M_z50,toR,willBeActive,   "surveys, surveys, 1982+ \\nmale z50,     male size at 50%-selected [1982+]");   
-    wts::writeParameter(os,pSrv2M_dz5095,toR,willBeActive,"surveys, surveys, 1982+ \\nmale z95-z50, male offset to 95%-selected [1982+]"); 
+    wts::writeParameter(os,pSrv1M_z50,toR,willBeActive,   "surveys, survey selectivity, -1981 \\nmale z50,     male size at 50%-selected [-1981]");   
+    wts::writeParameter(os,pSrv1M_dz5095,toR,willBeActive,"surveys, survey selectivity, -1981 \\nmale z95-z50, male offset to 95%-selected [-1981]"); 
+    wts::writeParameter(os,pSrv2M_z50,toR,willBeActive,   "surveys, survey selectivity, 1982+ \\nmale z50,     male size at 50%-selected [1982+]");   
+    wts::writeParameter(os,pSrv2M_dz5095,toR,willBeActive,"surveys, survey selectivity, 1982+ \\nmale z95-z50, male offset to 95%-selected [1982+]"); 
     
     wts::writeParameter(os,pSrv1F_z50,toR,willBeActive,   "surveys, survey selectivity, -1981 \\nfemale z50, female size at 50%-selected [-1981]");   
     wts::writeParameter(os,pSrv1F_dz5095,toR,willBeActive,"surveys, survey selectivity, -1981 \\nfemale z95-z50, female offset to 95%-selected [-1981]"); 
