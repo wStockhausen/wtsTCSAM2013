@@ -162,6 +162,7 @@
 //            2. Revised PARAMETER_SECTION to better handle modPrM2M when pin file is used.
 //            3. Incremented model version to 20160905.
 //            4. Corrected labels in writeParameters for male survey selectivity parameters.
+//--20160907: 1. writing retFcn_syz to projection model file if optFM=1 instead of selTCFR_syz.
 //
 //IMPORTANT: 2013-09 assessment model had RKC params for 1992+ discard mortality TURNED OFF. 
 //           THE ESTIMATION PHASE FOR RKC DISCARD MORTALITY IS NOW SET IN THE CONTROLLER FILE!
@@ -4613,21 +4614,45 @@ FUNCTION void writeMyProjectionFile(ofstream& os)
       os<<"#selTCF_TotMale(nSCs,nSXs): average of last 4 years selTCFM_syz total male new old shell"<<endl;
       os<<(selTCFM_syz(NEW_SHELL,endyr-4)+selTCFM_syz(NEW_SHELL,endyr-3)+selTCFM_syz(NEW_SHELL,endyr-2)+selTCFM_syz(NEW_SHELL,endyr-1))/4.0<<endl;
       os<<(selTCFM_syz(OLD_SHELL,endyr-4)+selTCFM_syz(OLD_SHELL,endyr-3)+selTCFM_syz(OLD_SHELL,endyr-2)+selTCFM_syz(OLD_SHELL,endyr-1))/4.0<<endl;
-      os<<"#selTCF_RetMale(nSCs,nSXs): average of last 4 years selTCFM_syz retained curve male new old shell"<<endl;
-      os<<(selTCFR_syz(NEW_SHELL,endyr-4)+selTCFR_syz(NEW_SHELL,endyr-3)+selTCFR_syz(NEW_SHELL,endyr-2)+selTCFR_syz(NEW_SHELL,endyr-1))/4.0<<endl;//IMPORTANT CHANGE: was only over last 3 years (but said 4)
-      os<<(selTCFR_syz(OLD_SHELL,endyr-4)+selTCFR_syz(OLD_SHELL,endyr-3)+selTCFR_syz(OLD_SHELL,endyr-2)+selTCFR_syz(OLD_SHELL,endyr-1))/4.0<<endl;
+      if (optFM==0){
+            os<<"#selTCF_RetMale(nSCs): average of last 4 years selTCFM_syz retained curve male new old shell"<<endl;
+            os<<(selTCFR_syz(NEW_SHELL,endyr-4)+selTCFR_syz(NEW_SHELL,endyr-3)+selTCFR_syz(NEW_SHELL,endyr-2)+selTCFR_syz(NEW_SHELL,endyr-1))/4.0<<endl;//IMPORTANT CHANGE: was only over last 3 years (but said 4)
+            os<<(selTCFR_syz(OLD_SHELL,endyr-4)+selTCFR_syz(OLD_SHELL,endyr-3)+selTCFR_syz(OLD_SHELL,endyr-2)+selTCFR_syz(OLD_SHELL,endyr-1))/4.0<<endl;
+      } else {
+            os<<"#retFcn_syz(nSCs): average of last four years"<<endl;
+            os<<(retFcn_syz(NEW_SHELL,endyr-4)+retFcn_syz(NEW_SHELL,endyr-3)+retFcn_syz(NEW_SHELL,endyr-2)+retFcn_syz(NEW_SHELL,endyr-1))/4.0<<endl;//IMPORTANT CHANGE: was only over last 3 years (but said 4)
+            os<<(retFcn_syz(OLD_SHELL,endyr-4)+retFcn_syz(OLD_SHELL,endyr-3)+retFcn_syz(OLD_SHELL,endyr-2)+retFcn_syz(OLD_SHELL,endyr-1))/4.0<<endl;
+      }
       os<<"#selTCF_TotMaleEast(nSCs,nSXs): set same as average total"<<endl;
       os<<(selTCFM_syz(NEW_SHELL,endyr-4)+selTCFM_syz(NEW_SHELL,endyr-3)+selTCFM_syz(NEW_SHELL,endyr-2)+selTCFM_syz(NEW_SHELL,endyr-1))/4.0<<endl;
       os<<(selTCFM_syz(OLD_SHELL,endyr-4)+selTCFM_syz(OLD_SHELL,endyr-3)+selTCFM_syz(OLD_SHELL,endyr-2)+selTCFM_syz(OLD_SHELL,endyr-1))/4.0<<endl;
-      os<<"#selTCF_RetMaleEast(nSCs,nSXs): set same as avg retained"<<endl;
-      os<<(selTCFR_syz(NEW_SHELL,endyr-4)+selTCFR_syz(NEW_SHELL,endyr-3)+selTCFR_syz(NEW_SHELL,endyr-2)+selTCFR_syz(NEW_SHELL,endyr-1))/4.0<<endl;//IMPORTANT CHANGE: was only over last 3 years (but said 4)
-      os<<(selTCFR_syz(OLD_SHELL,endyr-4)+selTCFR_syz(OLD_SHELL,endyr-3)+selTCFR_syz(OLD_SHELL,endyr-2)+selTCFR_syz(OLD_SHELL,endyr-1))/4.0<<endl;
+//      os<<"#selTCF_RetMaleEast(nSCs,nSXs): set same as avg retained"<<endl;
+//      os<<(selTCFR_syz(NEW_SHELL,endyr-4)+selTCFR_syz(NEW_SHELL,endyr-3)+selTCFR_syz(NEW_SHELL,endyr-2)+selTCFR_syz(NEW_SHELL,endyr-1))/4.0<<endl;//IMPORTANT CHANGE: was only over last 3 years (but said 4)
+//      os<<(selTCFR_syz(OLD_SHELL,endyr-4)+selTCFR_syz(OLD_SHELL,endyr-3)+selTCFR_syz(OLD_SHELL,endyr-2)+selTCFR_syz(OLD_SHELL,endyr-1))/4.0<<endl;
+      if (optFM==0){
+            os<<"#selTCF_RetMaleEast(nSCs,nSXs): set same as avg retained"<<endl;
+            os<<(selTCFR_syz(NEW_SHELL,endyr-4)+selTCFR_syz(NEW_SHELL,endyr-3)+selTCFR_syz(NEW_SHELL,endyr-2)+selTCFR_syz(NEW_SHELL,endyr-1))/4.0<<endl;//IMPORTANT CHANGE: was only over last 3 years (but said 4)
+            os<<(selTCFR_syz(OLD_SHELL,endyr-4)+selTCFR_syz(OLD_SHELL,endyr-3)+selTCFR_syz(OLD_SHELL,endyr-2)+selTCFR_syz(OLD_SHELL,endyr-1))/4.0<<endl;
+      } else {
+            os<<"#retFcn_syz(nSCs) for East: same as average retained"<<endl;
+            os<<(retFcn_syz(NEW_SHELL,endyr-4)+retFcn_syz(NEW_SHELL,endyr-3)+retFcn_syz(NEW_SHELL,endyr-2)+retFcn_syz(NEW_SHELL,endyr-1))/4.0<<endl;//IMPORTANT CHANGE: was only over last 3 years (but said 4)
+            os<<(retFcn_syz(OLD_SHELL,endyr-4)+retFcn_syz(OLD_SHELL,endyr-3)+retFcn_syz(OLD_SHELL,endyr-2)+retFcn_syz(OLD_SHELL,endyr-1))/4.0<<endl;
+      }
       os<<"#selTCF_TotMaleWest(nSCs,nSXs): set same as average total"<<endl;
       os<<(selTCFM_syz(NEW_SHELL,endyr-4)+selTCFM_syz(NEW_SHELL,endyr-3)+selTCFM_syz(NEW_SHELL,endyr-2)+selTCFM_syz(NEW_SHELL,endyr-1))/4.0<<endl;
       os<<(selTCFM_syz(OLD_SHELL,endyr-4)+selTCFM_syz(OLD_SHELL,endyr-3)+selTCFM_syz(OLD_SHELL,endyr-2)+selTCFM_syz(OLD_SHELL,endyr-1))/4.0<<endl;
-      os<<"#selTCF_RetMaleWest(nSCs,nSXs): SET SAME AS AVG RETAINED, BUT SHIFTED TO LOWER END BY 10 mm"<<endl;
-      os<<(selTCFR_syz(NEW_SHELL,endyr-4)+selTCFR_syz(NEW_SHELL,endyr-3)+selTCFR_syz(NEW_SHELL,endyr-2)+selTCFR_syz(NEW_SHELL,endyr-1))/4.0<<endl;//IMPORTANT CHANGE: was only over last 3 years (but said 4)
-      os<<(selTCFR_syz(OLD_SHELL,endyr-4)+selTCFR_syz(OLD_SHELL,endyr-3)+selTCFR_syz(OLD_SHELL,endyr-2)+selTCFR_syz(OLD_SHELL,endyr-1))/4.0<<endl;
+//      os<<"#selTCF_RetMaleWest(nSCs,nSXs): SET SAME AS AVG RETAINED, BUT SHIFTED TO LOWER END BY 10 mm"<<endl;
+//      os<<(selTCFR_syz(NEW_SHELL,endyr-4)+selTCFR_syz(NEW_SHELL,endyr-3)+selTCFR_syz(NEW_SHELL,endyr-2)+selTCFR_syz(NEW_SHELL,endyr-1))/4.0<<endl;//IMPORTANT CHANGE: was only over last 3 years (but said 4)
+//      os<<(selTCFR_syz(OLD_SHELL,endyr-4)+selTCFR_syz(OLD_SHELL,endyr-3)+selTCFR_syz(OLD_SHELL,endyr-2)+selTCFR_syz(OLD_SHELL,endyr-1))/4.0<<endl;
+      if (optFM==0){
+            os<<"#selTCF_RetMaleWest(nSCs,nSXs): SET SAME AS AVG RETAINED, BUT SHIFTED TO LOWER END BY 10 mm"<<endl;
+            os<<(selTCFR_syz(NEW_SHELL,endyr-4)+selTCFR_syz(NEW_SHELL,endyr-3)+selTCFR_syz(NEW_SHELL,endyr-2)+selTCFR_syz(NEW_SHELL,endyr-1))/4.0<<endl;//IMPORTANT CHANGE: was only over last 3 years (but said 4)
+            os<<(selTCFR_syz(OLD_SHELL,endyr-4)+selTCFR_syz(OLD_SHELL,endyr-3)+selTCFR_syz(OLD_SHELL,endyr-2)+selTCFR_syz(OLD_SHELL,endyr-1))/4.0<<endl;
+      } else {
+            os<<"#retFcn_syz(nSCs) for West: same as average retained"<<endl;
+            os<<(retFcn_syz(NEW_SHELL,endyr-4)+retFcn_syz(NEW_SHELL,endyr-3)+retFcn_syz(NEW_SHELL,endyr-2)+retFcn_syz(NEW_SHELL,endyr-1))/4.0<<endl;//IMPORTANT CHANGE: was only over last 3 years (but said 4)
+            os<<(retFcn_syz(OLD_SHELL,endyr-4)+retFcn_syz(OLD_SHELL,endyr-3)+retFcn_syz(OLD_SHELL,endyr-2)+retFcn_syz(OLD_SHELL,endyr-1))/4.0<<endl;
+      }
       os<<"#selTCF_Female(nZs): selectivity for females in directed fishery"<<endl;
       os<<selTCFF_z<<endl;
       os<<"#selSCF_cxz(nSXs,nZs): selectivity in snow crab fishery"<<endl;
