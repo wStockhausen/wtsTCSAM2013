@@ -163,6 +163,8 @@
 //            3. Incremented model version to 20160905.
 //            4. Corrected labels in writeParameters for male survey selectivity parameters.
 //--20160907: 1. writing retFcn_syz to projection model file if optFM=1 instead of selTCFR_syz.
+//--20161011: 1. writing survey, fishery numbers/biomass-at-size arrays to rep file
+//            2. Incremented version to 20161011.
 //
 //IMPORTANT: 2013-09 assessment model had RKC params for 1992+ discard mortality TURNED OFF. 
 //           THE ESTIMATION PHASE FOR RKC DISCARD MORTALITY IS NOW SET IN THE CONTROLLER FILE!
@@ -191,7 +193,7 @@ GLOBALS_SECTION
     #include "FisheryData.hpp"
     #include "ModelData.hpp"
     
-    adstring version = "20160905";//model version
+    adstring version = "20161011";//model version
     ivector verModelControlFile(1,2);  //model control file version
     
     int maxPhase = 8;//default max phase for penalty reduction
@@ -3410,6 +3412,7 @@ FUNCTION get_numbers_at_len                                    //wts: revised
     for (int x=1;x<=nSXs;x++) {  
         //initialize modNum_yxmsz in styr with recruitment in new shell, immature
         modNum_yxmsz(styr,x,IMMATURE,NEW_SHELL) += 0.5*rec_y(styr)*prRec_z;  
+        modNum_xyz(x,styr) = modNum_yxmsz(styr,x,IMMATURE,NEW_SHELL);
         for (int yr=styr;yr<endyr;yr++) {
             Surv1 = mfexp(-M_msx(IMMATURE,NEW_SHELL,x));
             Surv2 = mfexp(-mdptFshs_y(yr)*M_msx(IMMATURE,NEW_SHELL,x));
@@ -4803,7 +4806,7 @@ FUNCTION void writeToR_OLD(ofstream& R_out)
         REP2R2(pop.NatZ.M,modNum_xyz(  MALE));
         
         //survey quantities
-        //--abundance (millions)
+        //--observed abundance (millions)
         REP2R2(srv.obs.num.yrs,ptrMDS->pTSD->yrsAbund);
         REP2R2(srv.obs.num.INF,obsSrvImmNum_sxy(NEW_SHELL,FEMALE));
         REP2R2(srv.obs.num.IOF,obsSrvImmNum_sxy(OLD_SHELL,FEMALE));
@@ -4812,7 +4815,16 @@ FUNCTION void writeToR_OLD(ofstream& R_out)
         REP2R2(srv.obs.num.MNF,obsSrvMatNum_sxy(NEW_SHELL,FEMALE));
         REP2R2(srv.obs.num.MOF,obsSrvMatNum_sxy(OLD_SHELL,FEMALE));
         REP2R2(srv.obs.num.MNM,obsSrvMatNum_sxy(NEW_SHELL,  MALE));
-        REP2R2(srv.obs.num.MOM,obsSrvMatNum_sxy(OLD_SHELL,  MALE));
+        REP2R2(srv.obs.num.MOM,obsSrvMatNum_sxy(OLD_SHELL,  MALE));        
+        //--biomass (1000's t)
+        REP2R2(srv.obs.bio.yrs,ptrMDS->pTSD->yrsAbund);
+        REP2R2(srv.obs.bio.F,obsSrvBio_xy(FEMALE));
+        REP2R2(srv.obs.bio.M,obsSrvBio_xy(  MALE));
+        REP2R2(srv.obs.bio.MF,obsSrvMatBio_xy(FEMALE));
+        REP2R2(srv.obs.bio.MM,obsSrvMatBio_xy(  MALE));
+        REP2R2(srv.obs.bio.cv.MF,obsSrvCV_xn(FEMALE));
+        REP2R2(srv.obs.bio.cv.MM,obsSrvCV_xn(  MALE));
+        //predicted abundance (millions)
         REP2R2(srv.mod.num.INF,modSrvImmNum_xsy(FEMALE,NEW_SHELL));
         REP2R2(srv.mod.num.IOF,modSrvImmNum_xsy(FEMALE,OLD_SHELL));
         REP2R2(srv.mod.num.INM,modSrvImmNum_xsy(  MALE,NEW_SHELL));
@@ -4820,20 +4832,46 @@ FUNCTION void writeToR_OLD(ofstream& R_out)
         REP2R2(srv.mod.num.MNF,modSrvMatNum_xsy(FEMALE,NEW_SHELL));
         REP2R2(srv.mod.num.MOF,modSrvMatNum_xsy(FEMALE,OLD_SHELL));
         REP2R2(srv.mod.num.MNM,modSrvMatNum_xsy(  MALE,NEW_SHELL));
-        REP2R2(srv.mod.num.MOM,modSrvMatNum_xsy(  MALE,OLD_SHELL));
-        
+        REP2R2(srv.mod.num.MOM,modSrvMatNum_xsy(  MALE,OLD_SHELL));            
         //--biomass (1000's t)
-        REP2R2(srv.obs.bio.yrs,ptrMDS->pTSD->yrsAbund);
-        REP2R2(srv.obs.bio.F,obsSrvBio_xy(FEMALE));
-        REP2R2(srv.obs.bio.M,obsSrvBio_xy(  MALE));
         REP2R2(srv.mod.bio.F,modSrvBio_xy(FEMALE));
         REP2R2(srv.mod.bio.M,modSrvBio_xy(  MALE));
-        REP2R2(srv.obs.bio.MF,obsSrvMatBio_xy(FEMALE));
-        REP2R2(srv.obs.bio.MM,obsSrvMatBio_xy(  MALE));
         REP2R2(srv.mod.bio.MF,modSrvMatBio_xy(FEMALE));
         REP2R2(srv.mod.bio.MM,modSrvMatBio_xy(  MALE));
-        REP2R2(srv.obs.bio.cv.MF,obsSrvCV_xn(FEMALE));
-        REP2R2(srv.obs.bio.cv.MM,obsSrvCV_xn(  MALE));
+        //--numbers-at-size (millions), biomass-at-size (1000's t)
+        {
+            double totSrvNum;
+            d5_array n_xmsyz(1,nSXs,1,nMSs,1,nSCs,styr,endyr,1,nZBs);
+            d5_array b_xmsyz(1,nSXs,1,nMSs,1,nSCs,styr,endyr,1,nZBs);
+            n_xmsyz.initialize();
+            b_xmsyz.initialize();
+            for (int x=1;x<=nSXs;x++){
+                for (int m=1;m<=nMSs;m++){
+                    for (int s=1;s<=nSCs;s++){
+                        for (int y=styr;y<=endyr;y++){
+                            totSrvNum = value(modSrvNum_xy(FEMALE,y) + modSrvNum_xy(MALE,y));
+                            n_xmsyz(x,m,s,y) = totSrvNum*value(modSrvPrNatZ_msxyz(m,s,x,y));
+                            b_xmsyz(x,m,s,y) = elem_prod(wt_xmz(x,m),n_xmsyz(x,m,s,y));
+                        }
+                    }
+                }
+            }
+            //abundance
+            REP2R2(srv.mod.num.INFYZ,n_xmsyz(FEMALE,IMMATURE,NEW_SHELL));
+            REP2R2(srv.mod.num.MNFYZ,n_xmsyz(FEMALE,  MATURE,NEW_SHELL));
+            REP2R2(srv.mod.num.MOFYZ,n_xmsyz(FEMALE,  MATURE,OLD_SHELL));
+            REP2R2(srv.mod.num.INMYZ,n_xmsyz(  MALE,IMMATURE,NEW_SHELL));
+            REP2R2(srv.mod.num.MNMYZ,n_xmsyz(  MALE,  MATURE,NEW_SHELL));
+            REP2R2(srv.mod.num.MOMYZ,n_xmsyz(  MALE,  MATURE,OLD_SHELL));
+            //--biomass (1000's t)
+            REP2R2(srv.mod.bio.INMYZ,b_xmsyz(FEMALE,IMMATURE,NEW_SHELL));
+            REP2R2(srv.mod.bio.MNMYZ,b_xmsyz(FEMALE,  MATURE,NEW_SHELL));
+            REP2R2(srv.mod.bio.MOMYZ,b_xmsyz(FEMALE,  MATURE,OLD_SHELL));
+            REP2R2(srv.mod.bio.INMYZ,b_xmsyz(  MALE,IMMATURE,NEW_SHELL));
+            REP2R2(srv.mod.bio.MNMYZ,b_xmsyz(  MALE,  MATURE,NEW_SHELL));
+            REP2R2(srv.mod.bio.MOMYZ,b_xmsyz(  MALE,  MATURE,OLD_SHELL));
+        }
+        
         
         //--numbers-at-size (millions)
         REP2R2(srv.obs.NatZ.yrs,yrsObsZCsSrv_n);
@@ -5107,6 +5145,7 @@ FUNCTION void writeToR_OLD(ofstream& R_out)
             dvar_vector ratio1(1,nZBs);
             
             //total numbers-at-size captured
+            cpN_fyxmsz.initialize();
             for (int yr=styr;yr<=(endyr-1);yr++) {
                 //cout<<"yr = "<<yr<<endl;
                 //numbers of males captured in TCF
@@ -5345,6 +5384,7 @@ FUNCTION void writeToR_OLD(ofstream& R_out)
             }//shell category
             
             //total numbers-at-size discarded
+            dsN_fyxmsz.initialize();
             for (int yr=styr;yr<=(endyr-1);yr++) {
                 //numbers of males discarded in TCF
                 ratio1 = elem_prod(elem_div(fdTCFM_syz(NEW_SHELL,yr),fmTOT_xsyz(MALE,NEW_SHELL,yr)),1.0-S_xsyz(MALE,NEW_SHELL,yr));
@@ -5355,6 +5395,13 @@ FUNCTION void writeToR_OLD(ofstream& R_out)
                 dsN_fyxmsz(iTCF,yr,MALE,MATURE,NEW_SHELL) = elem_prod(ratio1,modFT_PopNum_yxmsz(yr,MALE,  MATURE,NEW_SHELL));
                 ratio1 = elem_prod(elem_div(fdTCFM_syz(OLD_SHELL,yr),fmTOT_xsyz(MALE,OLD_SHELL,yr)),1.0-S_xsyz(MALE,OLD_SHELL,yr));
                 dsN_fyxmsz(iTCF,yr,MALE,MATURE,OLD_SHELL) = elem_prod(ratio1,modFT_PopNum_yxmsz(yr,MALE,  MATURE,OLD_SHELL));
+                dsN_fyxmsz(iTCF,yr,FEMALE) = cpN_fyxmsz(iTCF,yr,FEMALE);
+                dsN_fyxmsz(iSCF,yr,  MALE) = cpN_fyxmsz(iSCF,yr,  MALE);
+                dsN_fyxmsz(iSCF,yr,FEMALE) = cpN_fyxmsz(iSCF,yr,FEMALE);
+                dsN_fyxmsz(iRKF,yr,  MALE) = cpN_fyxmsz(iRKF,yr,  MALE);
+                dsN_fyxmsz(iRKF,yr,FEMALE) = cpN_fyxmsz(iRKF,yr,FEMALE);
+                dsN_fyxmsz(iGTF,yr,  MALE) = cpN_fyxmsz(iGTF,yr,  MALE);
+                dsN_fyxmsz(iGTF,yr,FEMALE) = cpN_fyxmsz(iGTF,yr,FEMALE);
             }
             
             //write out fishery discards for TCF
@@ -5499,8 +5546,68 @@ FUNCTION void writeToR_OLD(ofstream& R_out)
         }
         REP2R2(fsh.bio.zscr.GTF,zsc(1));
 
+        //write out fishery numbers/biomass-at-size
+        if (optFM==1){
+            myWriteN_fyxmsz(R_out,iTCF,"TCF","cap",cpN_fyxmsz);
+            myWriteN_fyxmsz(R_out,iSCF,"SCF","cap",cpN_fyxmsz);
+            myWriteN_fyxmsz(R_out,iRKF,"RKF","cap",cpN_fyxmsz);
+            myWriteN_fyxmsz(R_out,iGTF,"GTF","cap",cpN_fyxmsz);
+            myWriteN_fyxmsz(R_out,iTCF,"TCF","dsc",dsN_fyxmsz);
+            myWriteN_fyxmsz(R_out,iSCF,"SCF","dsc",dsN_fyxmsz);
+            myWriteN_fyxmsz(R_out,iRKF,"RKF","dsc",dsN_fyxmsz);
+            myWriteN_fyxmsz(R_out,iGTF,"GTF","dsc",dsN_fyxmsz);
+        }
+        dvar6_array rmN_fyxmsz(1,nFsh,styr,endyr-1,1,nSXs,1,nMSs,1,nSCs,1,nZBs);
+        rmN_fyxmsz.initialize();
+        for (int y=styr;y<=(endyr-1);y++){
+            for (int m=1;m<=nMSs;m++){
+                for (int s=1;s<=nSCs;s++) rmN_fyxmsz(iTCF,y,MALE,m,s) = rmN_ymsz(y,m,s);
+            }
+        }
+        myWriteN_fyxmsz(R_out,iTCF,"TCF","rm",rmN_fyxmsz);
+        myWriteN_fyxmsz(R_out,iSCF,"SCF","rm",rmN_fyxmsz);
+        myWriteN_fyxmsz(R_out,iRKF,"RKF","rm",rmN_fyxmsz);
+        myWriteN_fyxmsz(R_out,iGTF,"GTF","rm",rmN_fyxmsz);
+        myWriteN_fyxmsz(R_out,iTCF,"TCF","dm",dmN_fyxmsz);
+        myWriteN_fyxmsz(R_out,iSCF,"SCF","dm",dmN_fyxmsz);
+        myWriteN_fyxmsz(R_out,iRKF,"RKF","dm",dmN_fyxmsz);
+        myWriteN_fyxmsz(R_out,iGTF,"GTF","dm",dmN_fyxmsz);
+        myWriteN_fyxmsz(R_out,iTCF,"TCF","tm",tmN_fyxmsz);
+        myWriteN_fyxmsz(R_out,iSCF,"SCF","tm",tmN_fyxmsz);
+        myWriteN_fyxmsz(R_out,iRKF,"RKF","tm",tmN_fyxmsz);
+        myWriteN_fyxmsz(R_out,iGTF,"GTF","tm",tmN_fyxmsz);
 //    cout<<"done writeToR_OLD"<<endl;
 
+// ==========================================================================
+FUNCTION void myWriteN_fyxmsz(ostream& os, int iF, adstring aF, adstring type, dvar6_array& a_fyxmsz)
+        //write out fishery array
+        //capture abundance (millions)
+        os<<"$fsh.mod."<<type<<".num."<<aF<<".INMYZ"<<endl;
+        for (int yr=styr;yr<=(endyr-1);yr++) os << a_fyxmsz(iF,yr,MALE,IMMATURE,NEW_SHELL)<<endl;
+        os<<"$fsh.mod."<<type<<".num."<<aF<<".MNMYZ"<<endl;
+        for (int yr=styr;yr<=(endyr-1);yr++) os << a_fyxmsz(iF,yr,MALE,  MATURE,NEW_SHELL)<<endl;
+        os<<"$fsh.mod."<<type<<".num."<<aF<<".MOMYZ"<<endl;
+        for (int yr=styr;yr<=(endyr-1);yr++) os << a_fyxmsz(iF,yr,MALE,  MATURE,OLD_SHELL)<<endl;
+        os<<"$fsh.mod."<<type<<".num."<<aF<<".INFYZ"<<endl;
+        for (int yr=styr;yr<=(endyr-1);yr++) os << a_fyxmsz(iF,yr,FEMALE,IMMATURE,NEW_SHELL)<<endl;
+        os<<"$fsh.mod."<<type<<".num."<<aF<<".MNFYZ"<<endl;
+        for (int yr=styr;yr<=(endyr-1);yr++) os << a_fyxmsz(iF,yr,FEMALE,  MATURE,NEW_SHELL)<<endl;
+        os<<"$fsh.mod."<<type<<".num."<<aF<<".MOFYZ"<<endl;
+        for (int yr=styr;yr<=(endyr-1);yr++) os << a_fyxmsz(iF,yr,FEMALE,  MATURE,OLD_SHELL)<<endl;
+        //capture biomass (1000's t)
+        os<<"$fsh.mod."<<type<<".bio."<<aF<<".INMYZ"<<endl;
+        for (int yr=styr;yr<=(endyr-1);yr++) os << elem_prod(a_fyxmsz(iF,yr,MALE,IMMATURE,NEW_SHELL),wt_xmz(MALE,IMMATURE))<<endl;
+        os<<"$fsh.mod."<<type<<".bio."<<aF<<".MNMYZ"<<endl;
+        for (int yr=styr;yr<=(endyr-1);yr++) os << elem_prod(a_fyxmsz(iF,yr,MALE,  MATURE,NEW_SHELL),wt_xmz(MALE,  MATURE))<<endl;
+        os<<"$fsh.mod."<<type<<".bio."<<aF<<".MOMYZ"<<endl;
+        for (int yr=styr;yr<=(endyr-1);yr++) os << elem_prod(a_fyxmsz(iF,yr,MALE,  MATURE,OLD_SHELL),wt_xmz(MALE,  MATURE))<<endl;
+        os<<"$fsh.mod."<<type<<".bio."<<aF<<".INFYZ"<<endl;
+        for (int yr=styr;yr<=(endyr-1);yr++) os << elem_prod(a_fyxmsz(iF,yr,FEMALE,IMMATURE,NEW_SHELL),wt_xmz(FEMALE,IMMATURE))<<endl;
+        os<<"$fsh.mod."<<type<<".bio."<<aF<<".MNFYZ"<<endl;
+        for (int yr=styr;yr<=(endyr-1);yr++) os << elem_prod(a_fyxmsz(iF,yr,FEMALE,  MATURE,NEW_SHELL),wt_xmz(FEMALE,  MATURE))<<endl;
+        os<<"$fsh.mod."<<type<<".bio."<<aF<<".MOFYZ"<<endl;
+        for (int yr=styr;yr<=(endyr-1);yr++) os << elem_prod(a_fyxmsz(iF,yr,FEMALE,  MATURE,OLD_SHELL),wt_xmz(FEMALE,  MATURE))<<endl;
+        
 // ==========================================================================
 FUNCTION void myWriteParamsToR(ostream& os)
     cout<<"starting myWriteParamsToR"<<endl;
