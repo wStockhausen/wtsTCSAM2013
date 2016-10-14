@@ -165,6 +165,7 @@
 //--20160907: 1. writing retFcn_syz to projection model file if optFM=1 instead of selTCFR_syz.
 //--20161011: 1. writing survey, fishery numbers/biomass-at-size arrays to rep file
 //            2. Incremented version to 20161011.
+//--20161013: 1. writing pop numbers/biomass-at-size arrays to rep file
 //
 //IMPORTANT: 2013-09 assessment model had RKC params for 1992+ discard mortality TURNED OFF. 
 //           THE ESTIMATION PHASE FOR RKC DISCARD MORTALITY IS NOW SET IN THE CONTROLLER FILE!
@@ -4792,62 +4793,36 @@ FUNCTION void writeToR_OLD(ofstream& R_out)
         REP2R2(pop.bio.LMs.FT,modFT_PopBioLegal_y);
         //--numbers-at-size
         ivector prm5(1,5); prm5[1]=4; prm5[2]=1; prm5[3]=2; prm5[4]=3; prm5[5]=5;
-        d5_array dmodNum_yxmsz = wts::value(modNum_yxmsz);
-        d5_array modNum_xmsyz  = wts::permuteDims(prm5, dmodNum_yxmsz);
-        REP2R2(pop.NatZ.INF,modNum_xmsyz(FEMALE,IMMATURE,NEW_SHELL));
-        REP2R2(pop.NatZ.IOF,modNum_xmsyz(FEMALE,IMMATURE,OLD_SHELL));
-        REP2R2(pop.NatZ.MNF,modNum_xmsyz(FEMALE,  MATURE,NEW_SHELL));
-        REP2R2(pop.NatZ.MOF,modNum_xmsyz(FEMALE,  MATURE,OLD_SHELL));
-        REP2R2(pop.NatZ.INM,modNum_xmsyz(  MALE,IMMATURE,NEW_SHELL));
-        REP2R2(pop.NatZ.IOM,modNum_xmsyz(  MALE,IMMATURE,OLD_SHELL));
-        REP2R2(pop.NatZ.MNM,modNum_xmsyz(  MALE,  MATURE,NEW_SHELL));
-        REP2R2(pop.NatZ.MOM,modNum_xmsyz(  MALE,  MATURE,OLD_SHELL));
-        REP2R2(pop.NatZ.F,modNum_xyz(FEMALE));
-        REP2R2(pop.NatZ.M,modNum_xyz(  MALE));
+        myWriteN_yxmsz(R_out,modNum_yxmsz);
+        
+//        d5_array modNum_xmsyz  = wts::permuteDims(prm5, dmodNum_yxmsz);
+//        REP2R2(pop.NatZ.INF,modNum_xmsyz(FEMALE,IMMATURE,NEW_SHELL));
+//        REP2R2(pop.NatZ.IOF,modNum_xmsyz(FEMALE,IMMATURE,OLD_SHELL));
+//        REP2R2(pop.NatZ.MNF,modNum_xmsyz(FEMALE,  MATURE,NEW_SHELL));
+//        REP2R2(pop.NatZ.MOF,modNum_xmsyz(FEMALE,  MATURE,OLD_SHELL));
+//        REP2R2(pop.NatZ.INM,modNum_xmsyz(  MALE,IMMATURE,NEW_SHELL));
+//        REP2R2(pop.NatZ.IOM,modNum_xmsyz(  MALE,IMMATURE,OLD_SHELL));
+//        REP2R2(pop.NatZ.MNM,modNum_xmsyz(  MALE,  MATURE,NEW_SHELL));
+//        REP2R2(pop.NatZ.MOM,modNum_xmsyz(  MALE,  MATURE,OLD_SHELL));
+//        REP2R2(pop.NatZ.F,modNum_xyz(FEMALE));
+//        REP2R2(pop.NatZ.M,modNum_xyz(  MALE));
         
         //survey quantities
-        //--observed abundance (millions)
-        REP2R2(srv.obs.num.yrs,ptrMDS->pTSD->yrsAbund);
-        REP2R2(srv.obs.num.INF,obsSrvImmNum_sxy(NEW_SHELL,FEMALE));
-        REP2R2(srv.obs.num.IOF,obsSrvImmNum_sxy(OLD_SHELL,FEMALE));
-        REP2R2(srv.obs.num.INM,obsSrvImmNum_sxy(NEW_SHELL,  MALE));
-        REP2R2(srv.obs.num.IOM,obsSrvImmNum_sxy(OLD_SHELL,  MALE));
-        REP2R2(srv.obs.num.MNF,obsSrvMatNum_sxy(NEW_SHELL,FEMALE));
-        REP2R2(srv.obs.num.MOF,obsSrvMatNum_sxy(OLD_SHELL,FEMALE));
-        REP2R2(srv.obs.num.MNM,obsSrvMatNum_sxy(NEW_SHELL,  MALE));
-        REP2R2(srv.obs.num.MOM,obsSrvMatNum_sxy(OLD_SHELL,  MALE));        
-        //--biomass (1000's t)
-        REP2R2(srv.obs.bio.yrs,ptrMDS->pTSD->yrsAbund);
-        REP2R2(srv.obs.bio.F,obsSrvBio_xy(FEMALE));
-        REP2R2(srv.obs.bio.M,obsSrvBio_xy(  MALE));
-        REP2R2(srv.obs.bio.MF,obsSrvMatBio_xy(FEMALE));
-        REP2R2(srv.obs.bio.MM,obsSrvMatBio_xy(  MALE));
-        REP2R2(srv.obs.bio.cv.MF,obsSrvCV_xn(FEMALE));
-        REP2R2(srv.obs.bio.cv.MM,obsSrvCV_xn(  MALE));
-        //predicted abundance (millions)
-        REP2R2(srv.mod.num.INF,modSrvImmNum_xsy(FEMALE,NEW_SHELL));
-        REP2R2(srv.mod.num.IOF,modSrvImmNum_xsy(FEMALE,OLD_SHELL));
-        REP2R2(srv.mod.num.INM,modSrvImmNum_xsy(  MALE,NEW_SHELL));
-        REP2R2(srv.mod.num.IOM,modSrvImmNum_xsy(  MALE,OLD_SHELL));
-        REP2R2(srv.mod.num.MNF,modSrvMatNum_xsy(FEMALE,NEW_SHELL));
-        REP2R2(srv.mod.num.MOF,modSrvMatNum_xsy(FEMALE,OLD_SHELL));
-        REP2R2(srv.mod.num.MNM,modSrvMatNum_xsy(  MALE,NEW_SHELL));
-        REP2R2(srv.mod.num.MOM,modSrvMatNum_xsy(  MALE,OLD_SHELL));            
-        //--biomass (1000's t)
-        REP2R2(srv.mod.bio.F,modSrvBio_xy(FEMALE));
-        REP2R2(srv.mod.bio.M,modSrvBio_xy(  MALE));
-        REP2R2(srv.mod.bio.MF,modSrvMatBio_xy(FEMALE));
-        REP2R2(srv.mod.bio.MM,modSrvMatBio_xy(  MALE));
         //--numbers-at-size (millions), biomass-at-size (1000's t)
         {
             double totSrvNum;
+            d5_array B_xmsnz(1,nSXs,1,nMSs,1,nSCs,1,ptrMDS->pTSD->nyNatZ,1,nZBs);
             d5_array n_xmsyz(1,nSXs,1,nMSs,1,nSCs,styr,endyr,1,nZBs);
             d5_array b_xmsyz(1,nSXs,1,nMSs,1,nSCs,styr,endyr,1,nZBs);
+            B_xmsnz.initialize();
             n_xmsyz.initialize();
             b_xmsyz.initialize();
             for (int x=1;x<=nSXs;x++){
                 for (int m=1;m<=nMSs;m++){
                     for (int s=1;s<=nSCs;s++){
+                        for (int n=1;n<=ptrMDS->pTSD->nyNatZ;n++){
+                            B_xmsnz(x,m,s,n) = elem_prod(wt_xmz(x,m),obsSrvNatZs_msxnz(m,s,x,n));
+                        }
                         for (int y=styr;y<=endyr;y++){
                             totSrvNum = value(modSrvNum_xy(FEMALE,y) + modSrvNum_xy(MALE,y));
                             n_xmsyz(x,m,s,y) = totSrvNum*value(modSrvPrNatZ_msxyz(m,s,x,y));
@@ -4856,51 +4831,51 @@ FUNCTION void writeToR_OLD(ofstream& R_out)
                     }
                 }
             }
-            //abundance
-            REP2R2(srv.mod.num.INFYZ,n_xmsyz(FEMALE,IMMATURE,NEW_SHELL));
-            REP2R2(srv.mod.num.MNFYZ,n_xmsyz(FEMALE,  MATURE,NEW_SHELL));
-            REP2R2(srv.mod.num.MOFYZ,n_xmsyz(FEMALE,  MATURE,OLD_SHELL));
-            REP2R2(srv.mod.num.INMYZ,n_xmsyz(  MALE,IMMATURE,NEW_SHELL));
-            REP2R2(srv.mod.num.MNMYZ,n_xmsyz(  MALE,  MATURE,NEW_SHELL));
-            REP2R2(srv.mod.num.MOMYZ,n_xmsyz(  MALE,  MATURE,OLD_SHELL));
-            //--biomass (1000's t)
-            REP2R2(srv.mod.bio.INMYZ,b_xmsyz(FEMALE,IMMATURE,NEW_SHELL));
-            REP2R2(srv.mod.bio.MNMYZ,b_xmsyz(FEMALE,  MATURE,NEW_SHELL));
-            REP2R2(srv.mod.bio.MOMYZ,b_xmsyz(FEMALE,  MATURE,OLD_SHELL));
-            REP2R2(srv.mod.bio.INMYZ,b_xmsyz(  MALE,IMMATURE,NEW_SHELL));
-            REP2R2(srv.mod.bio.MNMYZ,b_xmsyz(  MALE,  MATURE,NEW_SHELL));
-            REP2R2(srv.mod.bio.MOMYZ,b_xmsyz(  MALE,  MATURE,OLD_SHELL));
+            //--observed abundance (millions)
+            REP2R2(srv.obs.num.yrs,ptrMDS->pTSD->yrsAbund);
+            REP2R2(srv.obs.NatZ.INF,obsSrvNatZs_msxnz(IMMATURE,NEW_SHELL,FEMALE));
+            REP2R2(srv.obs.NatZ.IOF,obsSrvNatZs_msxnz(IMMATURE,OLD_SHELL,FEMALE));
+            REP2R2(srv.obs.NatZ.MNF,obsSrvNatZs_msxnz(  MATURE,NEW_SHELL,FEMALE));
+            REP2R2(srv.obs.NatZ.MOF,obsSrvNatZs_msxnz(  MATURE,OLD_SHELL,FEMALE));
+            REP2R2(srv.obs.NatZ.INM,obsSrvNatZs_msxnz(IMMATURE,NEW_SHELL,  MALE));
+            REP2R2(srv.obs.NatZ.IOM,obsSrvNatZs_msxnz(IMMATURE,OLD_SHELL,  MALE));
+            REP2R2(srv.obs.NatZ.MNM,obsSrvNatZs_msxnz(  MATURE,NEW_SHELL,  MALE));
+            REP2R2(srv.obs.NatZ.MOM,obsSrvNatZs_msxnz(  MATURE,OLD_SHELL,  MALE));        
+            //predicted abundance
+            REP2R2(srv.mod.NatZ.INF,n_xmsyz(FEMALE,IMMATURE,NEW_SHELL));
+            REP2R2(srv.mod.NatZ.MNF,n_xmsyz(FEMALE,  MATURE,NEW_SHELL));
+            REP2R2(srv.mod.NatZ.MOF,n_xmsyz(FEMALE,  MATURE,OLD_SHELL));
+            REP2R2(srv.mod.NatZ.INM,n_xmsyz(  MALE,IMMATURE,NEW_SHELL));
+            REP2R2(srv.mod.NatZ.MNM,n_xmsyz(  MALE,  MATURE,NEW_SHELL));
+            REP2R2(srv.mod.NatZ.MOM,n_xmsyz(  MALE,  MATURE,OLD_SHELL));
+            //--observed biomass-at-size (1000's t)
+            REP2R2(srv.obs.BatZ.INF,B_xmsnz(FEMALE,IMMATURE,NEW_SHELL));
+            REP2R2(srv.obs.BatZ.MNF,B_xmsnz(FEMALE,  MATURE,NEW_SHELL));
+            REP2R2(srv.obs.BatZ.MOF,B_xmsnz(FEMALE,  MATURE,OLD_SHELL));
+            REP2R2(srv.obs.BatZ.INM,B_xmsnz(  MALE,IMMATURE,NEW_SHELL));
+            REP2R2(srv.obs.BatZ.MNM,B_xmsnz(  MALE,  MATURE,NEW_SHELL));
+            REP2R2(srv.obs.BatZ.MOM,B_xmsnz(  MALE,  MATURE,OLD_SHELL));
+            //--predicted biomass-at-size (1000's t)
+            REP2R2(srv.mod.BatZ.INF,b_xmsyz(FEMALE,IMMATURE,NEW_SHELL));
+            REP2R2(srv.mod.BatZ.MNF,b_xmsyz(FEMALE,  MATURE,NEW_SHELL));
+            REP2R2(srv.mod.BatZ.MOF,b_xmsyz(FEMALE,  MATURE,OLD_SHELL));
+            REP2R2(srv.mod.BatZ.INM,b_xmsyz(  MALE,IMMATURE,NEW_SHELL));
+            REP2R2(srv.mod.BatZ.MNM,b_xmsyz(  MALE,  MATURE,NEW_SHELL));
+            REP2R2(srv.mod.BatZ.MOM,b_xmsyz(  MALE,  MATURE,OLD_SHELL));
         }
-        
-        
-        //--numbers-at-size (millions)
-        REP2R2(srv.obs.NatZ.yrs,yrsObsZCsSrv_n);
-        R_out << "$srv.obs.NatZ.INF"<< endl;
-        for (int i=1; i <= nObsZCsSrv; i++) R_out<<obsSrvPrNatZ_msxnz(IMMATURE,NEW_SHELL,FEMALE,i)*obsSrvNum_y(yrsObsZCsSrv_n(i))<<endl;
-        R_out << "$srv.obs.NatZ.IOF"<< endl;
-        for (int i=1; i <= nObsZCsSrv; i++) R_out<<obsSrvPrNatZ_msxnz(IMMATURE,OLD_SHELL,FEMALE,i)*obsSrvNum_y(yrsObsZCsSrv_n(i))<<endl;
-        R_out << "$srv.obs.NatZ.MNF"<< endl;
-        for (int i=1; i <= nObsZCsSrv; i++) R_out<<obsSrvPrNatZ_msxnz(  MATURE,NEW_SHELL,FEMALE,i)*obsSrvNum_y(yrsObsZCsSrv_n(i))<<endl;
-        R_out << "$srv.obs.NatZ.MOF"<< endl;
-        for (int i=1; i <= nObsZCsSrv; i++) R_out<<obsSrvPrNatZ_msxnz(  MATURE,OLD_SHELL,FEMALE,i)*obsSrvNum_y(yrsObsZCsSrv_n(i))<<endl;
-        R_out << "$srv.obs.NatZ.INM"<< endl;
-        for (int i=1; i <= nObsZCsSrv; i++) R_out<<obsSrvPrNatZ_msxnz(IMMATURE,NEW_SHELL,  MALE,i)*obsSrvNum_y(yrsObsZCsSrv_n(i))<<endl;
-        R_out << "$srv.obs.NatZ.IOM"<< endl;
-        for (int i=1; i <= nObsZCsSrv; i++) R_out<<obsSrvPrNatZ_msxnz(IMMATURE,OLD_SHELL,  MALE,i)*obsSrvNum_y(yrsObsZCsSrv_n(i))<<endl;
-        R_out << "$srv.obs.NatZ.MNM"<< endl;
-        for (int i=1; i <= nObsZCsSrv; i++) R_out<<obsSrvPrNatZ_msxnz(  MATURE,NEW_SHELL,  MALE,i)*obsSrvNum_y(yrsObsZCsSrv_n(i))<<endl;
-        R_out << "$srv.obs.NatZ.MOM"<< endl;
-        for (int i=1; i <= nObsZCsSrv; i++) R_out<<obsSrvPrNatZ_msxnz(  MATURE,OLD_SHELL,  MALE,i)*obsSrvNum_y(yrsObsZCsSrv_n(i))<<endl;
-        
-        R_out << "$srv.obs.NatZ.F"<< endl;
-        for (int i=1; i <= nObsZCsSrv; i++) R_out<<obsSrvNum_xyz(FEMALE,yrsObsZCsSrv_n(i))<< endl;
-        R_out << "$srv.obs.NatZ.M"<< endl;
-        for (int i=1; i <= nObsZCsSrv; i++) R_out<<obsSrvNum_xyz(  MALE,yrsObsZCsSrv_n(i))<< endl;
-        
-        R_out << "$srv.mod.NatZ.F"<< endl;
-        for (int i=1; i <= nObsZCsSrv; i++) R_out<<modSrvNum_xyz(FEMALE,yrsObsZCsSrv_n(i)) << endl;
-        R_out << "$srv.mod.NatZ.M"<< endl;
-        for (int i=1; i <= nObsZCsSrv; i++) R_out<<modSrvNum_xyz(  MALE,yrsObsZCsSrv_n(i)) << endl;
+        //--observed biomass (1000's t)
+        REP2R2(srv.obs.bio.yrs,ptrMDS->pTSD->yrsAbund);
+        REP2R2(srv.obs.bio.F,obsSrvBio_xy(FEMALE));
+        REP2R2(srv.obs.bio.M,obsSrvBio_xy(  MALE));
+        REP2R2(srv.obs.bio.MF,obsSrvMatBio_xy(FEMALE));
+        REP2R2(srv.obs.bio.MM,obsSrvMatBio_xy(  MALE));
+        REP2R2(srv.obs.bio.cv.MF,obsSrvCV_xn(FEMALE));
+        REP2R2(srv.obs.bio.cv.MM,obsSrvCV_xn(  MALE));
+        //--predicted biomass (1000's t)
+        REP2R2(srv.mod.bio.F,modSrvBio_xy(FEMALE));
+        REP2R2(srv.mod.bio.M,modSrvBio_xy(  MALE));
+        REP2R2(srv.mod.bio.MF,modSrvMatBio_xy(FEMALE));
+        REP2R2(srv.mod.bio.MM,modSrvMatBio_xy(  MALE));
         
         //--proportions-at-size
         REP2R2(srv.obs.PrNatZ.yrs,yrsObsZCsSrv_n);
@@ -5579,33 +5554,63 @@ FUNCTION void writeToR_OLD(ofstream& R_out)
 //    cout<<"done writeToR_OLD"<<endl;
 
 // ==========================================================================
+FUNCTION void myWriteN_yxmsz(ostream& os, dvar5_array& a_yxmsz)
+        //write out fishery array
+        //population abundance (millions)
+        os<<"$pop.mod.NatZ.INM"<<endl;
+        for (int yr=styr;yr<=endyr;yr++) os << a_yxmsz(yr,MALE,IMMATURE,NEW_SHELL)<<endl;
+        os<<"$pop.mod.NatZ.MNM"<<endl;
+        for (int yr=styr;yr<=endyr;yr++) os << a_yxmsz(yr,MALE,  MATURE,NEW_SHELL)<<endl;
+        os<<"$pop.mod.NatZ.MOM"<<endl;
+        for (int yr=styr;yr<=endyr;yr++) os << a_yxmsz(yr,MALE,  MATURE,OLD_SHELL)<<endl;
+        os<<"$pop.mod.NatZ.INF"<<endl;
+        for (int yr=styr;yr<=endyr;yr++) os << a_yxmsz(yr,FEMALE,IMMATURE,NEW_SHELL)<<endl;
+        os<<"$pop.mod.NatZ.MNF"<<endl;
+        for (int yr=styr;yr<=endyr;yr++) os << a_yxmsz(yr,FEMALE,  MATURE,NEW_SHELL)<<endl;
+        os<<"$pop.mod.NatZ.MOF"<<endl;
+        for (int yr=styr;yr<=endyr;yr++) os << a_yxmsz(yr,FEMALE,  MATURE,OLD_SHELL)<<endl;
+        //population biomass (1000's t)
+        os<<"$pop.mod.BatZ.INM"<<endl;
+        for (int yr=styr;yr<=endyr;yr++) os << elem_prod(a_yxmsz(yr,MALE,IMMATURE,NEW_SHELL),wt_xmz(MALE,IMMATURE))<<endl;
+        os<<"$pop.mod.BatZ.MNM"<<endl;
+        for (int yr=styr;yr<=endyr;yr++) os << elem_prod(a_yxmsz(yr,MALE,  MATURE,NEW_SHELL),wt_xmz(MALE,  MATURE))<<endl;
+        os<<"$pop.mod.BatZ.MOM"<<endl;
+        for (int yr=styr;yr<=endyr;yr++) os << elem_prod(a_yxmsz(yr,MALE,  MATURE,OLD_SHELL),wt_xmz(MALE,  MATURE))<<endl;
+        os<<"$pop.mod.BatZ.INF"<<endl;
+        for (int yr=styr;yr<=endyr;yr++) os << elem_prod(a_yxmsz(yr,FEMALE,IMMATURE,NEW_SHELL),wt_xmz(FEMALE,IMMATURE))<<endl;
+        os<<"$pop.mod.BatZ.MNF"<<endl;
+        for (int yr=styr;yr<=endyr;yr++) os << elem_prod(a_yxmsz(yr,FEMALE,  MATURE,NEW_SHELL),wt_xmz(FEMALE,  MATURE))<<endl;
+        os<<"$pop.mod.BatZ.MOF"<<endl;
+        for (int yr=styr;yr<=endyr;yr++) os << elem_prod(a_yxmsz(yr,FEMALE,  MATURE,OLD_SHELL),wt_xmz(FEMALE,  MATURE))<<endl;
+        
+// ==========================================================================
 FUNCTION void myWriteN_fyxmsz(ostream& os, int iF, adstring aF, adstring type, dvar6_array& a_fyxmsz)
         //write out fishery array
         //capture abundance (millions)
-        os<<"$fsh.mod."<<type<<".num."<<aF<<".INMYZ"<<endl;
+        os<<"$fsh.mod."<<type<<".NatZ."<<aF<<".INM"<<endl;
         for (int yr=styr;yr<=(endyr-1);yr++) os << a_fyxmsz(iF,yr,MALE,IMMATURE,NEW_SHELL)<<endl;
-        os<<"$fsh.mod."<<type<<".num."<<aF<<".MNMYZ"<<endl;
+        os<<"$fsh.mod."<<type<<".NatZ."<<aF<<".MNM"<<endl;
         for (int yr=styr;yr<=(endyr-1);yr++) os << a_fyxmsz(iF,yr,MALE,  MATURE,NEW_SHELL)<<endl;
-        os<<"$fsh.mod."<<type<<".num."<<aF<<".MOMYZ"<<endl;
+        os<<"$fsh.mod."<<type<<".NatZ."<<aF<<".MOM"<<endl;
         for (int yr=styr;yr<=(endyr-1);yr++) os << a_fyxmsz(iF,yr,MALE,  MATURE,OLD_SHELL)<<endl;
-        os<<"$fsh.mod."<<type<<".num."<<aF<<".INFYZ"<<endl;
+        os<<"$fsh.mod."<<type<<".NatZ."<<aF<<".INF"<<endl;
         for (int yr=styr;yr<=(endyr-1);yr++) os << a_fyxmsz(iF,yr,FEMALE,IMMATURE,NEW_SHELL)<<endl;
-        os<<"$fsh.mod."<<type<<".num."<<aF<<".MNFYZ"<<endl;
+        os<<"$fsh.mod."<<type<<".NatZ."<<aF<<".MNF"<<endl;
         for (int yr=styr;yr<=(endyr-1);yr++) os << a_fyxmsz(iF,yr,FEMALE,  MATURE,NEW_SHELL)<<endl;
-        os<<"$fsh.mod."<<type<<".num."<<aF<<".MOFYZ"<<endl;
+        os<<"$fsh.mod."<<type<<".NatZ."<<aF<<".MOF"<<endl;
         for (int yr=styr;yr<=(endyr-1);yr++) os << a_fyxmsz(iF,yr,FEMALE,  MATURE,OLD_SHELL)<<endl;
-        //capture biomass (1000's t)
-        os<<"$fsh.mod."<<type<<".bio."<<aF<<".INMYZ"<<endl;
+        //capture BatZmass (1000's t)
+        os<<"$fsh.mod."<<type<<".BatZ."<<aF<<".INM"<<endl;
         for (int yr=styr;yr<=(endyr-1);yr++) os << elem_prod(a_fyxmsz(iF,yr,MALE,IMMATURE,NEW_SHELL),wt_xmz(MALE,IMMATURE))<<endl;
-        os<<"$fsh.mod."<<type<<".bio."<<aF<<".MNMYZ"<<endl;
+        os<<"$fsh.mod."<<type<<".BatZ."<<aF<<".MNM"<<endl;
         for (int yr=styr;yr<=(endyr-1);yr++) os << elem_prod(a_fyxmsz(iF,yr,MALE,  MATURE,NEW_SHELL),wt_xmz(MALE,  MATURE))<<endl;
-        os<<"$fsh.mod."<<type<<".bio."<<aF<<".MOMYZ"<<endl;
+        os<<"$fsh.mod."<<type<<".BatZ."<<aF<<".MOM"<<endl;
         for (int yr=styr;yr<=(endyr-1);yr++) os << elem_prod(a_fyxmsz(iF,yr,MALE,  MATURE,OLD_SHELL),wt_xmz(MALE,  MATURE))<<endl;
-        os<<"$fsh.mod."<<type<<".bio."<<aF<<".INFYZ"<<endl;
+        os<<"$fsh.mod."<<type<<".BatZ."<<aF<<".INF"<<endl;
         for (int yr=styr;yr<=(endyr-1);yr++) os << elem_prod(a_fyxmsz(iF,yr,FEMALE,IMMATURE,NEW_SHELL),wt_xmz(FEMALE,IMMATURE))<<endl;
-        os<<"$fsh.mod."<<type<<".bio."<<aF<<".MNFYZ"<<endl;
+        os<<"$fsh.mod."<<type<<".BatZ."<<aF<<".MNF"<<endl;
         for (int yr=styr;yr<=(endyr-1);yr++) os << elem_prod(a_fyxmsz(iF,yr,FEMALE,  MATURE,NEW_SHELL),wt_xmz(FEMALE,  MATURE))<<endl;
-        os<<"$fsh.mod."<<type<<".bio."<<aF<<".MOFYZ"<<endl;
+        os<<"$fsh.mod."<<type<<".BatZ."<<aF<<".MOF"<<endl;
         for (int yr=styr;yr<=(endyr-1);yr++) os << elem_prod(a_fyxmsz(iF,yr,FEMALE,  MATURE,OLD_SHELL),wt_xmz(FEMALE,  MATURE))<<endl;
         
 // ==========================================================================
