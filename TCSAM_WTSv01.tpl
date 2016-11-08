@@ -167,6 +167,7 @@
 //            2. Incremented version to 20161011.
 //--20161013: 1. writing pop numbers/biomass-at-size arrays to rep file
 //--20161107: 1. Added internal OFL calculations via OFL_Calcs.hpp/cpp.
+//--20161108: 1. Corrected improper use of spmo in OFL calculations.
 //
 //IMPORTANT: 2013-09 assessment model had RKC params for 1992+ discard mortality TURNED OFF. 
 //           THE ESTIMATION PHASE FOR RKC DISCARD MORTALITY IS NOW SET IN THE CONTROLLER FILE!
@@ -3432,15 +3433,6 @@ FUNCTION get_numbers_at_len                                    //wts: revised
     rec_y(styr,mnYrRecCurr-1)            = mfexp(pMnLnRecInit);
     rec_y(mnYrRecDevsHist,mnYrRecCurr-1) = mfexp(pMnLnRecInit+pRecDevsHist);
     rec_y(mnYrRecCurr,endyr)             = mfexp(pMnLnRec+pRecDevs);
-//    cout<<"1"<<endl;
-    
-    //numbers at length from styr to endyr
-//     cout<<"lyr_mort = "<<lyr_mort<<endl;
-//     cout<<"uyr_mort = "<<uyr_mort<<endl;
-//     cout<<"mort_switch = "<<mort_switch<<endl;
-//     cout<<"pMfac_Big = "<<pMfac_Big<<endl;
-    if (sd_phase()){
-    }
     
     for (int x=1;x<=nSXs;x++) {  
         //initialize modNum_yxmsz in styr with recruitment in new shell, immature
@@ -6086,19 +6078,28 @@ FUNCTION void calcOFL(int yr, int debug, ostream& cout)
         cout<<"starting calcOFL(yr,debug,cout)"<<endl;
         cout<<"year for projection = "<<yr<<endl;
     }
-    //get initial population for "upcoming" year, yr
+
+    //1. get initial population for "upcoming" year, yr
     d4_array n_xmsz = wts::value(modNum_yxmsz(yr));
     if (debug) {cout<<"  males_msz:"<<endl; wts::print(n_xmsz(  MALE),cout,1);}
     if (debug) {cout<<"females_msz:"<<endl; wts::print(n_xmsz(FEMALE),cout,1);}
     
-    //set yr back one year (if necessary) to get population rates, etc.
+    //2. determine average recruitment
+    dvector avgRec_x(1,nSXs);
+    avgRec_x = 0.5*value(mean(rec_y(1982,yr)));
+    if (debug) {
+        cout<<"R_y( 1982:"<<yr<<")      = "<<rec_y(1982,yr)<<endl;
+        cout<<"R_yx(1982:"<<yr<<",MALE) = "<<0.5<<endl;
+        cout<<"Average recruitment = "<<avgRec_x<<endl;
+    }
+    
+    //3. set yr back one year to get population rates, etc.
     yr = yr-1;//don't have pop rates, etc. for endyr
     if (debug) cout<<"year for pop rates = "<<yr<<endl;
     
-    //1. Determine population rates for next year, using yr
+    //4. Determine population rates for next year, using yr
     double dtF = mdptFshs_y(yr);//time at which fisheries occur
-    double dtM = spmo;//time at which mating occurs
-    if (debug) cout<<"1"<<endl;
+    double dtM = dtF+spmo;//time at which mating occurs (spmo is offset from dtF)
     
     PopDyInfo* pPIM = new PopDyInfo(nZBs,dtM);//  males info
     pPIM->R_z   = value(prRec_z);
@@ -6119,7 +6120,7 @@ FUNCTION void calcOFL(int yr, int debug, ostream& cout)
     for (int s=1;s<=nSCs;s++) pPIF->Th_sz(s) = value(modPrM2M(FEMALE));
     if (debug) cout<<"calculated pPIM, pPIF."<<endl;
     
-    //2. Determine fishery conditions for next year based on averages for recent years
+    //5. Determine fishery conditions for next year based on averages for recent years
         int oflAvgPeriodYrs = 1;
         //assumption here is that ALL fisheries EXCEPT the first are bycatch fisheries
         //a. Calculate average handling mortality, retention curves and capture rates
@@ -6131,7 +6132,7 @@ FUNCTION void calcOFL(int yr, int debug, ostream& cout)
         avgHM_f(iRKF) = hm_pot;
         avgHM_f(iGTF) = hm_trawl;
         if (debug) cout<<"avgHm_f = "<<avgHM_f<<endl;
-    if (debug) cout<<"3"<<endl;
+    if (debug) cout<<"5.1"<<endl;
 
         d5_array avgCapF_xfmsz(1,nSXs,1,nFsh,1,nMSs,1,nSCs,1,nZBs);//averaged capture mortality
         d5_array avgRFcn_xfmsz(1,nSXs,1,nFsh,1,nMSs,1,nSCs,1,nZBs);//averaged retention function
@@ -6158,7 +6159,7 @@ FUNCTION void calcOFL(int yr, int debug, ostream& cout)
                 }//z
             }//s
         }//m
-    if (debug) cout<<"3"<<endl;
+    if (debug) cout<<"5.2"<<endl;
         for (int m=1;m<=nMSs;m++){
             for (int s=1;s<=nSCs;s++) {
                 for (int z=1;z<=nZBs;z++){
@@ -6176,7 +6177,7 @@ FUNCTION void calcOFL(int yr, int debug, ostream& cout)
                 }//z
             }//s
         }//m
-    if (debug) cout<<"4"<<endl;
+    if (debug) cout<<"5.3"<<endl;
         for (int x=1;x<=nSXs;x++){
             for (int m=1;m<=nMSs;m++){
                 for (int s=1;s<=nSCs;s++) {
@@ -6239,35 +6240,25 @@ FUNCTION void calcOFL(int yr, int debug, ostream& cout)
         pCIF->setRetentionFcns(avgRFcn_xfmsz(FEMALE));
         pCIF->setHandlingMortality(avgHM_f);
         pCIF->maxF = maxCapF;//need to set this for females
-    if (debug) cout<<"6"<<endl;
+    if (debug) cout<<"5.4"<<endl;
         
-    //3. Create PopProjectors
+    //6. Create PopProjectors
         PopProjector* pPPM = new PopProjector(pPIM,pCIM);
         PopProjector* pPPF = new PopProjector(pPIF,pCIF);
         if (debug) cout<<"created pPPs."<<endl;
         
-    //4. Create Equilibrium_Calculator
+    //7. Create Equilibrium_Calculators
         Equilibrium_Calculator* pECM = new Equilibrium_Calculator(pPPM);
         Equilibrium_Calculator* pECF = new Equilibrium_Calculator(pPPF);
         if (debug) cout<<"created pECs."<<endl;
         
-    //5. Determine TIER LEVEL
-        int tier = 3;
-        
+    //8. define OFL_Calculator
         OFL_Calculator*  pOC;
         if (debug) cout<<"declared pOC."<<endl;
         
-        dvector avgRec_x(1,nSXs);
+    //9. Determine TIER LEVEL, create Tier_Calculators, calculate OFL
+        int tier = 3;
         if (tier==3){
-            //4. Determine mean recruitment
-            avgRec_x = 0.5*value(mean(rec_y(1982,asmtYr)));
-            if (debug) {
-                cout<<"R_y(1982,asmtYr) = "<<rec_y(1982,asmtYr)<<endl;
-                cout<<"R_yx((1982:asmtYr,MALE) = "<<0.5<<endl;
-                cout<<"Average recruitment = "<<avgRec_x<<endl;
-            }
-
-            //5. Determine Fmsy and Bmsy
             Tier3_Calculator* pT3CM = new Tier3_Calculator(0.35,pECM);
             Tier3_Calculator* pT3CF = new Tier3_Calculator(0.35,pECF);
             if (debug) cout<<"created pT3Cs."<<endl;
