@@ -39,6 +39,7 @@ OBJECTFILES= \
 	${OBJECTDIR}/ModelConfiguration.o \
 	${OBJECTDIR}/ModelConstants.o \
 	${OBJECTDIR}/ModelData.o \
+	${OBJECTDIR}/OFLCalcs.o \
 	${OBJECTDIR}/TCSAM_WTSv01.o
 
 
@@ -85,6 +86,11 @@ ${OBJECTDIR}/ModelData.o: ModelData.cpp
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
 	$(COMPILE.cc) -O2 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/ModelData.o ModelData.cpp
+
+${OBJECTDIR}/OFLCalcs.o: OFLCalcs.cpp 
+	${MKDIR} -p ${OBJECTDIR}
+	${RM} "$@.d"
+	$(COMPILE.cc) -O2 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/OFLCalcs.o OFLCalcs.cpp
 
 ${OBJECTDIR}/TCSAM_WTSv01.o: TCSAM_WTSv01.cpp 
 	${MKDIR} -p ${OBJECTDIR}

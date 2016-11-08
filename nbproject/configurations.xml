@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<configurationDescriptor version="95">
+<configurationDescriptor version="97">
   <logicalFolder name="root" displayName="root" projectFiles="true" kind="ROOT">
     <logicalFolder name="HeaderFiles"
                    displayName="Header Files"
@@ -8,6 +8,7 @@
       <itemPath>ModelConfiguration.hpp</itemPath>
       <itemPath>ModelConstants.hpp</itemPath>
       <itemPath>ModelData.hpp</itemPath>
+      <itemPath>OFLCalcs.hpp</itemPath>
       <itemPath>TCSAM_WTSv01.htp</itemPath>
     </logicalFolder>
     <logicalFolder name="ResourceFiles"
@@ -21,6 +22,7 @@
       <itemPath>ModelConfiguration.cpp</itemPath>
       <itemPath>ModelConstants.cpp</itemPath>
       <itemPath>ModelData.cpp</itemPath>
+      <itemPath>OFLCalcs.cpp</itemPath>
       <itemPath>TCSAM_WTSv01.cpp</itemPath>
     </logicalFolder>
     <logicalFolder name="TestFiles"
@@ -85,6 +87,10 @@
       </item>
       <item path="ModelData.hpp" ex="false" tool="3" flavor2="0">
       </item>
+      <item path="OFLCalcs.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="OFLCalcs.hpp" ex="false" tool="3" flavor2="0">
+      </item>
       <item path="TCSAM_WTSv01.cpp" ex="false" tool="1" flavor2="0">
       </item>
       <item path="TCSAM_WTSv01.htp" ex="false" tool="3" flavor2="0">
@@ -125,6 +131,10 @@
       <item path="ModelData.cpp" ex="false" tool="1" flavor2="0">
       </item>
       <item path="ModelData.hpp" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="OFLCalcs.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="OFLCalcs.hpp" ex="false" tool="3" flavor2="0">
       </item>
       <item path="TCSAM_WTSv01.cpp" ex="false" tool="1" flavor2="0">
       </item>
