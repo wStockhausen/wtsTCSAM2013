@@ -168,6 +168,8 @@
 //--20161013: 1. writing pop numbers/biomass-at-size arrays to rep file
 //--20161107: 1. Added internal OFL calculations via OFL_Calcs.hpp/cpp.
 //--20161108: 1. Corrected improper use of spmo in OFL calculations.
+//--20161130: 1. Added annual selectivity and retention functions to "oldstyle" output.
+//--20161201: 1. Added annual survey catchabilities to "oldstyle" output.
 //
 //IMPORTANT: 2013-09 assessment model had RKC params for 1992+ discard mortality TURNED OFF. 
 //           THE ESTIMATION PHASE FOR RKC DISCARD MORTALITY IS NOW SET IN THE CONTROLLER FILE!
@@ -1786,17 +1788,21 @@ PARAMETER_SECTION
     init_bounded_number pLnEffXtr_GTF(-20.0,0.0,phsLnEffXtr_GTF)  ///< GTF effort extrapolation parameter
     ////end of estimated parameters///////////////
     
-    3darray retFcn_syz(1,nSCs,styr,endyr-1,1,nZBs)    // Retention curve for males caught in directed fishery    (IMPORTANT CHANGE: used to be "endyr")
-    3darray selTCFR_syz(1,nSCs,styr,endyr-1,1,nZBs)   // full selectivity for retained males in directed fishery (IMPORTANT CHANGE: used to be "endyr")
-    3darray selTCFM_syz(1,nSCs,styr,endyr-1,1,nZBs)   // selectivity for all males in directed fishery           (IMPORTANT CHANGE: used to be "endy1")
-    vector  selTCFF_z(1,nZBs)                       // selectivity for females in directed fishery             
-    3darray selSCF_cxz(1,3,1,nSXs,1,nZBs)      // 3D array to accommodate 3 selectivity periods 
-    3darray selRKF_cxz(1,3,1,nSXs,1,nZBs)      // 3D array to accommodate 3 selectivity periods 
-    3darray selGTF_cxz(1,3,1,nSXs,1,nZBs)      // 3D array to accommodate 3 selectivity periods
+    3darray retFcn_syz(1,nSCs,styr,endyr-1,1,nZBs)       // Retention curve for males caught in directed fishery    (IMPORTANT CHANGE: used to be "endyr")
+    4darray retFsh_fyxz(1,1,styr,endyr-1,1,nSXs,1,nZBs); //annual fishery retention curve (TCF only)
+    3darray selTCFR_syz(1,nSCs,styr,endyr-1,1,nZBs)    // full selectivity for retained males in directed fishery (IMPORTANT CHANGE: used to be "endyr")
+    3darray selTCFM_syz(1,nSCs,styr,endyr-1,1,nZBs)    // selectivity for all males in directed fishery           (IMPORTANT CHANGE: used to be "endy1")
+    vector  selTCFF_z(1,nZBs)                          // selectivity for females in directed fishery             
+    3darray selSCF_cxz(1,3,1,nSXs,1,nZBs)              // 3D array to accommodate 3 selectivity periods 
+    3darray selRKF_cxz(1,3,1,nSXs,1,nZBs)              // 3D array to accommodate 3 selectivity periods 
+    3darray selGTF_cxz(1,3,1,nSXs,1,nZBs)              // 3D array to accommodate 3 selectivity periods
+    4darray selFsh_fyxz(1,4,styr,endyr-1,1,nSXs,1,nZBs); //annual fishery selectivity
     
     matrix selSrv1_xz(1,nSXs,1,nZBs) // Survey selectivity 1 pre 1982
     matrix selSrv2_xz(1,nSXs,1,nZBs) // Survey selectivity 2 1982-1987
     matrix selSrv3_xz(1,nSXs,1,nZBs) // Survey selectivity 3 1988+
+    matrix qSrv_xy(1,nSXs,styr,endyr)            //annual survey catchability
+    3darray selSrv_yxz(styr,endyr,1,nSXs,1,nZBs) //annual survey selectivity
         
     3darray M_msx(1,nMSs,1,nSCs,1,nSXs);//natural mortality rates
     
@@ -2373,13 +2379,13 @@ PRELIMINARY_CALCS_SECTION
             sex = MALE;
             obsSrvPrNatZ_mxnz(IMMATURE,sex,i) = obsSrvPrNatZ_msxnz(IMMATURE,NEW_SHELL,sex,i)+obsSrvPrNatZ_msxnz(IMMATURE,OLD_SHELL,sex,i);
             obsSrvPrNatZ_mxnz(  MATURE,sex,i) = obsSrvPrNatZ_msxnz(  MATURE,NEW_SHELL,sex,i)+obsSrvPrNatZ_msxnz(  MATURE,OLD_SHELL,sex,i);
-            offset(9)  -= ssObsZCsSrv_msxn(MATURE,NEW_SHELL,sex,i)*obsSrvPrNatZ_mxnz(IMMATURE,sex,i)*log(obsSrvPrNatZ_mxnz(IMMATURE,sex,i)+p_const);//DON'T THINK CORRECT NSAMPLES IS BEING APPLIED HERE!
-            offset(10) -= ssObsZCsSrv_msxn(MATURE,OLD_SHELL,sex,i)*obsSrvPrNatZ_mxnz(  MATURE,sex,i)*log(obsSrvPrNatZ_mxnz(  MATURE,sex,i)+p_const);
+            offset(9)  -= ssObsZCsSrv_msxn(IMMATURE,NEW_SHELL,sex,i)*obsSrvPrNatZ_mxnz(IMMATURE,sex,i)*log(obsSrvPrNatZ_mxnz(IMMATURE,sex,i)+p_const);//not correct if ss's differ by M or S, but all ss's here are 200
+            offset(10) -= ssObsZCsSrv_msxn(  MATURE,NEW_SHELL,sex,i)*obsSrvPrNatZ_mxnz(  MATURE,sex,i)*log(obsSrvPrNatZ_mxnz(  MATURE,sex,i)+p_const);
             sex = FEMALE;
             obsSrvPrNatZ_mxnz(IMMATURE,sex,i) = obsSrvPrNatZ_msxnz(IMMATURE,NEW_SHELL,sex,i)+obsSrvPrNatZ_msxnz(IMMATURE,OLD_SHELL,sex,i);
             obsSrvPrNatZ_mxnz(  MATURE,sex,i) = obsSrvPrNatZ_msxnz(  MATURE,NEW_SHELL,sex,i)+obsSrvPrNatZ_msxnz(  MATURE,OLD_SHELL,sex,i);
-            offset(11) -= ssObsZCsSrv_msxn(MATURE,NEW_SHELL,sex,i)*obsSrvPrNatZ_mxnz(IMMATURE,sex,i)*log(obsSrvPrNatZ_mxnz(IMMATURE,sex,i)+p_const);
-            offset(12) -= ssObsZCsSrv_msxn(MATURE,OLD_SHELL,sex,i)*obsSrvPrNatZ_mxnz(  MATURE,sex,i)*log(obsSrvPrNatZ_mxnz(  MATURE,sex,i)+p_const);
+            offset(11) -= ssObsZCsSrv_msxn(IMMATURE,NEW_SHELL,sex,i)*obsSrvPrNatZ_mxnz(IMMATURE,sex,i)*log(obsSrvPrNatZ_mxnz(IMMATURE,sex,i)+p_const);
+            offset(12) -= ssObsZCsSrv_msxn(  MATURE,NEW_SHELL,sex,i)*obsSrvPrNatZ_mxnz(  MATURE,sex,i)*log(obsSrvPrNatZ_mxnz(  MATURE,sex,i)+p_const);
         }
     }
     CheckFile<<"offset( 9) = "<<offset( 9)<< endl;  
@@ -2871,12 +2877,12 @@ FUNCTION void jitterParameters(double fac)   //wts: new 2014-05-10
     pSelGTFM_z50A3 = wts::jitterParameter(pSelGTFM_z50A3,fac,rng);
     //1974 to 1981 
     pSrv1_QM       = wts::jitterParameter(pSrv1_QM,fac,rng);
-    pSrv1M_dz5095 = wts::jitterParameter(pSrv1M_dz5095,fac,rng);
-    pSrv1M_z50   = wts::jitterParameter(pSrv1M_z50,fac,rng);
+    pSrv1M_dz5095  = wts::jitterParameter(pSrv1M_dz5095,fac,rng);
+    pSrv1M_z50     = wts::jitterParameter(pSrv1M_z50,fac,rng);
     //1982-P
     pSrv2_QM       = wts::jitterParameter(pSrv2_QM,fac,rng);
-    pSrv2M_dz5095 = wts::jitterParameter(pSrv2M_dz5095,fac,rng);
-    pSrv2M_z50   = wts::jitterParameter(pSrv2M_z50,fac,rng);
+    pSrv2M_dz5095  = wts::jitterParameter(pSrv2M_dz5095,fac,rng);
+    pSrv2M_z50     = wts::jitterParameter(pSrv2M_z50,fac,rng);
     
 //    pPrM2MF = wts::jitterParameter(pPrM2MF,fac,rng);
 //    pPrM2MM = wts::jitterParameter(pPrM2MM,fac,rng);
@@ -3012,13 +3018,17 @@ FUNCTION get_moltingp                         //wts: revised
 FUNCTION get_selectivity                  //wts: revised
 //    cout<<"get_selectivity"<<endl;
     int ii = 1;
+
+    retFsh_fyxz.initialize();
+    selFsh_fyxz.initialize();
     
-    selTCFM_syz.initialize();
     retFcn_syz.initialize();
+    selTCFM_syz.initialize();
+    
     dvariable tmpSel50 = mean(mfexp(pSelTCFM_mnLnZ50A2+pSelTCFM_devsZ50(1,6)));
     for(int iy=styr;iy<=1990;iy++){ 
-        selTCFM_syz(NEW_SHELL,iy) = 1./(1.+mfexp(-1.*pSelTCFM_slpA1*(zBs-tmpSel50)));    
         retFcn_syz(NEW_SHELL, iy) = 1./(1.+mfexp(-1.*pRetTCFM_slpA1*(zBs-pRetTCFM_z50A1)));
+        selTCFM_syz(NEW_SHELL,iy) = 1./(1.+mfexp(-1.*pSelTCFM_slpA1*(zBs-tmpSel50)));    
     }
 //    cout<<"get_sel: 1a"<<endl;
     int ctr = 1;
@@ -3049,10 +3059,10 @@ FUNCTION get_selectivity                  //wts: revised
     for(int iy=1991;iy<endyr;iy++) retFcn_syz(NEW_SHELL,iy) = 1./(1.+mfexp(-1.*pRetTCFM_slpA2*(zBs-pRetTCFM_z50A2)));
 //    cout<<"get_sel: 1g"<<endl;
     
+    // set new and old selTCFM_syz same
     for(int iy=styr;iy<endyr;iy++){      //used to be iy<=endyr            
-        // set new and old selTCFM_syz same
-        selTCFM_syz(OLD_SHELL,iy) = selTCFM_syz(NEW_SHELL,iy);
         retFcn_syz(OLD_SHELL,iy)  = retFcn_syz(NEW_SHELL,iy);
+        selTCFM_syz(OLD_SHELL,iy) = selTCFM_syz(NEW_SHELL,iy);
     }//year loop
 //    cout<<"get_sel: 2"<<endl;
     
@@ -3137,11 +3147,29 @@ FUNCTION get_selectivity                  //wts: revised
         selGTF_cxz(2,FEMALE) /= selGTF_cxz(2,FEMALE,nZBs);
         selGTF_cxz(3,FEMALE) /= selGTF_cxz(3,FEMALE,nZBs);
      }
+
+     //save in annual arrays
+    for(int iy=styr;iy<endyr;iy++){            
+        retFsh_fyxz(iTCF,iy,  MALE) = retFcn_syz(NEW_SHELL,iy);
+        selFsh_fyxz(iTCF,iy,  MALE) = selTCFM_syz(NEW_SHELL,iy);
+        selFsh_fyxz(iTCF,iy,FEMALE) = selTCFF_z;
+        if (iy<=1996)             selFsh_fyxz(iSCF,iy) =selSCF_cxz(1);
+        if (1997<=iy && iy<=2004) selFsh_fyxz(iSCF,iy) =selSCF_cxz(2);
+        if (2005<=iy)             selFsh_fyxz(iSCF,iy) =selSCF_cxz(3);
+        if (iy<=1996)             selFsh_fyxz(iRKF,iy) =selRKF_cxz(1);
+        if (1997<=iy && iy<=2004) selFsh_fyxz(iRKF,iy) =selRKF_cxz(2);
+        if (2005<=iy)             selFsh_fyxz(iRKF,iy) =selRKF_cxz(3);
+        if (iy<=1987)             selFsh_fyxz(iGTF,iy) =selGTF_cxz(1);
+        if (1988<=iy && iy<=1996) selFsh_fyxz(iGTF,iy) =selGTF_cxz(2);
+        if (1997<=iy)             selFsh_fyxz(iGTF,iy) =selGTF_cxz(3);
+    }//year loop
     
     //calculate survey selectivities
     selSrv1_xz.initialize();
     selSrv2_xz.initialize();
     selSrv3_xz.initialize();
+    qSrv_xy.initialize();
+    selSrv_yxz.initialize();
     selSrv1_xz(MALE) = 1./(1.+mfexp(-1.*log(19.)*(zBs-pSrv1M_z50)/(pSrv1M_dz5095)));
     selSrv2_xz(MALE) = 1./(1.+mfexp(-1.*log(19.)*(zBs-pSrv2M_z50)/(pSrv2M_dz5095)));
     selSrv3_xz(MALE) = 1./(1.+mfexp(-1.*log(19.)*(zBs-pSrv2M_z50)/(pSrv2M_dz5095)));
@@ -3161,19 +3189,25 @@ FUNCTION get_selectivity                  //wts: revised
         selSrv3_xz(FEMALE) /= selSrv3_xz(FEMALE,nZBs);
     }
     
-    selSrv1_xz(MALE) *= pSrv1_QM;
-    selSrv2_xz(MALE) *= pSrv2_QM;
-    selSrv3_xz(MALE) *= pSrv2_QM;
-    
     // use somerton and otto curve for survey selectivities, as required
     if (useSomertonOtto1) selSrv1_xz(MALE) = selSO_z;
     if (useSomertonOtto2) selSrv2_xz(MALE) = selSO_z;
     if (useSomertonOtto3) selSrv3_xz(MALE) = selSO_z;
         
+    for (int y=styr;y<=endyr;y++){
+        if ((1975<=y)&&(y<1982)) {selSrv_yxz(y) = selSrv1_xz; qSrv_xy(MALE,y) = pSrv1_QM; qSrv_xy(FEMALE,y) = pSrv1_QF;}
+        if ((y>=1982)&&(y<1988)) {selSrv_yxz(y) = selSrv2_xz; qSrv_xy(MALE,y) = pSrv2_QM; qSrv_xy(FEMALE,y) = pSrv2_QF;}
+        if ((1988<=y)          ) {selSrv_yxz(y) = selSrv3_xz; qSrv_xy(MALE,y) = pSrv2_QM; qSrv_xy(FEMALE,y) = pSrv2_QF;}
+    }
+    
     //scale survey selectivity by survey catchability
-    selSrv1_xz(FEMALE)  *= pSrv1_QF;
+    if (!useSomertonOtto1) selSrv1_xz(MALE) *= pSrv1_QM;
+    if (!useSomertonOtto1) selSrv2_xz(MALE) *= pSrv2_QM;
+    if (!useSomertonOtto1) selSrv3_xz(MALE) *= pSrv2_QM;
+    
+    selSrv1_xz(FEMALE) *= pSrv1_QF;
     selSrv2_xz(FEMALE) *= pSrv2_QF;
-    selSrv3_xz(FEMALE)  *= pSrv2_QF;
+    selSrv3_xz(FEMALE) *= pSrv2_QF;
 //    cout<<"get_sel: 3"<<endl;
     //<--
     
@@ -5575,6 +5609,21 @@ FUNCTION void writeToR_OLD(ofstream& R_out)
         myWriteN_fyxmsz(R_out,iSCF,"SCF","tm",tmN_fyxmsz);
         myWriteN_fyxmsz(R_out,iRKF,"RKF","tm",tmN_fyxmsz);
         myWriteN_fyxmsz(R_out,iGTF,"GTF","tm",tmN_fyxmsz);
+        
+        //write out annual fishery selectivity functions
+        myWriteFshSel_fyxz(R_out,iTCF,"TCF","sel",selFsh_fyxz);
+        myWriteFshSel_fyxz(R_out,iSCF,"SCF","sel",selFsh_fyxz);
+        myWriteFshSel_fyxz(R_out,iRKF,"RKF","sel",selFsh_fyxz);
+        myWriteFshSel_fyxz(R_out,iGTF,"GTF","sel",selFsh_fyxz);
+        
+        //write out annual fishery retention functions
+        myWriteFshSel_fyxz(R_out,iTCF,"TCF","ret",retFsh_fyxz);
+        
+        //write out annual survey catchabilities and selectivity functions
+        REP2R2(srv.mod.selQ.NMFS.MALE,  qSrv_xy(  MALE));
+        REP2R2(srv.mod.selQ.NMFS.FEMALE,qSrv_xy(FEMALE));
+        myWriteSrvSel_yxz(R_out,selSrv_yxz);
+        
 //    cout<<"done writeToR_OLD"<<endl;
 
 // ==========================================================================
@@ -5636,6 +5685,22 @@ FUNCTION void myWriteN_fyxmsz(ostream& os, int iF, adstring aF, adstring type, d
         for (int yr=styr;yr<=(endyr-1);yr++) os << elem_prod(a_fyxmsz(iF,yr,FEMALE,  MATURE,NEW_SHELL),wt_xmz(FEMALE,  MATURE))<<endl;
         os<<"$fsh.mod."<<type<<".BatZ."<<aF<<".MOF"<<endl;
         for (int yr=styr;yr<=(endyr-1);yr++) os << elem_prod(a_fyxmsz(iF,yr,FEMALE,  MATURE,OLD_SHELL),wt_xmz(FEMALE,  MATURE))<<endl;
+        
+// ==========================================================================
+FUNCTION void myWriteSrvSel_yxz(ostream& os, dvar3_array& a_yxz)
+        //write out array of selectivity functions
+        os<<"$srv.mod.sel.NMFS.MALE"<<endl;
+        for (int yr=styr;yr<=endyr;yr++) os << a_yxz(yr,  MALE)<<endl;
+        os<<"$srv.mod.sel.NMFS.FEMALE"<<endl;
+        for (int yr=styr;yr<=endyr;yr++) os << a_yxz(yr,FEMALE)<<endl;
+        
+// ==========================================================================
+FUNCTION void myWriteFshSel_fyxz(ostream& os, int iF, adstring aF, adstring type, dvar4_array& a_fyxz)
+        //write out array
+        os<<"$fsh.mod."<<type<<"."<<aF<<".MALE"<<endl;
+        for (int yr=styr;yr<=(endyr-1);yr++) os << a_fyxz(iF,yr,  MALE)<<endl;
+        os<<"$fsh.mod."<<type<<"."<<aF<<".FEMALE"<<endl;
+        for (int yr=styr;yr<=(endyr-1);yr++) os << a_fyxz(iF,yr,FEMALE)<<endl;
         
 // ==========================================================================
 FUNCTION void myWriteParamsToR(ostream& os)
