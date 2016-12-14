@@ -177,6 +177,7 @@
 //            3. Moved calculation for cpN_fyxmsz to get_catch_at_len from Misc_output
 //            4. Added modPrCapNatZ_fxyz to "oldstyle" output.
 //            5. Added lots of diagnostics to deal with nan gradient problems.
+//            6. Changed some settings in TOP_OF_MAIN
 //
 //IMPORTANT: 2013-09 assessment model had RKC params for 1992+ discard mortality TURNED OFF. 
 //           THE ESTIMATION PHASE FOR RKC DISCARD MORTALITY IS NOW SET IN THE CONTROLLER FILE!
@@ -6162,10 +6163,10 @@ RUNTIME_SECTION
 // ===============================================================================
 // ===============================================================================
 TOP_OF_MAIN_SECTION
-  arrmblsize = 10000000;
-  gradient_structure::set_GRADSTACK_BUFFER_SIZE(5000000);
-  gradient_structure::set_CMPDIF_BUFFER_SIZE(150000000);
-  gradient_structure::set_NUM_DEPENDENT_VARIABLES(7000);
+  arrmblsize = 50000000;//10000000
+  gradient_structure::set_GRADSTACK_BUFFER_SIZE(10000000);//5000000
+  gradient_structure::set_CMPDIF_BUFFER_SIZE(300000000);//150000000
+  gradient_structure::set_NUM_DEPENDENT_VARIABLES(10000);//7000
   time(&start);
   CheckFile.open("CheckFile.dat");
   
