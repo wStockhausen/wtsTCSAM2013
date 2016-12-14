@@ -170,7 +170,13 @@
 //--20161108: 1. Corrected improper use of spmo in OFL calculations.
 //--20161130: 1. Added annual selectivity and retention functions to "oldstyle" output.
 //--20161201: 1. Added annual survey catchabilities to "oldstyle" output.
-//--20161214: 1. Moved calculation of cpN_fyxmsz from Misc_output to get_catch_at_len
+//--20161214: 1. Likelihoods for fishery total ZCs are currently based on model-estimated
+//                  total MORTALITY ZCs, not on CAPTURE ZCs, even if optFM==1 
+//                  (makes a difference for TC males).
+//            2. Moved calculation of cpN_fyxmsz from Misc_output to get_catch_at_len.
+//            3. Added calculation for modPrCapNatZ_fxyz (fishery CAPTURE ZCs) in get_catch_at_len.
+//            4. Dividing by 0 in calc for modPrCapNatZ_fxyz (no fishery f in year y) blows
+//                  up the gradient structure, but doesn't generate a divide by 0 error!
 //
 //IMPORTANT: 2013-09 assessment model had RKC params for 1992+ discard mortality TURNED OFF. 
 //           THE ESTIMATION PHASE FOR RKC DISCARD MORTALITY IS NOW SET IN THE CONTROLLER FILE!
@@ -1832,9 +1838,10 @@ PARAMETER_SECTION
     3darray modPrNatZ_TCFR_syz(1,nSCs,styr,endyr-1,1,nZBs)  // Predicted retained catch proportions
     3darray modPrNatZ_TCFM_syz(1,nSCs,styr,endyr-1,1,nZBs)  // Predicted male   proportions in directed fishery (total catch)      
     matrix  modPrNatZ_TCFF_yz(styr,endyr-1,1,nZBs)          // Predicted female proportions in directed fishery
-    3darray modPrNatZ_GTF_xyz(1,nSXs,styr,endyr-1,1,nZBs)   // Predicted trawl proportions                      
     3darray modPrNatZ_SCF_xyz(1,nSXs,styr,endyr-1,1,nZBs)   // Predicted snow crab fishery  proportions         
     3darray modPrNatZ_RKF_xyz(1,nSXs,styr,endyr-1,1,nZBs)   // Predicted red king crab proportions              
+    3darray modPrNatZ_GTF_xyz(1,nSXs,styr,endyr-1,1,nZBs)   // Predicted trawl proportions                      
+    4darray modPrCapNatZ_fxyz(1,nFsh,1,nSXs,styr,endyr-1,1,nZBs) //predicted fishery CAPTURE proportions
     
     3darray modNum_xyz(1,nSXs,styr,endyr,1,nZBs)                 // Total numbers by year, sex, size
     5darray modNum_yxmsz(styr,endyr,1,nSXs,1,nMSs,1,nSCs,1,nZBs) // Total numbers by year, sex, maturity state, shell condition, size
@@ -3640,7 +3647,8 @@ FUNCTION get_numbers_at_len                                    //wts: revised
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
 FUNCTION get_catch_at_len                  //wts: new version
-//    cout<<"get_catch_at_len"<<endl;
+    int debug = 1;
+    if (debug) cout<<"Finished get_catch_at_len"<<endl;
     dvar_vector ratio1(1,nZBs);
     dvar_vector ratio2(1,nZBs);
     
@@ -3908,9 +3916,46 @@ FUNCTION get_catch_at_len                  //wts: new version
             modPrNatZ_GTF_xyz(  MALE,yr) = predDscNumMortGTF_xyz(  MALE,yr)/tot;
         }
     }//yr
-    //  cout<<" done catch at len "<<endl;
-//    cout<<"done"<<endl;
 
+    if (optFM==1){
+        modPrCapNatZ_fxyz.initialize();
+        for (int yr=styr;yr<endyr;yr++) {
+            for (int fsh=1;fsh<=iRKF;fsh++){
+                for (int x=1;x<=nSXs;x++){
+                    dvariable tot = sum(cpN_fyxmsz(fsh,yr,x));
+                    if (debug) cout<<"fsh = "<<fsh<<tb<<"yr = "<<yr<<tb<<"x = "<<x<<tb<<"tot = "<<tot<<endl;
+                    if (tot>0.0){
+                        for (int m=1;m<=nMSs;m++){
+                            for (int s=1;s<=nSCs;s++) {
+                                modPrCapNatZ_fxyz(fsh,x,yr) += cpN_fyxmsz(fsh,yr,x,m,s);
+                            }//s
+                        }//m
+                        modPrCapNatZ_fxyz(fsh,x,yr) = modPrCapNatZ_fxyz(fsh,x,yr)/tot;
+                    }
+                }//x
+            }//fsh
+            //GTF (treated differently because ZCs are extended across both sexes)
+            {
+                int fsh = iGTF;
+                dvariable tot = sum(cpN_fyxmsz(fsh,yr));
+                if (debug) cout<<"fsh = "<<fsh<<tb<<"yr = "<<yr<<tb<<"tot = "<<tot<<endl;
+                if (tot>0.0){
+                    for (int x=1;x<=nSXs;x++){
+                        for (int m=1;m<=nMSs;m++){
+                            for (int s=1;s<=nSCs;s++) {
+                                modPrCapNatZ_fxyz(fsh,x,yr) += cpN_fyxmsz(fsh,yr,x,m,s);
+                            }
+                        }
+                    }
+                    modPrCapNatZ_fxyz(fsh,FEMALE,yr) = modPrCapNatZ_fxyz(fsh,FEMALE,yr)/tot;
+                    modPrCapNatZ_fxyz(fsh,  MALE,yr) = modPrCapNatZ_fxyz(fsh,  MALE,yr)/tot;
+                }
+            }
+        }//yr
+    }//optFM==1
+    
+    if (debug) cout<<"Finished get_catch_at_len"<<endl;
+    
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
 FUNCTION evaluate_the_objective_function    //wts: revising
