@@ -175,9 +175,14 @@
 //            2. Added flag 'optFMFit' to fit to fishery capture size comps, 
 //                  not  fishery total mortality size comps, when = 1
 //            3. Moved calculation for cpN_fyxmsz to get_catch_at_len from Misc_output
+//            4. Added calculation for modPrCapNatZ_fxyz in get_catch_at_len
 //            4. Added modPrCapNatZ_fxyz to "oldstyle" output.
 //            5. Added lots of diagnostics to deal with nan gradient problems.
-//            6. Changed some settings in TOP_OF_MAIN
+//            6. Changed some settings in TOP_OF_MAIN--no help with nan's
+//            7. Changed calc for modPrCapNatZ_fxyz to ensure no division by 0.
+//            8. Added commandline flag debugPROCEDURE_SECTION to turn on PROCEDURE_SECTION debug info
+//--20161214: 1. Incremented model version to '20161214'.
+//            2. Added reading optFMFit from control file and incremented version to 20161214.
 //
 //IMPORTANT: 2013-09 assessment model had RKC params for 1992+ discard mortality TURNED OFF. 
 //           THE ESTIMATION PHASE FOR RKC DISCARD MORTALITY IS NOW SET IN THE CONTROLLER FILE!
@@ -208,10 +213,8 @@ GLOBALS_SECTION
     #include "ModelData.hpp"
     #include "OFLCalcs.hpp"
 
-    int optFMFit = 0; //fit to fishery total mortality size comps (=0) or capture size comps (=1)
-    
-    adstring version = "20161011";//model version
-    ivector verModelControlFile(1,2);  //model control file version
+    adstring version = "20161214";//model version
+    ivector verModelControlFile(1,1);  //model control file version
     
     int maxPhase = 8;//default max phase for penalty reduction
     
@@ -265,7 +268,8 @@ GLOBALS_SECTION
     int debugOFL = 0;
     OFLResults oflResults;
     
-    int debugDATA_SECTION    = 0;
+    int debugDATA_SECTION      = 0;
+    int debugPROCEDURE_SECTION = 0;
     
     //strings to help writing to R
     adstring dmX;
@@ -311,8 +315,7 @@ DATA_SECTION
  END_CALCS
  
  LOCAL_CALCS
-    verModelControlFile[1] = 20160622;
-    verModelControlFile[2] = 20160820;
+    verModelControlFile[1] = 20161214;
     
     int kf = 1;
     strFOUT(kf++) = "penalty, recruitment penalty";
@@ -394,6 +397,12 @@ DATA_SECTION
     if ((on=option_match(ad_comm::argc,ad_comm::argv,"-debugDATA_SECTION"))>-1) {
         debugDATA_SECTION=1;
         echo<<"#debugDATA_SECTION turned ON"<<endl;
+        flg = 1;
+    }
+    //debugPROCEDURE_SECTION
+    if ((on=option_match(ad_comm::argc,ad_comm::argv,"-debugPROCEDURE_SECTION"))>-1) {
+        debugPROCEDURE_SECTION=1;
+        echo<<"#debugPROCEDURE_SECTION turned ON"<<endl;
         flg = 1;
     }
     //debugModelDatasets
@@ -1114,6 +1123,12 @@ DATA_SECTION
     init_int optFM;//original (0) or gmacs (1) -like fishing mortality
     !!if (optFM!=1) optFM = 0;//if gmacs not specified, then use original
     !!CHECK1(optFM);
+    !!CheckFile<<"##--fishery size comp options"<<endl;
+    !!CheckFile<<"#0 - fit using model-estimated total MORTALITY size comps"<<endl;
+    !!CheckFile<<"#1 - fit using model-estimated total CAPTURE size comps"<<endl;
+    init_int optFMFit;//original (0) or gmacs (1)-like fit to fishery capture size comps
+    !!if (optFMFit!=1) optFMFit = 0;//if gmacs not specified, then use original
+    !!CHECK1(optFMFit);
     !!CheckFile<<"##--fishery catch likelihood options"<<endl;
     init_int optFshNLLs  //flag indicating error model for fishery catch data (0=norm2, 1=lognormal)
     !!CHECK1(optFshNLLs);    
@@ -2530,7 +2545,7 @@ PRELIMINARY_CALCS_SECTION
 // ============================================================================
 // ============================================================================
 PROCEDURE_SECTION                                          //wts: revised
-    int debug = 1;
+    int debug = debugPROCEDURE_SECTION;
     if (debug) cout<<"Starting PROCEDURE_SECTION. phase = "<<current_phase()
                     <<tb<<"call_no = "<<call_no<<endl;
     {
@@ -2541,6 +2556,10 @@ PROCEDURE_SECTION                                          //wts: revised
         for (int i=1;i<=nvar;i++) y += x[i];
         if (debug) cout<<"check nan params: "<<y<<endl;
         if (isnan(y)){
+            cout<<endl<<endl;
+            cout<<"-------------------------------------------"<<endl;
+            cout<<"nan-valued parameters detected! termintaing model run."<<endl;
+            cout<<"phase = "<<current_phase()<<tb<<"call_no = "<<call_no<<endl;
             cout<<"nvarcalc                  = "<<initial_params::nvarcalc()<<endl;
             cout<<"nvar_calc_all             = "<<initial_params::nvarcalc_all()<<endl;
             cout<<"num_initial_params        = "<<initial_params::num_initial_params<<endl;
@@ -2557,16 +2576,16 @@ PROCEDURE_SECTION                                          //wts: revised
                 ctr += ii;
                 cout<<"---value = "<<x<<endl;
             }
-            cout<<"ctr = "<<ctr<<endl;
+            cout<<"-------------------------------------------"<<endl;
             ad_exit(-1);
         }
     }
 
     //run the population model
-    runPopMod(0,std::cout);
+    runPopMod(debug,std::cout);
 
     //evaluate the model fit
-    evaluate_the_objective_function(0,std::cout);
+    evaluate_the_objective_function(debug,std::cout);
     
     if((call_no==1)||(call_no/1000)*1000==call_no) {
         CheckFile<<"call_no = "<<call_no<<endl;
@@ -2581,7 +2600,7 @@ PROCEDURE_SECTION                                          //wts: revised
         myWriteMCMCToR(mcmc);
     }
     
-    cout<<"Finished PROCEDURE_SECTION"<<endl;
+    if (debug) cout<<"Finished PROCEDURE_SECTION"<<endl;
     
 
 // ----------------------------------------------------------------------
@@ -3836,83 +3855,85 @@ FUNCTION void get_catch_at_len(int debug,ostream& cout)                  //wts: 
     for (int yr=styr;yr<endyr;yr++) {          //(IMPORTANT CHANGE: used to be "endyr")        
         // Retained catch MORTALITY (males)
         tot = sum(predRetNumMortTCFM_yz(yr));
-        if(tot>0.000001){                         //non-differentiable--does it matter
+        if(tot>0.0){                         //non-differentiable--does it matter
             modPrNatZ_TCFR_syz(NEW_SHELL,yr) = predRetNumMortTCFM_syz(NEW_SHELL,yr)/tot;
             modPrNatZ_TCFR_syz(OLD_SHELL,yr) = predRetNumMortTCFM_syz(OLD_SHELL,yr)/tot;
         }
         
         // Total catch MORTALITY (males)
         tot = sum(predTotNumMortTCFM_yz(yr));
-        if(tot>0.0000001){                         //non-differentiable--does it matter
+        if(tot>0.0){                         //non-differentiable--does it matter
             modPrNatZ_TCFM_syz(NEW_SHELL,yr) = predTotNumMortTCFM_syz(NEW_SHELL,yr)/tot;
             modPrNatZ_TCFM_syz(OLD_SHELL,yr) = predTotNumMortTCFM_syz(OLD_SHELL,yr)/tot;
         }
          
         // female discards
         tot = sum(predDscNumMortTCF_xyz(FEMALE,yr));
-        if(tot>0.0000001){                         //non-differentiable--does it matter
+        if(tot>0.0){                         //non-differentiable--does it matter
             modPrNatZ_TCFF_yz(yr) = predDscNumMortTCF_xyz(FEMALE,yr)/tot;
         }
         
         // snow crab discards
         tot = sum(predDscNumMortSCF_xyz(FEMALE,yr));
-        if(tot>0.00000001){                    //non-differentiable--does it matter
+        if(tot>0.0){                    //non-differentiable--does it matter
             modPrNatZ_SCF_xyz(FEMALE,yr) = predDscNumMortSCF_xyz(FEMALE,yr)/tot;
         }
         tot = sum(predDscNumMortSCF_xyz(MALE,yr));
-        if(tot>0.00000001){                       //non-differentiable--does it matter
+        if(tot>0.0){                       //non-differentiable--does it matter
             modPrNatZ_SCF_xyz(MALE,yr) = predDscNumMortSCF_xyz(MALE,yr)/tot;
         }
         
         // red king crab discards
         tot = sum(predDscNumMortRKF_xyz(FEMALE,yr));
-        if(tot>0.00000001){                       //non-differentiable--does it matter
+        if(tot>0.0){                       //non-differentiable--does it matter
             modPrNatZ_RKF_xyz(FEMALE,yr) = predDscNumMortRKF_xyz(FEMALE,yr)/tot;
         }
         tot = sum(predDscNumMortRKF_xyz(MALE,yr));
-        if(tot>0.00000001){                         //non-differentiable--does it matter
+        if(tot>0.0){                         //non-differentiable--does it matter
             modPrNatZ_RKF_xyz(MALE,yr) = predDscNumMortRKF_xyz(MALE,yr)/tot;
         }
         
         // total groundfish trawl fishery discards
         // proportions (adds to 1 over sex, shell and length)
         tot = sum(predDscNumMortGTF_xyz(MALE,yr))+sum(predDscNumMortGTF_xyz(FEMALE,yr));
-        if(tot>0.0000001){
+        if(tot>0.0){
             modPrNatZ_GTF_xyz(FEMALE,yr) = predDscNumMortGTF_xyz(FEMALE,yr)/tot;
             modPrNatZ_GTF_xyz(  MALE,yr) = predDscNumMortGTF_xyz(  MALE,yr)/tot;
         }
+    }//yr
     
-        if (optFM==1){
-            modPrCapNatZ_fxyz.initialize();
+    if (optFM==1){
+        modPrCapNatZ_fxyz.initialize();
+        for (int yr=styr;yr<endyr;yr++) {        
             for (int fsh=1;fsh<=iRKF;fsh++){
                 for (int x=1;x<=nSXs;x++){
-                    tot =0;
+                    tot = sum(cpN_fyxmsz(fsh,yr,x));
                     for (int m=1;m<=nMSs;m++){
                         for (int s=1;s<=nSCs;s++) {
-                            tot += sum(cpN_fyxmsz(fsh,yr,x,m,s));
                             modPrCapNatZ_fxyz(fsh,x,yr) += cpN_fyxmsz(fsh,yr,x,m,s);
                         }
                     }
-                    modPrCapNatZ_fxyz(fsh,x,yr) = modPrCapNatZ_fxyz(fsh,x,yr)/tot;
+                    if (tot>0.0) modPrCapNatZ_fxyz(fsh,x,yr) = modPrCapNatZ_fxyz(fsh,x,yr)/tot;
                 }
             }
             //GTF
             {
                 int fsh = iGTF;
-                tot =0;
+                tot = sum(cpN_fyxmsz(fsh,yr));
                 for (int x=1;x<=nSXs;x++){
                     for (int m=1;m<=nMSs;m++){
                         for (int s=1;s<=nSCs;s++) {
-                            tot += sum(cpN_fyxmsz(fsh,yr,x,m,s));
                             modPrCapNatZ_fxyz(fsh,x,yr) += cpN_fyxmsz(fsh,yr,x,m,s);
                         }
                     }
                 }
-                modPrCapNatZ_fxyz(fsh,FEMALE,yr) = modPrCapNatZ_fxyz(fsh,FEMALE,yr)/tot;
-                modPrCapNatZ_fxyz(fsh,  MALE,yr) = modPrCapNatZ_fxyz(fsh,  MALE,yr)/tot;
+                if (tot>0.0){
+                    modPrCapNatZ_fxyz(fsh,FEMALE,yr) = modPrCapNatZ_fxyz(fsh,FEMALE,yr)/tot;
+                    modPrCapNatZ_fxyz(fsh,  MALE,yr) = modPrCapNatZ_fxyz(fsh,  MALE,yr)/tot;
+                }
             }
-        }//optFM==1
-    }//yr
+        }//yr
+    }//optFM==1
     if (debug) cout<<"finished get_catch_at_len "<<endl;
 
 // ---------------------------------------------------------------------------
@@ -4440,8 +4461,8 @@ FUNCTION void evaluate_the_objective_function(int debug, ostream& cout)    //wts
         os1.close();
         ad_exit(-1);
     }    
-    cout <<"phase = "<< current_phase() << " call = " << call_no << " Total Like = " << f << endl;
-    cout <<"Likes = "<< endl; for (int i=1;i<=objfOut.indexmax();i++) cout<<i<<tb<<objfOut(i)<<endl;
+    if (debug) {cout <<"phase = "<< current_phase() << " call = " << call_no << " Total Like = " << f << endl;}
+    if (debug) {cout <<"Likes = "<< endl; for (int i=1;i<=objfOut.indexmax();i++) cout<<i<<tb<<objfOut(i)<<endl;}
 
     call_no += 1;
     if (debug) cout<<"finished evaluate_the_objective_function"<<endl;
@@ -4942,6 +4963,7 @@ FUNCTION void writeToR_OLD(ofstream& R_out)
         
         //model options
         REP2R2(mod.optFM,optFM);
+        REP2R2(mod.optFMFit,optFMFit);
         
         //model processes
         //--molting
