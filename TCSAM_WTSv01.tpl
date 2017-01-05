@@ -198,7 +198,10 @@
 //--20170104: 1. Revised likelihood calculations to ONLY use calcNLL_normal() functions 
 //                  for priors.
 //            2. Incremented model version to 20170104. Model control file version incremented to 20170104.
-//            3. Changed from norm2() to 0.5*norm2() for fishery biomass likelihood components.
+//            3. Changed from norm2() to 0.5*norm2() for fishery biomass likelihood components. 
+//                  Requires CatchBiomass likelihood weights to DOUBLE to match old results.
+//--20170105: 1. Removed "maturity_switch", now using optInitM2M and optMatForSrvOSM to control behavior.
+//                  2016AM behavior obtained setting both to 1 (because maturity_switch=1 in 2016AM).
 //
 //IMPORTANT: 2013-09 assessment model had RKC params for 1992+ discard mortality TURNED OFF. 
 //           THE ESTIMATION PHASE FOR RKC DISCARD MORTALITY IS NOW SET IN THE CONTROLLER FILE!
@@ -1569,16 +1572,13 @@ LOCAL_CALCS
     int phase_logistic_sel
     int survsel1_phase
     int survsel_phase
-    int maturity_switch
  LOCAL_CALCS
     phase_logistic_sel = phsRet_TCFM;
     survsel1_phase = phsSelSrvM1;
     survsel_phase = phsSelSrvM2;
-    maturity_switch = optInitM2M;
     CHECK1(phase_logistic_sel);
     CHECK1(survsel1_phase);
     CHECK1(survsel_phase);
-    CHECK1(maturity_switch);
  END_CALCS
     
     // the rest are working variables 
@@ -2111,7 +2111,7 @@ PRELIMINARY_CALCS_SECTION
     modPrM2M(FEMALE) = 1.0;
     modPrM2M(FEMALE)(1,16) = obsAvgMatNS_xz(FEMALE)(1,16);
     modPrM2M(MALE)         = obsAvgMatNS_xz(  MALE);
-    if (maturity_switch > 0) {
+    if (optInitM2M==1) {
         // use logistic maturity curve for new shell males instead of fractions by year
         // this would be for initial population not probability of moving to mature
 //        obsAvgMatNS_xz(MALE) = obsPrMatureM_z;
@@ -2434,7 +2434,7 @@ PRELIMINARY_CALCS_SECTION
     
     // use logistic maturity curve for new and old shell male survey data if switch>0 instead of yearly samples
     // old shell already uses ok maturity curve (AEP only applies to OLD SHELL?)
-    if (maturity_switch > 0){
+    if (optMatForSrvOSM==1){
         for(int i=1; i <= nObsZCsSrv; i++){
 //             tmps = (tmpObsPrNatZ_Srv_msxnz(1,2,2,i)+tmpObsPrNatZ_Srv_msxnz(2,2,2,i));
 //             tmpObsPrNatZ_Srv_msxnz(2,2,2,i) = elem_prod(obsAvgMatOS_xz(2),tmps);
