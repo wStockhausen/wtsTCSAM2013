@@ -183,6 +183,22 @@
 //            8. Added commandline flag debugPROCEDURE_SECTION to turn on PROCEDURE_SECTION debug info
 //--20161214: 1. Incremented model version to '20161214'.
 //            2. Added reading optFMFit from control file and incremented version to 20161214.
+//--20161219: 1. Corrected documentation to indicate GTF selectivity functions defined for
+//                  intervals pre-1987, 1987-1996, 1997+ (not pre-1988, 1988-1996, 1997+)
+//            2. Added option (optNM=1) to apply correct natural mortality rates to
+//                  crab following their terminal molt in year that they molted. 
+//                  Previously (optNM=0), immature natural mortality rates were applied
+//                  to crab following their terminal molt in year they molted.
+//            3. Incremented model version to '20161219', control file version to 20161219 (verModelControl).
+//--20161229: 1. Changed output for modPrCapNatZ_fxyz from fsh.mod.cap.NatZ... to fsh.mod.cap.PrNatZ...
+//                  to parallel other fishery size comp-related output.
+//--20170102: 1. Added obsCapBio..., predCapBio..., zsCapBio..., lkCapBio... arrays to handle
+//                  optFMFit==2 option, fitting to captured biomass in fisheries (not total mortality)
+//--20170103: 1. Revised likelihood calculations to use calcNLL_normal() functions to facilitate comparisons w/ TCSAM02.
+//--20170104: 1. Revised likelihood calculations to ONLY use calcNLL_normal() functions 
+//                  for priors.
+//            2. Incremented model version to 20170104. Model control file version incremented to 20170104.
+//            3. Changed from norm2() to 0.5*norm2() for fishery biomass likelihood components.
 //
 //IMPORTANT: 2013-09 assessment model had RKC params for 1992+ discard mortality TURNED OFF. 
 //           THE ESTIMATION PHASE FOR RKC DISCARD MORTALITY IS NOW SET IN THE CONTROLLER FILE!
@@ -213,7 +229,7 @@ GLOBALS_SECTION
     #include "ModelData.hpp"
     #include "OFLCalcs.hpp"
 
-    adstring version = "20161214";//model version
+    adstring version = "20170104";//model version
     ivector verModelControlFile(1,1);  //model control file version
     
     int maxPhase = 8;//default max phase for penalty reduction
@@ -305,24 +321,26 @@ GLOBALS_SECTION
 DATA_SECTION
   
  LOCAL_CALCS
+    verModelControlFile[1] = 20170104;
     echo.open("EchoOut.dat", ios::trunc);
     echo<<"#Starting TCSAM2013 Code"<<endl;
-    echo<<"#model version = "<<version<<endl;
+    echo<<"#model version                 = "<<version<<endl;
+    echo<<"#model control file version(s) = "<<verModelControlFile<<endl;
     echo<<"#Starting DATA_SECTION"<<endl;
+    
     cout<<"#Starting TCSAM2013 Code"<<endl;
     cout<<"#model version = "<<version<<endl;
+    cout<<"#model control file version(s) = "<<verModelControlFile<<endl;
     cout<<"#Starting DATA_SECTION"<<endl;
  END_CALCS
  
  LOCAL_CALCS
-    verModelControlFile[1] = 20161214;
-    
     int kf = 1;
     strFOUT(kf++) = "penalty, recruitment penalty";
-    strFOUT(kf++) = "penalty, sex ratio penalty";
+    strFOUT(kf++) = "penalty, historic recruitment penalty";
     strFOUT(kf++) = "penalty, natural mortality penalty (immatures)";
     strFOUT(kf++) = "penalty, natural mortality penalty (mature males)";
-    strFOUT(kf++) = "penalty, natural mortality penalty (immature females)";
+    strFOUT(kf++) = "penalty, natural mortality penalty (mature females)";
 
     strFOUT(kf++) = "priors, survey q penalty";
     strFOUT(kf++) = "priors, female survey q penalty";
@@ -1080,6 +1098,9 @@ DATA_SECTION
     !!CHECK1(mort_switch2);
     !!CHECK1(lyr_mort);
     !!CHECK1(uyr_mort);
+    !!CheckFile<<"##--options for applying natural mortality to just terminally-molted crab"<<endl;
+    init_int optNM   //option for how to apply NM to terminally-molted crab in year of molt
+    !!CHECK1(optNM);
     !!CheckFile<<"##--options for using maturity info and estimating prM2M"<<endl;
     init_int optInitM2M  ///<option to initialize prM2M(MALE)
     !!CHECK1(optInitM2M);
@@ -1123,11 +1144,11 @@ DATA_SECTION
     init_int optFM;//original (0) or gmacs (1) -like fishing mortality
     !!if (optFM!=1) optFM = 0;//if gmacs not specified, then use original
     !!CHECK1(optFM);
-    !!CheckFile<<"##--fishery size comp options"<<endl;
+    !!CheckFile<<"##--fishery size comp & biomass time series options"<<endl;
     !!CheckFile<<"#0 - fit using model-estimated total MORTALITY size comps"<<endl;
     !!CheckFile<<"#1 - fit using model-estimated total CAPTURE size comps"<<endl;
-    init_int optFMFit;//original (0) or gmacs (1)-like fit to fishery capture size comps
-    !!if (optFMFit!=1) optFMFit = 0;//if gmacs not specified, then use original
+    !!CheckFile<<"#1 - fit using model-estimated total CAPTURE size comps AND biomass time series"<<endl;
+    init_int optFMFit;
     !!CHECK1(optFMFit);
     !!CheckFile<<"##--fishery catch likelihood options"<<endl;
     init_int optFshNLLs  //flag indicating error model for fishery catch data (0=norm2, 1=lognormal)
@@ -1488,19 +1509,19 @@ LOCAL_CALCS
     !!CHECK1(inpSelRKFF_z50A3);
     // groundfish fisheries bycatch selectivity 
     !!CheckFile<<"###--GTF"<<endl;
-    //--males, 1973-1987
+    //--males, 1973-1986
     init_number inpSelGTFM_slpA1
     init_number inpSelGTFM_z50A1
-    //--males, 1988-1996
+    //--males, 1987-1996
     init_number inpSelGTFM_slpA2
     init_number inpSelGTFM_z50A2
     //--males, 1997+
     init_number inpSelGTFM_slpA3
     init_number inpSelGTFM_z50A3
-    //--females, 1973-1987
+    //--females, 1973-1986
     init_number inpSelGTFF_slpA1
     init_number inpSelGTFF_z50A1
-    //--females, 1988-1996
+    //--females, 1987-1996
     init_number inpSelGTFF_slpA2
     init_number inpSelGTFF_z50A2 
     //females, 1997+
@@ -1561,6 +1582,10 @@ LOCAL_CALCS
  END_CALCS
     
     // the rest are working variables 
+    matrix obsCapBioTCF_xn(1,nSXs,1,nObsDscTCF)   // observed captured biomass in TCF (1000's tons)
+    matrix obsCapBioSCF_xn(1,nSXs,1,nObsDscSCF)   // observed captured biomass in SCF (1000's tons)
+    matrix obsCapBioRKF_xn(1,nSXs,1,nObsDscRKF)   // observed captured biomass in RKF (1000's tons)
+    vector obsCapBioGTF_n(1,nObsDscGTF)           // observed captured biomass in GTF (1000's tons)
     
     matrix obsDscBioMortTCF_xn(1,nSXs,1,nObsDscTCF)   // observed discard MORTALITY in TCF (1000's tons)
     matrix obsDscBioMortSCF_xn(1,nSXs,1,nObsDscSCF)   // observed discard MORTALITY in SCF (1000's tons)
@@ -1572,6 +1597,13 @@ LOCAL_CALCS
 //    obsSrvNum_n=obsSrvNum_n*1000000;       // survey numbers read in are millions of crab (but /1000 above so obsSrvNum_n in thousands of crab, now)
 //    wt_xmz(FEMALE) = wt_xmz(FEMALE)*0.001; // change weights from kg to tons
 //    wt_xmz(  MALE) = wt_xmz(  MALE)*0.001; // change weights from kg  to tons
+    //standardize discards to "captured" biomass
+    obsCapBioTCF_xn = obsDscBioTCF_xn;
+    obsCapBioSCF_xn = obsDscBioSCF_xn;
+    obsCapBioRKF_xn = obsDscBioRKF_xn;
+    obsCapBioGTF_n  = obsDscBioGTF_n;
+    obsCapBioTCF_xn(MALE) += obsRetCatchBio_y(yrsObsDscTCF_n);//add in retained catch for males in directed fishery
+    
     //apply discard mortality to observed discards
     obsDscBioMortTCF_xn = hm_pot*obsDscBioTCF_xn;//apply discard mortality to catches
     obsDscBioMortSCF_xn = hm_pot*obsDscBioSCF_xn;
@@ -1584,17 +1616,24 @@ LOCAL_CALCS
 //        obsTotBioMortTCFM_n(i) = obsDscBioMortTCF_xn(MALE,i)+obsRetCatchBio_y(yrsObsDscTCF_n(i));
 //    }
     CheckFile<<"yrsObsDscTCF_n"<<endl<<yrsObsDscTCF_n<<endl;
+    CheckFile<<"obsCapBioTCF_xn(  MALE)"<<endl<<obsCapBioTCF_xn(  MALE)<<endl;
+    CheckFile<<"obsCapBioTCF_xn(FEMALE)"<<endl<<obsCapBioTCF_xn(FEMALE)<<endl;
     CheckFile<<"obsDscBioMortTCF_xn(  MALE)"<<endl<<obsDscBioMortTCF_xn(  MALE)<<endl;
     CheckFile<<"obsDscBioMortTCF_xn(FEMALE)"<<endl<<obsDscBioMortTCF_xn(FEMALE)<<endl;
     CheckFile<<"obsRetBioMortTCFM"<<endl<<obsRetCatchBio_y(yrsObsDscTCF_n)<<endl;
     CheckFile<<"obsTotBioMortTCFM_n"<<endl<<obsTotBioMortTCFM_n<<endl;
     CheckFile<<"yrsObsDscSCF"<<endl<<yrsObsDscSCF<<endl;
+    CheckFile<<"obsCapBioSCF_xn(  MALE)"<<endl<<obsCapBioSCF_xn(  MALE)<<endl;
+    CheckFile<<"obsCapBioSCF_xn(FEMALE)"<<endl<<obsCapBioSCF_xn(FEMALE)<<endl;
     CheckFile<<"obsDscBioMortSCF_xn(  MALE)"<<endl<<obsDscBioMortSCF_xn(  MALE)<<endl;
     CheckFile<<"obsDscBioMortSCF_xn(FEMALE)"<<endl<<obsDscBioMortSCF_xn(FEMALE)<<endl;
     CheckFile<<"yrsObsDscRKF"<<endl<<yrsObsDscRKF<<endl;
+    CheckFile<<"obsCapBioRKF_xn(  MALE)"<<endl<<obsCapBioRKF_xn(  MALE)<<endl;
+    CheckFile<<"obsCapBioRKF_xn(FEMALE)"<<endl<<obsCapBioRKF_xn(FEMALE)<<endl;
     CheckFile<<"obsDscBioMortRKF_xn(  MALE)"<<endl<<obsDscBioMortRKF_xn(  MALE)<<endl;
     CheckFile<<"obsDscBioMortRKF_xn(FEMALE)"<<endl<<obsDscBioMortRKF_xn(FEMALE)<<endl;
     CheckFile<<"yrsObsDscGTF"<<endl<<yrsObsDscGTF<<endl;
+    CheckFile<<"obsCapBioGTF_n"<<endl<<obsCapBioGTF_n<<endl;
     CheckFile<<"obsDscBioMortGTF_n"<<endl<<obsDscBioMortGTF_n<<endl;
     
  END_CALCS
@@ -1756,10 +1795,10 @@ PARAMETER_SECTION
     init_bounded_number pSelRKFM_z50A3(95.0,150.0,phsSel_RKFM)
     
     // Groundfish fisheries female bycatch selectivity pattern
-    //-- 1973-1987
+    //-- 1973-1986
     init_bounded_number pSelGTFF_slpA1(0.01,0.5,phsSel_GTFF)
     init_bounded_number pSelGTFF_z50A1(40.0,125.01,phsSel_GTFF)
-    //-- 1988-1996
+    //-- 1987-1996
     init_bounded_number pSelGTFF_slpA2(0.005,0.5,phsSel_GTFF)
     init_bounded_number pSelGTFF_z50A2(40.0,250.01,phsSel_GTFF) 
     //-- 1997+
@@ -1767,10 +1806,10 @@ PARAMETER_SECTION
     init_bounded_number pSelGTFF_z50A3(40.0,150.01,phsSel_GTFF)
 
     // Groundfish fisheries male bycatch selectivity pattern
-    ///-- styr-1987
+    ///-- styr-1986
     init_bounded_number pSelGTFM_slpA1(0.01,0.5,phsSel_GTFM)
     init_bounded_number pSelGTFM_z50A1(40.0,120.01,phsSel_GTFM)
-    //-- 1988-1996
+    //-- 1987-1996
     init_bounded_number pSelGTFM_slpA2(0.01,0.5,phsSel_GTFM)
     init_bounded_number pSelGTFM_z50A2(40.0,120.01,phsSel_GTFM)
     //-- 1997+
@@ -1959,6 +1998,12 @@ PARAMETER_SECTION
     3darray predDscNumMortGTF_xyz(1,nSXs,styr,endyr-1,1,nZBs)
     matrix predDscBioMortGTF_xy(1,nSXs,styr,endyr-1)                  ///< Trawl catch mortality (in biomass and by sex)
     
+    //arrays for fitting total captures
+    matrix predCapBioTCF_xy(1,nSXs,styr,endyr-1);
+    matrix predCapBioSCF_xy(1,nSXs,styr,endyr-1);
+    matrix predCapBioRKF_xy(1,nSXs,styr,endyr-1);
+    matrix predCapBioGTF_xy(1,nSXs,styr,endyr-1);
+    
     //changed endyr to endyr-1   
     vector effnTCF_ret_y(styr,endyr-1)            // Effective sample sizes
     matrix effnTCF_tot_xy(1,nSXs,styr,endyr-1)    // Effective sample sizes
@@ -1988,19 +2033,27 @@ PARAMETER_SECTION
     // Likelihood components
     vector zsRetMortBio_TCFR_y(styr,endyr-1)        ///< z-scores for fit to retained male catch mortality in directed TCF 
     vector zsTotMortBio_TCFM_n(1,nObsDscTCF)        ///< z-scores for fit to total male catch mortality in directed TCF 
-    vector zsDscMortBio_TCFM_n(1,nObsDscTCF)        ///< z-scores for fit to discard male catch mortality in directed TCF 
-    vector zsDscMortBio_TCFF_n(1,nObsDscTCF)        ///< z-scores for fit to female bycatch mortality in directed TCF 
+    matrix zsDscMortBio_TCF_xn(1,nSXs,1,nObsDscTCF) ///< z-scores for fit to discard bycatch mortality, by sex, in directed TCF 
     matrix zsDscMortBio_SCF_xn(1,nSXs,1,nObsDscSCF) ///< z-scores for fit to bycatch mortality, by sex, in SCF 
     matrix zsDscMortBio_RKF_xn(1,nSXs,1,nObsDscRKF) ///< z-scores for fit to bycatch mortality, by sex, in RKFCF 
     vector zsDscMortBio_GTF_n(1,nObsDscGTF)         ///< z-scores for fit to total bycatch mortality in GTF 
     number lkRetMortBio_TCFR          ///< likelihood for retained male catch mortality in directed TCF 
     number lkTotMortBio_TCFM          ///< likelihood for total male catch mortality in directed TCF
-    number lkDscMortBio_TCFM          ///< likelihood for discard male catch mortality in directed TCF
-    number lkDscMortBio_TCFF          ///< likelihood for female bycatch mortality in directed TCF 
-    vector lkDscMortBio_SCF_x(1,nSXs) ///< likelihood for bycatch in SCF, by sex
-    vector lkDscMortBio_RKF_x(1,nSXs) ///< likelihood for bycatch in RKF, by sex
-    number lkDscMortBio_GTF           ///< likelihood for bycatch in GTF
+    vector lkDscMortBio_TCF_x(1,nSXs) ///< likelihood for bycatch mortality in directed TCF, by sex
+    vector lkDscMortBio_SCF_x(1,nSXs) ///< likelihood for bycatch mortality in SCF, by sex
+    vector lkDscMortBio_RKF_x(1,nSXs) ///< likelihood for bycatch mortality in RKF, by sex
+    number lkDscMortBio_GTF           ///< likelihood for bycatch mortality in GTF
     vector lkZCs(1,NUM_LEN_LIKE)      ///< likelihood for fishery size compositions
+    
+    matrix zsCapBio_TCF_xn(1,nSXs,1,nObsDscTCF) ///< z-scores for fit to capture biomass, by sex, in TCF 
+    matrix zsCapBio_SCF_xn(1,nSXs,1,nObsDscSCF) ///< z-scores for fit to capture biomass, by sex, in SCF 
+    matrix zsCapBio_RKF_xn(1,nSXs,1,nObsDscRKF) ///< z-scores for fit to capture biomass, by sex, in RKF 
+    vector zsCapBio_GTF_n(1,nObsDscGTF)         ///< z-scores for fit to capture biomass, in GTF 
+    
+    vector lkCapBio_TCF_x(1,nSXs) ///< likelihood for fit to capture biomass, by sex, in TCF 
+    vector lkCapBio_SCF_x(1,nSXs) ///< likelihood for fit to capture biomass, by sex, in SCF 
+    vector lkCapBio_RKF_x(1,nSXs) ///< likelihood for fit to capture biomass, by sex, in RKF 
+    number lkCapBio_GTF           ///< likelihood for fit to capture biomass, in GTF 
     
     matrix zsSrvMatBio_xn(1,nSXs,1,nObsSrvBio) ///< z-scores for fits to survey mature biomass
     vector lkSrvMatBio_x(1,nSXs)               ///< likelihood for survey mature biomass data
@@ -2202,19 +2255,19 @@ PRELIMINARY_CALCS_SECTION
         pSelRKFF_slpA3 = inpSelRKFF_slpA3;
         pSelRKFF_z50A3 = inpSelRKFF_z50A3;
         // groundfish fisheries bycatch selectivity 
-        //--males, 1973-1987
+        //--males, 1973-1986
         pSelGTFM_slpA1 = inpSelGTFM_slpA1;
         pSelGTFM_z50A1 = inpSelGTFM_z50A1;
-        //--males, 1988-1996
+        //--males, 1987-1996
         pSelGTFM_slpA2 = inpSelGTFM_slpA2;
         pSelGTFM_z50A2 = inpSelGTFM_z50A2;
         //--males, 1997+
         pSelGTFM_slpA3 = inpSelGTFM_slpA3;
         pSelGTFM_z50A3 = inpSelGTFM_z50A3;
-        //--females, 1973-1987
+        //--females, 1973-1986
         pSelGTFF_slpA1 = inpSelGTFF_slpA1;
         pSelGTFF_z50A1 = inpSelGTFF_z50A1;
-        //--females, 1988-1996
+        //--females, 1987-1996
         pSelGTFF_slpA2 = inpSelGTFF_slpA2;
         pSelGTFF_z50A2 = inpSelGTFF_z50A2;
         //females, 1997+
@@ -2731,17 +2784,17 @@ FUNCTION void writeParameters(ofstream& os,int toR, int willBeActive)
     wts::writeParameter(os,pSelRKFM_slpA3,toR,willBeActive,"fisheries, RKF selectivity, males (2005+)\\n  slope, male slope [2005+]");   
     wts::writeParameter(os,pSelRKFM_z50A3,toR,willBeActive,"fisheries, RKF selectivity, males (2005+)\\n  z50, male size at 50%-selected [2005+]");    
     
-    wts::writeParameter(os,pSelGTFF_slpA1,toR,willBeActive,"fisheries, GTF selectivity, females (-1987)\\n  slope, female slope [-1987]");   
-    wts::writeParameter(os,pSelGTFF_z50A1,toR,willBeActive,"fisheries, GTF selectivity, females (-1987)\\n  z50, female size at 50%-selected [-1987]");   
-    wts::writeParameter(os,pSelGTFF_slpA2,toR,willBeActive,"fisheries, GTF selectivity, females (1988-1996)\\n  slope, female slope [1988-1996]");   
-    wts::writeParameter(os,pSelGTFF_z50A2,toR,willBeActive,"fisheries, GTF selectivity, females (1988-1996)\\n  z50, female size at 50%-selected [1988-1996]");   
+    wts::writeParameter(os,pSelGTFF_slpA1,toR,willBeActive,"fisheries, GTF selectivity, females (-1986)\\n  slope, female slope [-1986]");   
+    wts::writeParameter(os,pSelGTFF_z50A1,toR,willBeActive,"fisheries, GTF selectivity, females (-1986)\\n  z50, female size at 50%-selected [-1986]");   
+    wts::writeParameter(os,pSelGTFF_slpA2,toR,willBeActive,"fisheries, GTF selectivity, females (1987-1996)\\n  slope, female slope [1987-1996]");   
+    wts::writeParameter(os,pSelGTFF_z50A2,toR,willBeActive,"fisheries, GTF selectivity, females (1987-1996)\\n  z50, female size at 50%-selected [1987-1996]");   
     wts::writeParameter(os,pSelGTFF_slpA3,toR,willBeActive,"fisheries, GTF selectivity, females (1997+)\\n  slope, female slope [1997+]");   
     wts::writeParameter(os,pSelGTFF_z50A3,toR,willBeActive,"fisheries, GTF selectivity, females (1997+)\\n  z50, female size at 50%-selected [1997+]");   
     
-    wts::writeParameter(os,pSelGTFM_slpA1,toR,willBeActive,"fisheries, GTF selectivity, males (-1987)\\n  slope, male slope [-1987]");   
-    wts::writeParameter(os,pSelGTFM_z50A1,toR,willBeActive,"fisheries, GTF selectivity, males (-1987)\\n  z50, male size at 50%-selected [-1987]");   
-    wts::writeParameter(os,pSelGTFM_slpA2,toR,willBeActive,"fisheries, GTF selectivity, males (1988-1996)\\n  slope, male slope [1988-1996]");   
-    wts::writeParameter(os,pSelGTFM_z50A2,toR,willBeActive,"fisheries, GTF selectivity, males (1988-1996)\\n  z50, male size at 50%-selected [1988-1996]");   
+    wts::writeParameter(os,pSelGTFM_slpA1,toR,willBeActive,"fisheries, GTF selectivity, males (-1986)\\n  slope, male slope [-1986]");   
+    wts::writeParameter(os,pSelGTFM_z50A1,toR,willBeActive,"fisheries, GTF selectivity, males (-1986)\\n  z50, male size at 50%-selected [-1986]");   
+    wts::writeParameter(os,pSelGTFM_slpA2,toR,willBeActive,"fisheries, GTF selectivity, males (1987-1996)\\n  slope, male slope [1987-1996]");   
+    wts::writeParameter(os,pSelGTFM_z50A2,toR,willBeActive,"fisheries, GTF selectivity, males (1987-1996)\\n  z50, male size at 50%-selected [1987-1996]");   
     wts::writeParameter(os,pSelGTFM_slpA3,toR,willBeActive,"fisheries, GTF selectivity, males (1997+)\\n  slope, male slope [1997+]");   
     wts::writeParameter(os,pSelGTFM_z50A3,toR,willBeActive,"fisheries, GTF selectivity, males (1997+)\\n  z50, male size at 50%-selected [1997+]");   
     
@@ -2848,19 +2901,19 @@ FUNCTION void jitterParameters(double fac)   //wts: new 2014-05-10
     pSelRKFM_slpA3 = wts::jitterParameter(pSelRKFM_slpA3,fac,rng);
     pSelRKFM_z50A3 = wts::jitterParameter(pSelRKFM_z50A3,fac,rng);
     
-    // Trawl fishery selectivity female, 1973-1987
+    // Trawl fishery selectivity female, 1973-1986
     pSelGTFF_slpA1 = wts::jitterParameter(pSelGTFF_slpA1,fac,rng);
     pSelGTFF_z50A1 = wts::jitterParameter(pSelGTFF_z50A1,fac,rng);
-    // Trawl fishery selectivity female, 1988-1996
+    // Trawl fishery selectivity female, 1987-1996
     pSelGTFF_slpA2 = wts::jitterParameter(pSelGTFF_slpA2,fac,rng);
     pSelGTFF_z50A2 = wts::jitterParameter(pSelGTFF_z50A2,fac,rng);
     // Trawl fishery selectivity female, 1997-P
     pSelGTFF_slpA3 = wts::jitterParameter(pSelGTFF_slpA3,fac,rng);
     pSelGTFF_z50A3 = wts::jitterParameter(pSelGTFF_z50A3,fac,rng);
-    // Trawl fishery selectivity male, 1973-1987
+    // Trawl fishery selectivity male, 1973-1986
     pSelGTFM_slpA1 = wts::jitterParameter(pSelGTFM_slpA1,fac,rng);
     pSelGTFM_z50A1 = wts::jitterParameter(pSelGTFM_z50A1,fac,rng);
-    // Trawl fishery selectivity male, 1988-1996
+    // Trawl fishery selectivity male, 1987-1996
     pSelGTFM_slpA2 = wts::jitterParameter(pSelGTFM_slpA2,fac,rng);
     pSelGTFM_z50A2 = wts::jitterParameter(pSelGTFM_z50A2,fac,rng);
     // Trawl fishery selectivity male, 1997-P
@@ -3002,7 +3055,7 @@ FUNCTION void get_growth1(int debug,ostream& cout)                              
     // Fraction recruiting
     dvariable alpha_rec = pRecAlpha/pRecBeta;
     for (int ilen=1;ilen<=nZBs;ilen++) {
-        devia = zBs(ilen)+2.5-zBs(1);     //wts: think adding 2.5 here is wrong! just want offset from 1st bin (unless these are cutputs)
+        devia = zBs(ilen)+2.5-zBs(1);     //wts: think adding 2.5 here is wrong! just want offset from 1st bin (unless these are cutpts)
         prRec_z(ilen) = pow(devia,alpha_rec-1.)*exp(-devia/pRecBeta);//mfexp(...) doesn't work here?
     }
     prRec_z /= sum(prRec_z); //standardize so each row sums to 1.0
@@ -3106,7 +3159,7 @@ FUNCTION void get_selectivity(int debug,ostream& cout)                  //wts: r
     selRKF_cxz(3,MALE)=1./(1.+mfexp(-1.*pSelRKFM_slpA3*(zBs-pSelRKFM_z50A3))); 
 //    cout<<"get_sel: 2c"<<endl;
     
-    //  trawl fishery selectivity for 3 time periods, #1 (1973-1987), #2 (1988-1996) and #3 (1997-P)
+    //  trawl fishery selectivity for 3 time periods, #1 (1973-1986), #2 (1987-1996) and #3 (1997-P)
     selGTF_cxz(1,FEMALE)=1./(1.+mfexp(-1.*pSelGTFF_slpA1*(zBs-pSelGTFF_z50A1)));
     selGTF_cxz(2,FEMALE)=1./(1.+mfexp(-1.*pSelGTFF_slpA2*(zBs-pSelGTFF_z50A2)));
     selGTF_cxz(3,FEMALE)=1./(1.+mfexp(-1.*pSelGTFF_slpA3*(zBs-pSelGTFF_z50A3)));
@@ -3170,8 +3223,8 @@ FUNCTION void get_selectivity(int debug,ostream& cout)                  //wts: r
         if (iy<=1996)             selFsh_fyxz(iRKF,iy) =selRKF_cxz(1);
         if (1997<=iy && iy<=2004) selFsh_fyxz(iRKF,iy) =selRKF_cxz(2);
         if (2005<=iy)             selFsh_fyxz(iRKF,iy) =selRKF_cxz(3);
-        if (iy<=1987)             selFsh_fyxz(iGTF,iy) =selGTF_cxz(1);
-        if (1988<=iy && iy<=1996) selFsh_fyxz(iGTF,iy) =selGTF_cxz(2);
+        if (iy<=1986)             selFsh_fyxz(iGTF,iy) =selGTF_cxz(1);
+        if (1987<=iy && iy<=1996) selFsh_fyxz(iGTF,iy) =selGTF_cxz(2);
         if (1997<=iy)             selFsh_fyxz(iGTF,iy) =selGTF_cxz(3);
     }//year loop
     
@@ -3462,8 +3515,6 @@ FUNCTION void get_mortality(int debug,ostream& cout)
 // -------------------------------------------------------------------------
 FUNCTION void get_numbers_at_len(int debug,ostream& cout)                                    //wts: revised
 //    cout<<"get_numbers_at_len"<<endl;
-    dvar_matrix tmpo(1,2,styr,endyr);
-    dvariable tmpi,Surv1,Surv2,Surv3,Surv4,Surv5,Surv6;
     
     rec_y.initialize();
     modNum_xyz.initialize();
@@ -3482,48 +3533,93 @@ FUNCTION void get_numbers_at_len(int debug,ostream& cout)                       
         //initialize modNum_yxmsz in styr with recruitment in new shell, immature
         modNum_yxmsz(styr,x,IMMATURE,NEW_SHELL) += 0.5*rec_y(styr)*prRec_z;  
         modNum_xyz(x,styr) = modNum_yxmsz(styr,x,IMMATURE,NEW_SHELL);
-        for (int yr=styr;yr<endyr;yr++) {
-            Surv1 = mfexp(-M_msx(IMMATURE,NEW_SHELL,x));
-            Surv2 = mfexp(-mdptFshs_y(yr)*M_msx(IMMATURE,NEW_SHELL,x));
-            if((lyr_mort<=yr) && (yr<=uyr_mort) && (mort_switch==1)) {
-//                 cout<<yr<<": applying big_mort"<<endl;
-                Surv3 = mfexp(-M_msx(MATURE,NEW_SHELL,x)*pMfac_Big(x));
-                Surv4 = mfexp(-mdptFshs_y(yr)*M_msx(MATURE,NEW_SHELL,x)*pMfac_Big(x));
-                Surv5 = mfexp(-M_msx(MATURE,OLD_SHELL, x)*pMfac_Big(x));
-                Surv6 = mfexp(-mdptFshs_y(yr)*M_msx(MATURE,OLD_SHELL, x)*pMfac_Big(x));
-            } else {
-                Surv3 = mfexp(-M_msx(MATURE,NEW_SHELL,x));
-                Surv4 = mfexp(-mdptFshs_y(yr)*M_msx(MATURE,NEW_SHELL,x));
-                Surv5 = mfexp(-M_msx(MATURE,OLD_SHELL,x));
-                Surv6 = mfexp(-mdptFshs_y(yr)*M_msx(MATURE,OLD_SHELL,x));
-            }
-            // Numbers advancing to new shell...
-            dvar_vector tmpn = Surv1*elem_prod(prMoltImm_xz(x),elem_prod(S_xsyz(x,NEW_SHELL,yr),modNum_yxmsz(yr,x,IMMATURE,NEW_SHELL)));
-            dvar_vector tmpo = Surv1*elem_prod(prMoltImm_xz(x),elem_prod(S_xsyz(x,OLD_SHELL,yr),modNum_yxmsz(yr,x,IMMATURE,OLD_SHELL)));
-            natlength_new(x,yr+1) =  (tmpn+tmpo) * prGr_xzz(x);
-            modNum_yxmsz(yr+1,x,IMMATURE,OLD_SHELL) = Surv1*(elem_prod(S_xsyz(x,NEW_SHELL,yr),modNum_yxmsz(yr,x,IMMATURE,NEW_SHELL))+
-                                                             elem_prod(S_xsyz(x,OLD_SHELL,yr),modNum_yxmsz(yr,x,IMMATURE,OLD_SHELL))) - tmpn-tmpo;
+        if (optNM==0){
+            //apply NM rates for immature crab to just-matured crab (2012-2016 way)
+            dvar_matrix tmpn(1,nSXs,styr,endyr), tmpo(1,nSXs,styr,endyr);
+            dvariable Surv1,Surv2,Surv3,Surv4,Surv5,Surv6;
+            for (int yr=styr;yr<endyr;yr++) {
+                Surv1 = mfexp(-M_msx(IMMATURE,NEW_SHELL,x));
+                Surv2 = mfexp(-mdptFshs_y(yr)*M_msx(IMMATURE,NEW_SHELL,x));
+                if((lyr_mort<=yr) && (yr<=uyr_mort) && (mort_switch==1)) {
+    //                 cout<<yr<<": applying big_mort"<<endl;
+                    Surv3 = mfexp(-M_msx(MATURE,NEW_SHELL,x)*pMfac_Big(x));
+                    Surv4 = mfexp(-mdptFshs_y(yr)*M_msx(MATURE,NEW_SHELL,x)*pMfac_Big(x));
+                    Surv5 = mfexp(-M_msx(MATURE,OLD_SHELL, x)*pMfac_Big(x));
+                    Surv6 = mfexp(-mdptFshs_y(yr)*M_msx(MATURE,OLD_SHELL, x)*pMfac_Big(x));
+                } else {
+                    Surv3 = mfexp(-M_msx(MATURE,NEW_SHELL,x));
+                    Surv4 = mfexp(-mdptFshs_y(yr)*M_msx(MATURE,NEW_SHELL,x));
+                    Surv5 = mfexp(-M_msx(MATURE,OLD_SHELL,x));
+                    Surv6 = mfexp(-mdptFshs_y(yr)*M_msx(MATURE,OLD_SHELL,x));
+                }
+                // Numbers advancing to new shell...
+                dvar_vector tmpn = Surv1*elem_prod(prMoltImm_xz(x),elem_prod(S_xsyz(x,NEW_SHELL,yr),modNum_yxmsz(yr,x,IMMATURE,NEW_SHELL)));
+                dvar_vector tmpo = Surv1*elem_prod(prMoltImm_xz(x),elem_prod(S_xsyz(x,OLD_SHELL,yr),modNum_yxmsz(yr,x,IMMATURE,OLD_SHELL)));
+                natlength_new(x,yr+1) =  (tmpn+tmpo) * prGr_xzz(x);
+                modNum_yxmsz(yr+1,x,IMMATURE,OLD_SHELL) = Surv1*(elem_prod(S_xsyz(x,NEW_SHELL,yr),modNum_yxmsz(yr,x,IMMATURE,NEW_SHELL))+
+                                                                 elem_prod(S_xsyz(x,OLD_SHELL,yr),modNum_yxmsz(yr,x,IMMATURE,OLD_SHELL))) - tmpn-tmpo;
+
+                dvar_vector tmpmn = Surv3*elem_prod(prMoltMat_xz(x),elem_prod(S_xsyz(x,NEW_SHELL,yr),modNum_yxmsz(yr,x,  MATURE,NEW_SHELL)));
+                dvar_vector tmpmo = Surv5*elem_prod(prMoltMat_xz(x),elem_prod(S_xsyz(x,OLD_SHELL,yr),modNum_yxmsz(yr,x,  MATURE,OLD_SHELL)));
+                modNum_yxmsz(yr+1,x,  MATURE,NEW_SHELL) = (tmpmn+tmpmo) * prGr_xzz(x);
+                modNum_yxmsz(yr+1,x,  MATURE,OLD_SHELL) = Surv3 * elem_prod(S_xsyz(x,NEW_SHELL,yr),modNum_yxmsz(yr,x,  MATURE,NEW_SHELL)) + 
+                                                          Surv5 * elem_prod(S_xsyz(x,OLD_SHELL,yr),modNum_yxmsz(yr,x,  MATURE,OLD_SHELL)) - tmpmn-tmpmo;
+
+                // this is for estimating the fraction of new shell that move to old shell to fit
+                // the survey data that is split by immature and mature
+                modNum_yxmsz(yr+1,x,  MATURE,NEW_SHELL) += elem_prod(    modPrM2M(x),natlength_new(x,yr+1));//add new shell that become mature
+                modNum_yxmsz(yr+1,x,IMMATURE,NEW_SHELL)  = elem_prod(1.0-modPrM2M(x),natlength_new(x,yr+1));//new shell that stay immature
+                //     cout<<" to 2 "<<endl;
+                // add in recruits for next year
+                // put all recruits in new shell immature
+                modNum_yxmsz(yr+1,x,IMMATURE,NEW_SHELL) += 0.5*rec_y(yr+1)*prRec_z;
+                natlength_new(x,yr+1)   = modNum_yxmsz(yr+1,x,IMMATURE,NEW_SHELL) + modNum_yxmsz(yr+1,x,  MATURE,NEW_SHELL);//no real reason to recalc this!
+                natlength_old(x,yr+1)   = modNum_yxmsz(yr+1,x,  MATURE,OLD_SHELL) + modNum_yxmsz(yr+1,x,IMMATURE,OLD_SHELL);
+                natlength_mat(x,yr+1)   = modNum_yxmsz(yr+1,x,  MATURE,NEW_SHELL) + modNum_yxmsz(yr+1,x,  MATURE,OLD_SHELL);
+                natlength_imm(x,yr+1)   = modNum_yxmsz(yr+1,x,IMMATURE,NEW_SHELL) + modNum_yxmsz(yr+1,x,IMMATURE,OLD_SHELL);
+                modNum_xyz(x,yr+1)      = natlength_mat(x,yr+1)  + natlength_imm(x,yr+1);
+            }//yr
+        } else if (optNM==1){
+            //apply nm rate for mature crab to just-matured crab (like TCSAM02)
+                //NOTE: M_msx and S_xsyz do not depend on shell condition, 
+                //although they're dimensioned that way
+            dvariable SurvImmA,SurvImmB,SurvMatA,SurvMatB;
+            for (int yr=styr;yr<endyr;yr++) {
+                SurvImmA = mfexp(-mdptFshs_y(yr)*M_msx(IMMATURE,NEW_SHELL,x));      //NM to fishery for immature crab
+                SurvMatA = mfexp(-mdptFshs_y(yr)*M_msx(  MATURE,NEW_SHELL,x));      //NM to fishery for mature crab
+                SurvImmB = mfexp(-(1.0-mdptFshs_y(yr))*M_msx(IMMATURE,NEW_SHELL,x));//NM after fishery for immature crab
+                SurvMatB = mfexp(-(1.0-mdptFshs_y(yr))*M_msx(  MATURE,NEW_SHELL,x));//NM after fishery for mature crab
+                if((lyr_mort<=yr) && (yr<=uyr_mort) && (mort_switch==1)) {//enhanced mortality period
+                    SurvMatA = mfexp(-mdptFshs_y(yr)*M_msx(MATURE,NEW_SHELL,x)*pMfac_Big(x));
+                    SurvMatB = mfexp(-(1.0-mdptFshs_y(yr))*M_msx(MATURE,NEW_SHELL,x)*pMfac_Big(x));
+                }
+                dvar_vector tmp1(1,nZBs);
+                modNum_yxmsz(yr+1,x,IMMATURE,OLD_SHELL) = 0.0;//no old shell immatures
+                //immatures that survive fishery, after growth
+                tmp1 = elem_prod(S_xsyz(x,NEW_SHELL,yr),SurvImmA*modNum_yxmsz(yr,x,IMMATURE,NEW_SHELL))*prGr_xzz(x);
+                //previously immature crab that remain immature and survive to start of new year
+                modNum_yxmsz(yr+1,x,IMMATURE,NEW_SHELL) = SurvImmB*elem_prod(1.0-modPrM2M(x),tmp1);
+                //previously immature crab that undergo terminal molt and survive to start of new year
+                modNum_yxmsz(yr+1,x,  MATURE,NEW_SHELL) = SurvMatB*elem_prod(    modPrM2M(x),tmp1);
+                //mature crab that survive to start of new year
+                modNum_yxmsz(yr+1,x,  MATURE,OLD_SHELL) = SurvMatB*elem_prod(S_xsyz(x,NEW_SHELL,yr),
+                                                            SurvMatA*(modNum_yxmsz(yr,x,MATURE,NEW_SHELL)+modNum_yxmsz(yr,x,MATURE,OLD_SHELL)));
+                //add in recruitment as immature, new shell crab
+                modNum_yxmsz(yr+1,x,IMMATURE,NEW_SHELL) += 0.5*rec_y(yr+1)*prRec_z;
+                //update other arrays
+                natlength_new(x,yr+1) = modNum_yxmsz(yr+1,x,IMMATURE,NEW_SHELL) + modNum_yxmsz(yr+1,x,  MATURE,NEW_SHELL);//no real reason to recalc this!
+                natlength_old(x,yr+1) = modNum_yxmsz(yr+1,x,  MATURE,OLD_SHELL) + modNum_yxmsz(yr+1,x,IMMATURE,OLD_SHELL);
+                natlength_mat(x,yr+1) = modNum_yxmsz(yr+1,x,  MATURE,NEW_SHELL) + modNum_yxmsz(yr+1,x,  MATURE,OLD_SHELL);
+                natlength_imm(x,yr+1) = modNum_yxmsz(yr+1,x,IMMATURE,NEW_SHELL) + modNum_yxmsz(yr+1,x,IMMATURE,OLD_SHELL);
+                modNum_xyz(x,yr+1)    = natlength_mat(x,yr+1) + natlength_imm(x,yr+1);        
+            }//yr
+        } else {
+            cout<<"Error in optNM = "<<optNM<<endl;
+            cout<<"Option not recognized!"<<endl;
+            cout<<"Terminating..."<<endl;
+            ad_exit(-1);
+        }
             
-            dvar_vector tmpmn = Surv3*elem_prod(prMoltMat_xz(x),elem_prod(S_xsyz(x,NEW_SHELL,yr),modNum_yxmsz(yr,x,  MATURE,NEW_SHELL)));
-            dvar_vector tmpmo = Surv5*elem_prod(prMoltMat_xz(x),elem_prod(S_xsyz(x,OLD_SHELL,yr),modNum_yxmsz(yr,x,  MATURE,OLD_SHELL)));
-            modNum_yxmsz(yr+1,x,  MATURE,NEW_SHELL) = (tmpmn+tmpmo) * prGr_xzz(x);
-            modNum_yxmsz(yr+1,x,  MATURE,OLD_SHELL) = Surv3 * elem_prod(S_xsyz(x,NEW_SHELL,yr),modNum_yxmsz(yr,x,  MATURE,NEW_SHELL)) + 
-                                                      Surv5 * elem_prod(S_xsyz(x,OLD_SHELL,yr),modNum_yxmsz(yr,x,  MATURE,OLD_SHELL)) - tmpmn-tmpmo;
-            
-            // this is for estimating the fraction of new shell that move to old shell to fit
-            // the survey data that is split by immature and mature
-            modNum_yxmsz(yr+1,x,  MATURE,NEW_SHELL) += elem_prod(    modPrM2M(x),natlength_new(x,yr+1));//add new shell that become mature
-            modNum_yxmsz(yr+1,x,IMMATURE,NEW_SHELL)  = elem_prod(1.0-modPrM2M(x),natlength_new(x,yr+1));//new shell that stay immature
-            //     cout<<" to 2 "<<endl;
-            // add in recruits for next year
-            // put all recruits in new shell immature
-            modNum_yxmsz(yr+1,x,IMMATURE,NEW_SHELL) += 0.5*rec_y(yr+1)*prRec_z;
-            natlength_new(x,yr+1)   = modNum_yxmsz(yr+1,x,IMMATURE,NEW_SHELL) + modNum_yxmsz(yr+1,x,  MATURE,NEW_SHELL);//no real reason to recalc this!
-            natlength_old(x,yr+1)   = modNum_yxmsz(yr+1,x,  MATURE,OLD_SHELL) + modNum_yxmsz(yr+1,x,IMMATURE,OLD_SHELL);
-            natlength_mat(x,yr+1)   = modNum_yxmsz(yr+1,x,  MATURE,NEW_SHELL) + modNum_yxmsz(yr+1,x,  MATURE,OLD_SHELL);
-            natlength_imm(x,yr+1)   = modNum_yxmsz(yr+1,x,IMMATURE,NEW_SHELL) + modNum_yxmsz(yr+1,x,IMMATURE,OLD_SHELL);
-            modNum_xyz(x,yr+1)      = natlength_mat(x,yr+1)  + natlength_imm(x,yr+1);
-        }//yr
     }//x
 //    cout<<"2"<<endl;
     
@@ -3841,6 +3937,35 @@ FUNCTION void get_catch_at_len(int debug,ostream& cout)                  //wts: 
             cpN_fyxmsz(iGTF,yr,FEMALE,MATURE,OLD_SHELL) = elem_prod(ratio1,modFT_PopNum_yxmsz(yr,FEMALE,  MATURE,OLD_SHELL));
             //if (debug) cout<<"--GTF: females"<<endl;
         }//yr
+        
+        if (optFMFit==2){
+            predCapBioTCF_xy.initialize();
+            predCapBioSCF_xy.initialize();
+            predCapBioRKF_xy.initialize();
+            predCapBioGTF_xy.initialize();
+            for (int yr=styr;yr<=(endyr-1);yr++) {
+                //TCF
+                predCapBioTCF_xy(  MALE,yr) += wt_xmz(  MALE,IMMATURE)*(cpN_fyxmsz(iTCF,yr,  MALE,IMMATURE,NEW_SHELL)+cpN_fyxmsz(iTCF,yr,  MALE,IMMATURE,OLD_SHELL));
+                predCapBioTCF_xy(  MALE,yr) += wt_xmz(  MALE,  MATURE)*(cpN_fyxmsz(iTCF,yr,  MALE,  MATURE,NEW_SHELL)+cpN_fyxmsz(iTCF,yr,  MALE,  MATURE,OLD_SHELL));
+                predCapBioTCF_xy(FEMALE,yr) += wt_xmz(FEMALE,IMMATURE)*(cpN_fyxmsz(iTCF,yr,FEMALE,IMMATURE,NEW_SHELL)+cpN_fyxmsz(iTCF,yr,FEMALE,IMMATURE,OLD_SHELL));
+                predCapBioTCF_xy(FEMALE,yr) += wt_xmz(FEMALE,  MATURE)*(cpN_fyxmsz(iTCF,yr,FEMALE,  MATURE,NEW_SHELL)+cpN_fyxmsz(iTCF,yr,FEMALE,  MATURE,OLD_SHELL));
+                //SCF
+                predCapBioSCF_xy(  MALE,yr) += wt_xmz(  MALE,IMMATURE)*(cpN_fyxmsz(iSCF,yr,  MALE,IMMATURE,NEW_SHELL)+cpN_fyxmsz(iSCF,yr,  MALE,IMMATURE,OLD_SHELL));
+                predCapBioSCF_xy(  MALE,yr) += wt_xmz(  MALE,  MATURE)*(cpN_fyxmsz(iSCF,yr,  MALE,  MATURE,NEW_SHELL)+cpN_fyxmsz(iSCF,yr,  MALE,  MATURE,OLD_SHELL));
+                predCapBioSCF_xy(FEMALE,yr) += wt_xmz(FEMALE,IMMATURE)*(cpN_fyxmsz(iSCF,yr,FEMALE,IMMATURE,NEW_SHELL)+cpN_fyxmsz(iSCF,yr,FEMALE,IMMATURE,OLD_SHELL));
+                predCapBioSCF_xy(FEMALE,yr) += wt_xmz(FEMALE,  MATURE)*(cpN_fyxmsz(iSCF,yr,FEMALE,  MATURE,NEW_SHELL)+cpN_fyxmsz(iSCF,yr,FEMALE,  MATURE,OLD_SHELL));
+                //RKF
+                predCapBioRKF_xy(  MALE,yr) += wt_xmz(  MALE,IMMATURE)*(cpN_fyxmsz(iRKF,yr,  MALE,IMMATURE,NEW_SHELL)+cpN_fyxmsz(iRKF,yr,  MALE,IMMATURE,OLD_SHELL));
+                predCapBioRKF_xy(  MALE,yr) += wt_xmz(  MALE,  MATURE)*(cpN_fyxmsz(iRKF,yr,  MALE,  MATURE,NEW_SHELL)+cpN_fyxmsz(iRKF,yr,  MALE,  MATURE,OLD_SHELL));
+                predCapBioRKF_xy(FEMALE,yr) += wt_xmz(FEMALE,IMMATURE)*(cpN_fyxmsz(iRKF,yr,FEMALE,IMMATURE,NEW_SHELL)+cpN_fyxmsz(iRKF,yr,FEMALE,IMMATURE,OLD_SHELL));
+                predCapBioRKF_xy(FEMALE,yr) += wt_xmz(FEMALE,  MATURE)*(cpN_fyxmsz(iRKF,yr,FEMALE,  MATURE,NEW_SHELL)+cpN_fyxmsz(iRKF,yr,FEMALE,  MATURE,OLD_SHELL));
+                //GTF
+                predCapBioGTF_xy(  MALE,yr) += wt_xmz(  MALE,IMMATURE)*(cpN_fyxmsz(iGTF,yr,  MALE,IMMATURE,NEW_SHELL)+cpN_fyxmsz(iGTF,yr,  MALE,IMMATURE,OLD_SHELL));
+                predCapBioGTF_xy(  MALE,yr) += wt_xmz(  MALE,  MATURE)*(cpN_fyxmsz(iGTF,yr,  MALE,  MATURE,NEW_SHELL)+cpN_fyxmsz(iGTF,yr,  MALE,  MATURE,OLD_SHELL));
+                predCapBioGTF_xy(FEMALE,yr) += wt_xmz(FEMALE,IMMATURE)*(cpN_fyxmsz(iGTF,yr,FEMALE,IMMATURE,NEW_SHELL)+cpN_fyxmsz(iGTF,yr,FEMALE,IMMATURE,OLD_SHELL));
+                predCapBioGTF_xy(FEMALE,yr) += wt_xmz(FEMALE,  MATURE)*(cpN_fyxmsz(iGTF,yr,FEMALE,  MATURE,NEW_SHELL)+cpN_fyxmsz(iGTF,yr,FEMALE,  MATURE,OLD_SHELL));
+            }
+        }
     }//optFM
     
     modPrNatZ_TCFR_syz.initialize();
@@ -3938,11 +4063,67 @@ FUNCTION void get_catch_at_len(int debug,ostream& cout)                  //wts: 
 
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
-FUNCTION void evaluate_the_objective_function(int debug, ostream& cout)    //wts: revising
+FUNCTION dvariable calcNLL_normal(prevariable &x, double mu, double sigma, int debug, ostream& cout)    
+    RETURN_ARRAYS_INCREMENT();
+    if (debug) cout<<"starting calcNLL_normal("<<x<<cc<<mu<<cc<<sigma<<")"<<endl;
+    dvariable nll = 0.5*(log(2.0*PI)+2.0*log(sigma)+square((x-mu)/sigma));
+    if (debug) cout<<"finished calcNLL_normal("<<x<<cc<<mu<<cc<<sigma<<") = "<<nll<<endl;
+    RETURN_ARRAYS_DECREMENT();
+    return nll;
+    
+// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+FUNCTION dvariable calcNLL_normal(dvar_vector x, double mu, double sigma, int debug, ostream& cout)    
+    RETURN_ARRAYS_INCREMENT();
+    if (debug) cout<<"starting calcNLL_normal(zs"<<cc<<mu<<cc<<sigma<<")"<<endl;
+    int n = x.indexmax()-x.indexmin()+1;
+    dvariable nll = 0.5*(n*log(2.0*PI)+2.0*n*log(sigma)+norm2((x-mu)/sigma));
+    if (debug) {
+        cout<<"x     = "<<x<<endl;
+        cout<<"mu    = "<<mu<<endl;
+        cout<<"sigma = "<<sigma<<endl;
+        cout<<"nll   = "<<nll<<endl;
+    }
+    RETURN_ARRAYS_DECREMENT();
+    return nll;
+    
+// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+FUNCTION dvariable calcNLL_normal(dvar_vector zs, double sigma, int debug, ostream& cout)    
+    RETURN_ARRAYS_INCREMENT();
+    if (debug) cout<<"starting calcNLL_normal(zs"<<cc<<sigma<<")"<<endl;
+    int n = zs.indexmax()-zs.indexmin()+1;
+    dvariable nll = 0.5*(n*log(2.0*PI)+2.0*n*log(sigma)+norm2(zs));
+    if (debug) {
+        cout<<"zs    = "<<zs<<endl;
+        cout<<"sigma = "<<sigma<<endl;
+        cout<<"nll   = "<<nll<<endl;
+    }
+    RETURN_ARRAYS_DECREMENT();
+    return nll;
+    
+// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+FUNCTION dvariable calcNLL_normal(dvar_vector zs, dvector sigma, int debug, ostream& cout)    
+    RETURN_ARRAYS_INCREMENT();
+    if (debug) cout<<"starting calcNLL_normal(zs,sigma)"<<endl;
+    int n = zs.indexmax()-zs.indexmin()+1;
+    dvariable nll = 0.5*(n*log(2.0*PI)+2.0*sum(log(sigma))+norm2(zs));
+    if (debug) {
+        cout<<"zs    = "<<zs<<endl;
+        cout<<"sigma = "<<sigma<<endl;
+        cout<<"nll   = "<<nll<<endl;
+    }
+    RETURN_ARRAYS_DECREMENT();
+    return nll;
+    
+// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+FUNCTION void evaluate_the_objective_function(int debug, ostream& cout)    
     if (debug) cout<<"evaluate the objective function"<<endl;
     int yr;
     dvariable nextf;
-    dvar_matrix cv_srv1(1,nSXs,styr,endyr);
+    dmatrix cv_srv1(1,nSXs,styr,endyr);
     dvariable multi;
     
     f.initialize();
@@ -3956,26 +4137,33 @@ FUNCTION void evaluate_the_objective_function(int debug, ostream& cout)    //wts
     penal_rec.initialize();
 //    if (active(pRecDevs)) {        
         //recruitment likelihood - norm2 is sum of square values   
-        penal_rec = 1.0*like_wght_rec*norm2(pRecDevs);
+        //penal_rec = 1.0*like_wght_rec*norm2(pRecDevs);
+        //penal_rec = 0.5*norm2(pRecDevs);
+        penal_rec = calcNLL_normal(pRecDevs,0.0,1.0,debug,cout);
+        f += 2.0*like_wght_rec*penal_rec; objfOut(1) = 2.0*like_wght_rec*penal_rec; likeOut(1) = penal_rec; wgtsOut(1) = 2.0*like_wght_rec;
         //   penalty on devs in historic period     
         //penal_rec += 1.0*norm2(pRecDevsHist);
         //   penalty on dev first differences in historic period     
-        penal_rec += 1.0*norm2(first_difference(pRecDevsHist));
-        
-        f += penal_rec; objfOut(1) = penal_rec; likeOut(1) = penal_rec; wgtsOut(1) = 1;
+        //penal_rec = 1.0*norm2(first_difference(pRecDevsHist));
+        //penal_rec = 0.5*norm2(first_difference(pRecDevsHist));
+        penal_rec = calcNLL_normal(first_difference(pRecDevsHist),0.0,1.0,debug,cout);
+        f += 2.0*penal_rec; objfOut(2) = 2.0*penal_rec; likeOut(2) = penal_rec; wgtsOut(2) = 2.0;
 //    } 
     
     //nat Mort. penalty
 //    if(active(pMfac_Imm)) {
-        nat_penalty = 0.5 * square((pMfac_Imm - 1.0) / 0.05);                 //hard-wired
-        f += nat_penalty; objfOut(3) = nat_penalty; likeOut(3) = nat_penalty; wgtsOut(3) = 1;
+        //nat_penalty = 0.5 * square((pMfac_Imm - 1.0) / 0.05);                 //hard-wired
+        nat_penalty = calcNLL_normal(pMfac_Imm,1.0,0.05,debug,cout);
+        f += nat_penalty; objfOut(3) = nat_penalty; likeOut(3) = nat_penalty; wgtsOut(3) = 1.0;
 //    }
 //    if(active(pMfac_MatM)) {  
-        nat_penalty = 0.5 * square((pMfac_MatM - 1.0) / 0.05);                     //hard-wired
+        //nat_penalty = 0.5 * square((pMfac_MatM - 1.0) / 0.05);                     //hard-wired
+        nat_penalty = calcNLL_normal(pMfac_MatM,1.0,0.05,debug,cout);
         f += nat_penalty; objfOut(4) = nat_penalty; likeOut(4) = nat_penalty; wgtsOut(4) = 1;
 //    }
 //    if(active(pMfac_MatF)) {  
-        nat_penalty = 0.5 * square((pMfac_MatF - 1.0) / 0.05);                     //hard-wired
+        //nat_penalty = 0.5 * square((pMfac_MatF - 1.0) / 0.05);                     //hard-wired
+        nat_penalty = calcNLL_normal(pMfac_MatF,1.0,0.05,debug,cout);
         f += nat_penalty; objfOut(5) = nat_penalty; likeOut(5) = nat_penalty; wgtsOut(5) = 1;
 //    }
     
@@ -3994,12 +4182,14 @@ FUNCTION void evaluate_the_objective_function(int debug, ostream& cout)    //wts
 //    }
 //    if(active(pSrv2_QM) && srv3_qPriorWgt>=0) {  
         //max of underbag at 182.5 mm is 0.873   
-        srv3q_penalty = 0.5 * square((pSrv2_QM - srv3_qPriorMean) / srv3_qPriorStD);
+        //srv3q_penalty = 0.5 * square((pSrv2_QM - srv3_qPriorMean) / srv3_qPriorStD);
+        srv3q_penalty = calcNLL_normal(pSrv2_QM,srv3_qPriorMean,srv3_qPriorStD,debug,cout);
         f += srv3_qPriorWgt*srv3q_penalty; objfOut(6) = srv3_qPriorWgt*srv3q_penalty; likeOut(6) = srv3q_penalty; wgtsOut(6) = srv3_qPriorWgt;
 //    }
 //    if(active(pSrv2_QF) && srv3_qFemPriorWgt>=0) {  
         //peak of females is at about 80mm underbag is 0.75 at this size - less uncertainty  
-        srv3q_penalty = 0.5 * square((pSrv2_QF - srv3_qFemPriorMean) / srv3_qFemPriorStD);
+        //srv3q_penalty = 0.5 * square((pSrv2_QF - srv3_qFemPriorMean) / srv3_qFemPriorStD);
+        srv3q_penalty = calcNLL_normal(pSrv2_QF,srv3_qFemPriorMean,srv3_qFemPriorStD,debug,cout);
         f += srv3_qFemPriorWgt*srv3q_penalty; objfOut(7) = srv3_qFemPriorWgt*srv3q_penalty; likeOut(7) = srv3q_penalty; wgtsOut(7) = srv3_qFemPriorWgt;
 //    }
     
@@ -4007,30 +4197,38 @@ FUNCTION void evaluate_the_objective_function(int debug, ostream& cout)    //wts
     // not used in this case
     af_penal = 0; bf_penal = 0; am_penal = 0; bm_penal = 0;
 //    if(active(pGrAF1)) {  
-        af_penal = 0.5 * square((pGrAF1 - 0.56560241)/0.1);                  //hard-wired
-        f += af_penal; objfOut(8) = af_penal; likeOut(8) = af_penal; wgtsOut(8) = 1;
+        //af_penal = 0.5 * square((pGrAF1 - 0.56560241)/0.1);                  //hard-wired
+        af_penal = calcNLL_normal(pGrAF1,0.56560241,0.1,debug,cout);
+        f += af_penal; objfOut(8) = af_penal; likeOut(8) = af_penal; wgtsOut(8) = 1.0;
 //    }
 //    if(active(pGrBF1)) {  
-        bf_penal = 0.5 * square((pGrBF1 - 0.9132661)/0.025);                    //hard-wired
-        f += bf_penal; objfOut(9) = bf_penal; likeOut(9) = bf_penal; wgtsOut(9) = 1;
+        //bf_penal = 0.5 * square((pGrBF1 - 0.9132661)/0.025);                  //hard-wired
+        bf_penal = calcNLL_normal(pGrBF1,0.9132661,0.025,debug,cout);
+        f += bf_penal; objfOut(9) = bf_penal; likeOut(9) = bf_penal; wgtsOut(9) = 1.0;
 //    }
 //    if(active(pGrAM1)) {
-        am_penal   = 0.5 * square((pGrAM1 - 0.437941)/0.025);                     //hard-wired
-        f += am_penal; objfOut(10) = am_penal; likeOut(10) = am_penal; wgtsOut(10) = 1;
+        //am_penal   = 0.5 * square((pGrAM1 - 0.437941)/0.025);                     //hard-wired
+        am_penal   = calcNLL_normal(pGrAM1,0.437941,0.025,debug,cout);
+        f += am_penal; objfOut(10) = am_penal; likeOut(10) = am_penal; wgtsOut(10) = 1.0;
 //    }
 //    if(active(pGrBM1)) {
-        bm_penal = 0.5 * square((pGrBM1 - 0.9487)/0.1);                          //hard-wired
-        f += bm_penal; objfOut(11) = bm_penal; likeOut(11) = bm_penal; wgtsOut(11) = 1;
+        //bm_penal = 0.5 * square((pGrBM1 - 0.9487)/0.1);                          //hard-wired
+        bm_penal = calcNLL_normal(pGrBM1,0.9487,0.1,debug,cout);
+        f += bm_penal; objfOut(11) = bm_penal; likeOut(11) = bm_penal; wgtsOut(11) = 1.0;
 //    }
     
 //    if(active(pPrM2MF)) {
-        lkPrM2M = norm2(first_difference(first_difference(pPrM2MF)));
-        f += 1.0*lkPrM2M; objfOut(12)= 1.0*lkPrM2M; likeOut(12) = lkPrM2M; wgtsOut(12) = 1;
+        //lkPrM2M = norm2(first_difference(first_difference(pPrM2MF)));
+        lkPrM2M = 0.5*norm2(first_difference(first_difference(pPrM2MF)));
+        //lkPrM2M = calcNLL_normal(first_difference(first_difference(pPrM2MF)),0.0,1.0,debug,cout);
+        f += 2.0*lkPrM2M; objfOut(12)= 2.0*lkPrM2M; likeOut(12) = lkPrM2M; wgtsOut(12) = 2.0;
 //    }
         
 //    if(active(pPrM2MM)) {
-        lkPrM2M = norm2(first_difference(first_difference(pPrM2MM)));//wts: why different weights? 1.0 vs. 0.5?
-        f += 0.5*lkPrM2M; objfOut(13)= 0.5*lkPrM2M; likeOut(13) = lkPrM2M; wgtsOut(13) = 0.5;
+        //lkPrM2M = norm2(first_difference(first_difference(pPrM2MM)));//wts: why different weights? 1.0 vs. 0.5?
+        lkPrM2M = 0.5*norm2(first_difference(first_difference(pPrM2MM)));
+        //lkPrM2M = calcNLL_normal(first_difference(first_difference(pPrM2MM)),0.0,1.0,debug,cout);
+        f += 2.0*0.5*lkPrM2M; objfOut(13)= 2.0*0.5*lkPrM2M; likeOut(13) = lkPrM2M; wgtsOut(13) = 2.0*0.5;
 //    }
     
     // various penalties
@@ -4043,14 +4241,16 @@ FUNCTION void evaluate_the_objective_function(int debug, ostream& cout)    //wts
         int phs = pSelTCFM_devsZ50.get_phase_start();
         llw = llwSelTCFM_devsZ50; 
 //        if (doPenRed) llw = pow(red,(current_phase()-phs)/max(1.0,1.0*(maxPhase-phs)))*llw;
-        nextf = norm2(first_difference(pSelTCFM_devsZ50));
-        fpen += llw*nextf; objfOut(14) = llw*nextf; likeOut(14) = nextf; wgtsOut(14) = llw;           
+        //nextf = norm2(first_difference(pSelTCFM_devsZ50));
+        nextf = calcNLL_normal(first_difference(pSelTCFM_devsZ50),0.0,1.0,debug,cout);
+        fpen += 2.0*llw*nextf; objfOut(14) = 2.0*llw*nextf; likeOut(14) = nextf; wgtsOut(14) = 2.0*llw;           
         
         phs = pSelTCFM_devsZ50.get_phase_start();
         llw = llwSelTCFM_devsZ50; 
 //        if (doPenRed) llw = pow(red,(current_phase()-phs)/max(1.0,1.0*(maxPhase-phs)))*llw;
-        nextf = norm2(pSelTCFM_devsZ50);
-        fpen += llw*nextf; objfOut(38) = llw*nextf; likeOut(38) = nextf; wgtsOut(38) = llw;   //wts: need to turn this off in last phase?        
+        //nextf = norm2(pSelTCFM_devsZ50);
+        nextf = calcNLL_normal(pSelTCFM_devsZ50,0.0,1.0,debug,cout);
+        fpen += 2.0*llw*nextf; objfOut(38) = 2.0*llw*nextf; likeOut(38) = nextf; wgtsOut(38) = 2.0*llw;   //wts: need to turn this off in last phase?        
     }
 //    if (active(pF_DevsTCF)) 
     { 
@@ -4060,8 +4260,9 @@ FUNCTION void evaluate_the_objective_function(int debug, ostream& cout)    //wts
             llw = pow(red,(current_phase()-phs)/max(1.0,1.0*(maxPhase-phs)))*llw;
             if (current_phase()>=maxPhase) llw = 0.0;
         }
-        nextf = norm2(pF_DevsTCF);
-        fpen += llw*nextf; objfOut(15) = llw*nextf; likeOut(15) = nextf; wgtsOut(15) = llw;   //wts: need to turn this off in last phase?        
+        //nextf = norm2(pF_DevsTCF);
+        nextf = calcNLL_normal(pF_DevsTCF,0.0,1.0,debug,cout);
+        fpen += 2.0*llw*nextf; objfOut(15) = 2.0*llw*nextf; likeOut(15) = nextf; wgtsOut(15) = 2.0*llw;   //wts: need to turn this off in last phase?        
     }
 //    if(active(pF_DevsSCF)) 
     {
@@ -4071,8 +4272,9 @@ FUNCTION void evaluate_the_objective_function(int debug, ostream& cout)    //wts
             llw = pow(red,(current_phase()-phs)/max(1.0,1.0*(maxPhase-phs)))*llw;
             if (current_phase()>=maxPhase) llw = 0.0;
         }
-        nextf = norm2(pF_DevsSCF);
-        fpen += llw*nextf; objfOut(16) = llw*nextf; likeOut(16) = nextf; wgtsOut(16) = llw; //wts: need to turn this off in last phase? note that relative weights are hard-wired
+        //nextf = norm2(pF_DevsSCF);
+        nextf = calcNLL_normal(pF_DevsSCF,0.0,1.0,debug,cout);
+        fpen += 2.0*llw*nextf; objfOut(16) = 2.0*llw*nextf; likeOut(16) = nextf; wgtsOut(16) = 2.0*llw; //wts: need to turn this off in last phase? note that relative weights are hard-wired
         
     }
 //    if(active(pF_DevsRKF)) 
@@ -4083,8 +4285,9 @@ FUNCTION void evaluate_the_objective_function(int debug, ostream& cout)    //wts
             llw = pow(red,(current_phase()-phs)/max(1.0,1.0*(maxPhase-phs)))*llw;
             if (current_phase()>=maxPhase) llw = 0.0;
         }
-        nextf = norm2(pF_DevsRKF);
-        fpen += llw*nextf; objfOut(17) = llw*nextf; likeOut(17) = nextf; wgtsOut(17) = llw; //wts: need to turn this off in last phase?
+        //nextf = norm2(pF_DevsRKF);
+        nextf = calcNLL_normal(pF_DevsRKF,0.0,1.0,debug,cout);
+        fpen += 2.0*llw*nextf; objfOut(17) = 2.0*llw*nextf; likeOut(17) = nextf; wgtsOut(17) = 2.0*llw; //wts: need to turn this off in last phase?
         
     }
 //    if(active(pF_DevsGTF)) 
@@ -4095,8 +4298,9 @@ FUNCTION void evaluate_the_objective_function(int debug, ostream& cout)    //wts
             llw = pow(red,(current_phase()-phs)/max(1.0,1.0*(maxPhase-phs)))*llw;
             if (current_phase()>=maxPhase) llw = 0.0;
         }
-        nextf = norm2(pF_DevsGTF);
-        fpen += llw*nextf; objfOut(18) = llw*nextf; likeOut(18) = nextf; wgtsOut(18) = llw; //wts: need to turn this off in last phase?        
+        //nextf = norm2(pF_DevsGTF);
+        nextf = calcNLL_normal(pF_DevsGTF,0.0,1.0,debug,cout);
+        fpen += 2.0*llw*nextf; objfOut(18) = 2.0*llw*nextf; likeOut(18) = nextf; wgtsOut(18) = 2.0*llw; //wts: need to turn this off in last phase?        
     }
     
     f += fpen;
@@ -4177,7 +4381,7 @@ FUNCTION void evaluate_the_objective_function(int debug, ostream& cout)    //wts
             } 
         }//n
         if (debug) cout<<"lkZCs(8) = "<<lkZCs(8)<<endl;
-    } else if (optFMFit==1){
+    } else if (optFMFit==1||optFMFit==2){
         for (int n=1; n <= nObsZCsTCFM; n++) {
             yr = yrsObsZCsTCFM_n(n);
             lkZCs(2) -= ssTotZCsTCFM_sn(NEW_SHELL,n)*((obsPrNatZ_TCFM_snz(NEW_SHELL,n)+obsPrNatZ_TCFM_snz(OLD_SHELL,n))
@@ -4294,12 +4498,13 @@ FUNCTION void evaluate_the_objective_function(int debug, ostream& cout)    //wts
     // this fits mature biomass separate male and female
     zsSrvMatBio_xn.initialize();
     lkSrvMatBio_x.initialize();
-    dvar_vector stdSrv(1,nObsSrvBio);
+    dvector stdSrv(1,nObsSrvBio);
     stdSrv.initialize();
     for (int x=1;x<=nSXs;x++){
         stdSrv = sqrt(log(elem_prod(cv_srv1(x)(yrsObsSrvBio_n),cv_srv1(x)(yrsObsSrvBio_n))+1.0));
         zsSrvMatBio_xn(x) = elem_div(log(obsSrvMatBio_xy(x)(yrsObsSrvBio_n)+smlValSrv)-log(modSrvMatBio_xy(x)(yrsObsSrvBio_n)+smlValSrv),stdSrv);
         lkSrvMatBio_x(x)  = 0.5*norm2(zsSrvMatBio_xn(x));
+        //lkSrvMatBio_x(x)  = calcNLL_normal(zsSrvMatBio_xn(x),stdSrv,debug,cout);
         if (lkSrvMatBio_x(x)==0.0){
             cout<<"x = "<<x<<endl;
             cout<<"yrsObsSrvBio_n = "<<endl<<yrsObsSrvBio_n<<endl;
@@ -4314,7 +4519,7 @@ FUNCTION void evaluate_the_objective_function(int debug, ostream& cout)    //wts
     }
 //    cout<<"2"<<endl;    
     
-    f += sum(lkSrvMatBio_x); objfOut(31) = sum(lkSrvMatBio_x); likeOut(31) = sum(lkSrvMatBio_x); wgtsOut(31) = 1;
+    f += sum(lkSrvMatBio_x); objfOut(31) = sum(lkSrvMatBio_x); likeOut(31) = sum(lkSrvMatBio_x); wgtsOut(31) = 1.0;
     
     //Likelihoods for bulk fishery catch data
     // Male retained catch in TCF
@@ -4322,123 +4527,236 @@ FUNCTION void evaluate_the_objective_function(int debug, ostream& cout)    //wts
     lkRetMortBio_TCFR.initialize();
     if (optFshNLLs==0){
         //normal error assumption, sd=sqrt(2) [fixed]
-        zsRetMortBio_TCFR_y(1965,endyr-1) = (obsRetCatchBio_y(1965,endyr-1)-predRetBioMortTCFM_y(1965,endyr-1))/sqrt(0.5);
-        lkRetMortBio_TCFR                  = 0.5*norm2(zsRetMortBio_TCFR_y);
+        zsRetMortBio_TCFR_y(1965,endyr-1) = (obsRetCatchBio_y(1965,endyr-1)-predRetBioMortTCFM_y(1965,endyr-1));
+        lkRetMortBio_TCFR = 0.5*norm2(zsRetMortBio_TCFR_y);
+        //lkRetMortBio_TCFR = calcNLL_normal(zsRetMortBio_TCFR_y,sqrt(0.5),debug,cout);
         nextf = like_wght_CatchBio*lkRetMortBio_TCFR; objfOut(32) = nextf; f += nextf; likeOut(32) = lkRetMortBio_TCFR; wgtsOut(32) = like_wght_CatchBio;
     } else {
         //lognormal error assumption
         double stdv = sqrt(log(1.0+square(obsErrTCFR)));
         zsRetMortBio_TCFR_y(1965,endyr-1) = (log(obsRetCatchBio_y(1965,endyr-1)+smlValFsh)-log(predRetBioMortTCFM_y(1965,endyr-1)+smlValFsh))/stdv;
         lkRetMortBio_TCFR = 0.5*norm2(zsRetMortBio_TCFR_y);
+        //lkRetMortBio_TCFR = calcNLL_normal(zsRetMortBio_TCFR_y,stdv,debug,cout);
         nextf = lkRetMortBio_TCFR; objfOut(32) = nextf; f += nextf; likeOut(32) = lkRetMortBio_TCFR; wgtsOut(32) = 1.0;
     }
     
-    // male catch MORTALITY in TCF
-    zsTotMortBio_TCFM_n.initialize();
-    lkTotMortBio_TCFM.initialize();
-    zsDscMortBio_TCFM_n.initialize();
-    lkDscMortBio_TCFM.initialize();
-    if (optTCFMfit==0){
-        //fit to TOTAL male mortality
-        if (optFshNLLs==0){
-            //normal error assumption, sd=sqrt(2) [fixed]
-            zsTotMortBio_TCFM_n = (obsTotBioMortTCFM_n - predTotBioMortTCFM_y(yrsObsDscTCF_n))/sqrt(0.5);
-            lkTotMortBio_TCFM = 0.5*norm2(zsTotMortBio_TCFM_n);
-            nextf = like_wght_CatchBio*lkTotMortBio_TCFM; objfOut(33) = nextf; f += nextf; likeOut(33) = lkTotMortBio_TCFM; wgtsOut(33) = like_wght_CatchBio;
-        } else {
-            //lognormal error assumption
-            double stdv = sqrt(log(1.0+square(obsErrTCFD)));
-            zsTotMortBio_TCFM_n = (log(obsTotBioMortTCFM_n+smlValFsh)-log(predTotBioMortTCFM_y(yrsObsDscTCF_n)+smlValFsh))/stdv;
-            lkTotMortBio_TCFM = 0.5*norm2(zsTotMortBio_TCFM_n);
-            nextf = lkTotMortBio_TCFM; objfOut(33) = nextf; f += nextf; likeOut(33) = lkTotMortBio_TCFM; wgtsOut(33) = 1.0;
+    // male catch in TCF
+    if (optFMFit==0||optFMFit==1){
+        zsTotMortBio_TCFM_n.initialize();
+        lkTotMortBio_TCFM.initialize();
+        zsDscMortBio_TCF_xn.initialize();
+        lkDscMortBio_TCF_x.initialize();
+        if (optTCFMfit==0){
+            //fit to TOTAL male mortality
+            if (optFshNLLs==0){
+                //normal error assumption, sd=sqrt(2) [fixed]
+                zsTotMortBio_TCFM_n = (obsTotBioMortTCFM_n - predTotBioMortTCFM_y(yrsObsDscTCF_n));
+                lkTotMortBio_TCFM = 0.5*norm2(zsTotMortBio_TCFM_n);
+                //lkTotMortBio_TCFM = calcNLL_normal(zsTotMortBio_TCFM_n,sqrt(0.5),debug,cout);
+                nextf = like_wght_CatchBio*lkTotMortBio_TCFM; objfOut(33) = nextf; f += nextf; likeOut(33) = lkTotMortBio_TCFM; wgtsOut(33) = like_wght_CatchBio;
+            } else {
+                //lognormal error assumption
+                double stdv = sqrt(log(1.0+square(obsErrTCFD)));
+                zsTotMortBio_TCFM_n = (log(obsTotBioMortTCFM_n+smlValFsh)-log(predTotBioMortTCFM_y(yrsObsDscTCF_n)+smlValFsh))/stdv;
+                lkTotMortBio_TCFM = 0.5*norm2(zsTotMortBio_TCFM_n);
+                //lkTotMortBio_TCFM = calcNLL_normal(zsTotMortBio_TCFM_n,stdv,debug,cout);
+                nextf = lkTotMortBio_TCFM; objfOut(33) = nextf; f += nextf; likeOut(33) = lkTotMortBio_TCFM; wgtsOut(33) = 1.0;
+            }
+        } else if (optTCFMfit==1) {
+            //fit to DISCARD male mortality
+            if (optFshNLLs==0){
+                //normal error assumption, sd=sqrt(2) [fixed]
+                zsDscMortBio_TCF_xn(MALE) = (obsDscBioMortTCF_xn(MALE) - predDscBioMortTCF_xy(MALE)(yrsObsDscTCF_n));
+                lkDscMortBio_TCF_x(MALE)  = 0.5*norm2(zsDscMortBio_TCF_xn(MALE));
+                //lkDscMortBio_TCF_x(MALE) = calcNLL_normal(zsDscMortBio_TCF_xn(MALE),sqrt(0.5),debug,cout);
+                nextf = like_wght_CatchBio*lkDscMortBio_TCF_x(MALE); objfOut(33) = nextf; f += nextf; likeOut(33) = lkDscMortBio_TCF_x(MALE); wgtsOut(33) = like_wght_CatchBio;
+            } else {
+                //lognormal error assumption
+                double stdv = sqrt(log(1.0+square(obsErrTCFD)));
+                zsDscMortBio_TCF_xn(MALE) = (log(obsDscBioMortTCF_xn(MALE)+smlValFsh)-log(predDscBioMortTCF_xy(MALE)(yrsObsDscTCF_n)+smlValFsh))/stdv;
+                lkDscMortBio_TCF_x(MALE)  = 0.5*norm2(zsDscMortBio_TCF_xn(MALE));
+                //lkDscMortBio_TCF_x(MALE) = calcNLL_normal(zsDscMortBio_TCF_xn(MALE),stdv,debug,cout);
+                nextf = lkDscMortBio_TCF_x(MALE); objfOut(33) = nextf; f += nextf; likeOut(33) = lkDscMortBio_TCF_x(MALE); wgtsOut(33) = 1.0;
+            }
         }
-    } else if (optTCFMfit==1) {
-        //fit to discard male mortality
-        if (optFshNLLs==0){
-            //normal error assumption, sd=sqrt(2) [fixed]
-            zsDscMortBio_TCFM_n = (obsDscBioMortTCF_xn(MALE) - predDscBioMortTCF_xy(MALE)(yrsObsDscTCF_n))/sqrt(0.5);
-            lkDscMortBio_TCFM = 0.5*norm2(zsDscMortBio_TCFM_n);
-            nextf = like_wght_CatchBio*lkDscMortBio_TCFM; objfOut(33) = nextf; f += nextf; likeOut(33) = lkDscMortBio_TCFM; wgtsOut(33) = like_wght_CatchBio;
-        } else {
-            //lognormal error assumption
-            double stdv = sqrt(log(1.0+square(obsErrTCFD)));
-            zsDscMortBio_TCFM_n = (log(obsDscBioMortTCF_xn(MALE)+smlValFsh)-log(predDscBioMortTCF_xy(MALE)(yrsObsDscTCF_n)+smlValFsh))/stdv;
-            lkDscMortBio_TCFM = 0.5*norm2(zsDscMortBio_TCFM_n);
-            nextf = lkDscMortBio_TCFM; objfOut(33) = nextf; f += nextf; likeOut(33) = lkDscMortBio_TCFM; wgtsOut(33) = 1.0;
-        }
+    } else if (optFMFit==2){
+        //fit to TOTAL captured biomass, by sex
+        zsCapBio_TCF_xn.initialize();
+        lkCapBio_TCF_x.initialize();
+        for (int x=1;x<=nSXs;x++){
+            if (optFshNLLs==0){
+                //normal error assumption, sd=sqrt(2) [fixed]
+                zsCapBio_TCF_xn(x) = (obsCapBioTCF_xn(x) - predCapBioTCF_xy(x)(yrsObsDscTCF_n));
+                lkCapBio_TCF_x(x)  = 0.5*norm2(zsCapBio_TCF_xn(x));
+                //lkCapBio_TCF_x(x) = calcNLL_normal(zsCapBio_TCF_xn(x),sqrt(0.5),debug,cout);
+                //objfOut(33) should be MALE=2, 34 should be FEMALE=1, hence 35-x below
+                nextf = like_wght_CatchBio*lkCapBio_TCF_x(x); objfOut(35-x) = nextf; f += nextf; likeOut(35-x) = lkCapBio_TCF_x(x); wgtsOut(35-x) = like_wght_CatchBio;
+            } else {
+                //lognormal error assumption
+                double stdv = sqrt(log(1.0+square(obsErrTCFD)));
+                zsCapBio_TCF_xn(x) = (log(obsCapBioTCF_xn(x)+smlValFsh)-log(predCapBioTCF_xy(x)(yrsObsDscTCF_n)+smlValFsh))/stdv;
+                lkCapBio_TCF_x(x)  = 0.5*norm2(zsCapBio_TCF_xn(x));
+                //lkCapBio_TCF_x(x) = calcNLL_normal(zsCapBio_TCF_xn(x),stdv,debug,cout);
+                nextf = lkCapBio_TCF_x(x); objfOut(35-x) = nextf; f += nextf; likeOut(35-x) = lkCapBio_TCF_x(x); wgtsOut(35-x) = 1.0;
+            }
+        }//--x
     }
-    
+
     //  female catch in directed fishery
-    zsDscMortBio_TCFF_n.initialize();
-    lkDscMortBio_TCFF.initialize();
-    if (optFshNLLs==0){
-        //normal error assumption, sd=sqrt(2) [fixed]
-        zsDscMortBio_TCFF_n = (obsDscBioMortTCF_xn(FEMALE)-predDscBioMortTCF_xy(FEMALE)(yrsObsDscTCF_n))/sqrt(0.5);
-        lkDscMortBio_TCFF = 0.5*norm2(zsDscMortBio_TCFF_n);
-        nextf = like_wght_CatchBio*lkDscMortBio_TCFF; objfOut(34) = nextf; f+= nextf; likeOut(34) = lkDscMortBio_TCFF; wgtsOut(34) = like_wght_CatchBio;
-    } else {
-        //lognormal error assumption
-        double stdv = sqrt(log(1.0+square(obsErrTCFD)));
-        zsDscMortBio_TCFF_n = (log(obsDscBioMortTCF_xn(FEMALE)+smlValFsh)-log(predDscBioMortTCF_xy(FEMALE)(yrsObsDscTCF_n)+smlValFsh))/stdv;
-        lkDscMortBio_TCFF = 0.5*norm2(zsDscMortBio_TCFF_n);
-        nextf = lkDscMortBio_TCFF; objfOut(34) = nextf; f+= nextf; likeOut(34) = lkDscMortBio_TCFF; wgtsOut(34) = 1.0;
+    if (optFMFit==0||optFMFit==1){
+        //discard catch mortality
+        if (optFshNLLs==0){
+            //normal error assumption, sd=sqrt(2) [fixed]
+            zsDscMortBio_TCF_xn(FEMALE) = (obsDscBioMortTCF_xn(FEMALE)-predDscBioMortTCF_xy(FEMALE)(yrsObsDscTCF_n));
+            lkDscMortBio_TCF_x(FEMALE) = 0.5*norm2(zsDscMortBio_TCF_xn(FEMALE));
+            //lkDscMortBio_TCF_x(FEMALE) = calcNLL_normal(zsDscMortBio_TCF_xn(FEMALE),sqrt(0.5),debug,cout);
+            nextf = like_wght_CatchBio*lkDscMortBio_TCF_x(FEMALE); objfOut(34) = nextf; f+= nextf; likeOut(34) = lkDscMortBio_TCF_x(FEMALE); wgtsOut(34) = like_wght_CatchBio;
+        } else {
+            //lognormal error assumption
+            double stdv = sqrt(log(1.0+square(obsErrTCFD)));
+            zsDscMortBio_TCF_xn(FEMALE) = (log(obsDscBioMortTCF_xn(FEMALE)+smlValFsh)-log(predDscBioMortTCF_xy(FEMALE)(yrsObsDscTCF_n)+smlValFsh))/stdv;
+            lkDscMortBio_TCF_x(FEMALE) = 0.5*norm2(zsDscMortBio_TCF_xn(FEMALE));
+            //lkDscMortBio_TCF_x(FEMALE) = calcNLL_normal(zsDscMortBio_TCF_xn(FEMALE),stdv,debug,cout);
+            nextf = lkDscMortBio_TCF_x(FEMALE); objfOut(34) = nextf; f+= nextf; likeOut(34) = lkDscMortBio_TCF_x(FEMALE); wgtsOut(34) = 1.0;
+        }
+    } else if (optFMFit==2){
+        //captured catch biomass: done above in TCF males
     }
-    
+
     //snow crab fishery
-    zsDscMortBio_SCF_xn.initialize();
-    lkDscMortBio_SCF_x.initialize();
-    if (optFshNLLs==0){
-        //normal error assumption, sd=sqrt(2) [fixed]
-        for (int x=1;x<=nSXs;x++){
-            zsDscMortBio_SCF_xn(x) = (obsDscBioMortSCF_xn(x) - predDscBioMortSCF_xy(x)(yrsObsDscSCF))/sqrt(0.5);
-            lkDscMortBio_SCF_x(x)  = 0.5*norm2(zsDscMortBio_SCF_xn(x));
+    if (optFMFit==0||optFMFit==1){
+        //discard catch mortality
+        zsDscMortBio_SCF_xn.initialize();
+        lkDscMortBio_SCF_x.initialize();
+        if (optFshNLLs==0){
+            //normal error assumption, sd=sqrt(2) [fixed]
+            for (int x=1;x<=nSXs;x++){
+                zsDscMortBio_SCF_xn(x) = (obsDscBioMortSCF_xn(x) - predDscBioMortSCF_xy(x)(yrsObsDscSCF));
+                lkDscMortBio_SCF_x(x)  = 0.5*norm2(zsDscMortBio_SCF_xn(x));
+                //lkDscMortBio_SCF_x(x) = calcNLL_normal(zsDscMortBio_SCF_xn(x),sqrt(0.5),debug,cout);
+            }
+            nextf = like_wght_CatchBio*sum(lkDscMortBio_SCF_x); objfOut(35) = nextf; f += nextf; likeOut(35) = sum(lkDscMortBio_SCF_x); wgtsOut(35) = like_wght_CatchBio;
+        } else {
+            //lognormal error assumption
+            double stdv = sqrt(log(1.0+square(obsErrSCF)));
+            for (int x=1;x<=nSXs;x++){
+                zsDscMortBio_SCF_xn(x) = (log(obsDscBioMortSCF_xn(x)+smlValFsh)-log(predDscBioMortSCF_xy(x)(yrsObsDscSCF)+smlValFsh))/stdv;
+                lkDscMortBio_SCF_x(x)  = 0.5*norm2(zsDscMortBio_SCF_xn(x));
+                //lkDscMortBio_SCF_x(x) = calcNLL_normal(zsDscMortBio_SCF_xn(x),stdv,debug,cout);
+            }
+            nextf = sum(lkDscMortBio_SCF_x); objfOut(35) = nextf; f += nextf; likeOut(35) = sum(lkDscMortBio_SCF_x); wgtsOut(35) = 1.0;
         }
-        nextf = like_wght_CatchBio*sum(lkDscMortBio_SCF_x); objfOut(35) = nextf; f += nextf; likeOut(35) = sum(lkDscMortBio_SCF_x); wgtsOut(35) = like_wght_CatchBio;
-    } else {
-        //lognormal error assumption
-        double stdv = sqrt(log(1.0+square(obsErrSCF)));
-        for (int x=1;x<=nSXs;x++){
-            zsDscMortBio_SCF_xn(x) = (log(obsDscBioMortSCF_xn(x)+smlValFsh)-log(predDscBioMortSCF_xy(x)(yrsObsDscSCF)+smlValFsh))/stdv;
-            lkDscMortBio_SCF_x(x)  = 0.5*norm2(zsDscMortBio_SCF_xn(x));
+    } else if (optFMFit==2){
+        //captured catch biomass
+        zsCapBio_SCF_xn.initialize();
+        lkCapBio_SCF_x.initialize();
+        if (optFshNLLs==0){
+            //normal error assumption, sd=sqrt(2) [fixed]
+            for (int x=1;x<=nSXs;x++){
+                zsCapBio_SCF_xn(x) = (obsCapBioSCF_xn(x) - predCapBioSCF_xy(x)(yrsObsDscSCF));
+                lkCapBio_SCF_x(x)  = 0.5*norm2(zsCapBio_SCF_xn(x));
+                //lkCapBio_SCF_x(x) = calcNLL_normal(zsCapBio_SCF_xn(x),sqrt(0.5),debug,cout);
+            }
+            nextf = like_wght_CatchBio*sum(lkCapBio_SCF_x); objfOut(35) = nextf; f += nextf; likeOut(35) = sum(lkCapBio_SCF_x); wgtsOut(35) = like_wght_CatchBio;
+        } else {
+            //lognormal error assumption
+            double stdv = sqrt(log(1.0+square(obsErrSCF)));
+            for (int x=1;x<=nSXs;x++){
+                zsCapBio_SCF_xn(x) = (log(obsCapBioSCF_xn(x)+smlValFsh)-log(predCapBioSCF_xy(x)(yrsObsDscSCF)+smlValFsh))/stdv;
+                lkCapBio_SCF_x(x)  = 0.5*norm2(zsCapBio_SCF_xn(x));
+                //lkCapBio_SCF_x(x) = calcNLL_normal(zsCapBio_SCF_xn(x),stdv,debug,cout);
+            }
+            nextf = sum(lkCapBio_SCF_x); objfOut(35) = nextf; f += nextf; likeOut(35) = sum(lkCapBio_SCF_x); wgtsOut(35) = 1.0;
         }
-        nextf = sum(lkDscMortBio_SCF_x); objfOut(35) = nextf; f += nextf; likeOut(35) = sum(lkDscMortBio_SCF_x); wgtsOut(35) = 1.0;
     }
     
     //BBRKC fishery
-    zsDscMortBio_RKF_xn.initialize();
-    lkDscMortBio_RKF_x.initialize();
-    if (optFshNLLs==0){
-        //normal error assumption, sd=sqrt(2) [fixed]
-        for (int x=1;x<=nSXs;x++){
-            zsDscMortBio_RKF_xn(x) = (obsDscBioMortRKF_xn(x) - predDscBioMortRKF_xy(x)(yrsObsDscRKF))/sqrt(0.5);
-            lkDscMortBio_RKF_x(x)  = 0.5*norm2(zsDscMortBio_RKF_xn(x));
+    if (optFMFit==0||optFMFit==1){
+        //discard catch mortality
+        zsDscMortBio_RKF_xn.initialize();
+        lkDscMortBio_RKF_x.initialize();
+        if (optFshNLLs==0){
+            //normal error assumption, sd=sqrt(2) [fixed]
+            for (int x=1;x<=nSXs;x++){
+                zsDscMortBio_RKF_xn(x) = (obsDscBioMortRKF_xn(x) - predDscBioMortRKF_xy(x)(yrsObsDscRKF));
+                lkDscMortBio_RKF_x(x)  = 0.5*norm2(zsDscMortBio_RKF_xn(x));
+                //lkDscMortBio_RKF_x(x) = calcNLL_normal(zsDscMortBio_RKF_xn(x),sqrt(0.5),debug,cout);
+            }
+            nextf = like_wght_CatchBio*sum(lkDscMortBio_RKF_x); objfOut(36) = nextf; f += nextf; likeOut(36) = sum(lkDscMortBio_RKF_x); wgtsOut(36) = like_wght_CatchBio;
+        } else {
+            //lognormal error assumption
+            double stdv = sqrt(log(1.0+square(obsErrRKF)));
+            for (int x=1;x<=nSXs;x++){
+                zsDscMortBio_RKF_xn(x) = (log(obsDscBioMortRKF_xn(x)+smlValFsh)-log(predDscBioMortRKF_xy(x)(yrsObsDscRKF)+smlValFsh))/stdv;
+                lkDscMortBio_RKF_x(x)  = 0.5*norm2(zsDscMortBio_RKF_xn(x));
+                //lkDscMortBio_RKF_x(x) = calcNLL_normal(zsDscMortBio_RKF_xn(x),stdv,debug,cout);
+            }
+            nextf = sum(lkDscMortBio_RKF_x); objfOut(36) = nextf; f += nextf; likeOut(36) = sum(lkDscMortBio_RKF_x); wgtsOut(36) = 1.0;
         }
-        nextf = like_wght_CatchBio*sum(lkDscMortBio_RKF_x); objfOut(36) = nextf; f += nextf; likeOut(36) = sum(lkDscMortBio_RKF_x); wgtsOut(36) = like_wght_CatchBio;
-    } else {
-        //lognormal error assumption
-        double stdv = sqrt(log(1.0+square(obsErrRKF)));
-        for (int x=1;x<=nSXs;x++){
-            zsDscMortBio_RKF_xn(x) = (log(obsDscBioMortRKF_xn(x)+smlValFsh)-log(predDscBioMortRKF_xy(x)(yrsObsDscRKF)+smlValFsh))/stdv;
-            lkDscMortBio_RKF_x(x)  = 0.5*norm2(zsDscMortBio_RKF_xn(x));
+    } else if (optFMFit==2){
+        //captured catch biomass
+        zsCapBio_RKF_xn.initialize();
+        lkCapBio_RKF_x.initialize();
+        if (optFshNLLs==0){
+            //normal error assumption, sd=sqrt(2) [fixed]
+            for (int x=1;x<=nSXs;x++){
+                zsCapBio_RKF_xn(x) = (obsCapBioRKF_xn(x) - predCapBioRKF_xy(x)(yrsObsDscRKF));
+                lkCapBio_RKF_x(x)  = 0.5*norm2(zsCapBio_RKF_xn(x));
+                //lkCapBio_RKF_x(x) = calcNLL_normal(zsCapBio_RKF_xn(x),sqrt(0.5),debug,cout);
+            }
+            nextf = like_wght_CatchBio*sum(lkCapBio_RKF_x); objfOut(36) = nextf; f += nextf; likeOut(36) = sum(lkCapBio_RKF_x); wgtsOut(36) = like_wght_CatchBio;
+        } else {
+            //lognormal error assumption
+            double stdv = sqrt(log(1.0+square(obsErrRKF)));
+            for (int x=1;x<=nSXs;x++){
+                zsCapBio_RKF_xn(x) = (log(obsCapBioRKF_xn(x)+smlValFsh)-log(predCapBioRKF_xy(x)(yrsObsDscRKF)+smlValFsh))/stdv;
+                lkCapBio_RKF_x(x)  = 0.5*norm2(zsCapBio_RKF_xn(x));
+                //lkCapBio_RKF_x(x) = calcNLL_normal(zsCapBio_RKF_xn(x),stdv,debug,cout);
+            }
+            nextf = sum(lkCapBio_RKF_x); objfOut(36) = nextf; f += nextf; likeOut(36) = sum(lkCapBio_RKF_x); wgtsOut(36) = 1.0;
         }
-        nextf = sum(lkDscMortBio_RKF_x); objfOut(36) = nextf; f += nextf; likeOut(36) = sum(lkDscMortBio_RKF_x); wgtsOut(36) = 1.0;
     }
-    
+
     //groundfish trawl fishery
-    zsDscMortBio_GTF_n.initialize();
-    lkDscMortBio_GTF.initialize();
-    if (optFshNLLs==0){
-        //normal error assumption, sd=sqrt(1/2) [fixed]
-        zsDscMortBio_GTF_n = (obsDscBioMortGTF_n - (predDscBioMortGTF_xy(FEMALE)+predDscBioMortGTF_xy(MALE))(yrsObsDscGTF))/sqrt(0.5);
-        lkDscMortBio_GTF = 0.5*norm2(zsDscMortBio_GTF_n);
-        nextf = like_wght_CatchBio*lkDscMortBio_GTF;  objfOut(37) = nextf; f += nextf; likeOut(37) = lkDscMortBio_GTF; wgtsOut(37) = like_wght_CatchBio;
-    } else {
-        //lognormal error assumption
-        double stdv = sqrt(log(1.0+square(obsErrGTF)));
-        zsDscMortBio_GTF_n = (log(obsDscBioMortGTF_n+smlValFsh) - log((predDscBioMortGTF_xy(FEMALE)+predDscBioMortGTF_xy(MALE))(yrsObsDscGTF)+smlValFsh))/stdv;
-        lkDscMortBio_GTF = 0.5*norm2(zsDscMortBio_GTF_n);
-        nextf = lkDscMortBio_GTF;  objfOut(37) = nextf; f += nextf; likeOut(37) = lkDscMortBio_GTF; wgtsOut(37) = 1.0;
+    if (optFMFit==0||optFMFit==1){
+        //discard catch mortality
+        zsDscMortBio_GTF_n.initialize();
+        lkDscMortBio_GTF.initialize();
+        if (optFshNLLs==0){
+            //normal error assumption, sd=sqrt(1/2) [fixed]
+            zsDscMortBio_GTF_n = (obsDscBioMortGTF_n - (predDscBioMortGTF_xy(FEMALE)+predDscBioMortGTF_xy(MALE))(yrsObsDscGTF));
+            lkDscMortBio_GTF = 0.5*norm2(zsDscMortBio_GTF_n);
+            //lkDscMortBio_GTF = calcNLL_normal(zsDscMortBio_GTF_n,sqrt(0.5),debug,cout);
+            nextf = like_wght_CatchBio*lkDscMortBio_GTF;  objfOut(37) = nextf; f += nextf; likeOut(37) = lkDscMortBio_GTF; wgtsOut(37) = like_wght_CatchBio;
+        } else {
+            //lognormal error assumption
+            double stdv = sqrt(log(1.0+square(obsErrGTF)));
+            zsDscMortBio_GTF_n = (log(obsDscBioMortGTF_n+smlValFsh) - log((predDscBioMortGTF_xy(FEMALE)+predDscBioMortGTF_xy(MALE))(yrsObsDscGTF)+smlValFsh))/stdv;
+            lkDscMortBio_GTF = 0.5*norm2(zsDscMortBio_GTF_n);
+            //lkDscMortBio_GTF = calcNLL_normal(zsDscMortBio_GTF_n,sqrt(0.5),debug,cout);
+            nextf = lkDscMortBio_GTF;  objfOut(37) = nextf; f += nextf; likeOut(37) = lkDscMortBio_GTF; wgtsOut(37) = 1.0;
+        }
+    } else if (optFMFit==2){
+        //discard catch mortality
+        zsCapBio_GTF_n.initialize();
+        lkCapBio_GTF.initialize();
+        if (optFshNLLs==0){
+            //normal error assumption, sd=sqrt(1/2) [fixed]
+            zsCapBio_GTF_n = (obsCapBioGTF_n - (predCapBioGTF_xy(FEMALE)+predCapBioGTF_xy(MALE))(yrsObsDscGTF));
+            lkCapBio_GTF = 0.5*norm2(zsCapBio_GTF_n);
+            //lkCapBio_GTF = calcNLL_normal(zsCapBio_GTF_n,sqrt(0.5),debug,cout);
+            nextf = like_wght_CatchBio*lkCapBio_GTF;  objfOut(37) = nextf; f += nextf; likeOut(37) = lkCapBio_GTF; wgtsOut(37) = like_wght_CatchBio;
+        } else {
+            //lognormal error assumption
+            double stdv = sqrt(log(1.0+square(obsErrGTF)));
+            zsCapBio_GTF_n = (log(obsCapBioGTF_n+smlValFsh) - log((predCapBioGTF_xy(FEMALE)+predCapBioGTF_xy(MALE))(yrsObsDscGTF)+smlValFsh))/stdv;
+            lkCapBio_GTF = 0.5*norm2(zsCapBio_GTF_n);
+            //lkCapBio_GTF = calcNLL_normal(zsCapBio_GTF_n,stdv,debug,cout);
+            nextf = lkCapBio_GTF;  objfOut(37) = nextf; f += nextf; likeOut(37) = lkCapBio_GTF; wgtsOut(37) = 1.0;
+        }
     }
+
+    
     // ------------------------------------------
     if (isnan(value(f))){
         ofstream initReptToR("TCSAM2013.NEWSTYLE.nan.R");
@@ -4950,6 +5268,8 @@ FUNCTION void writeToR_OLD(ofstream& R_out)
         
         Misc_output(0,std::cout);
         
+        REP2R2(mod.Version,version);
+        REP2R2(mod.ControlFileVersion,verModelControlFile);
         REP2R2(mod.styr,styr);
         REP2R2(mod.endyr,endyr);
         REP2R2(mod.obsyr,ptrMDS->pTSD->yrsAbund[1]);
@@ -4962,6 +5282,7 @@ FUNCTION void writeToR_OLD(ofstream& R_out)
         REP2R2(mod.mnYrRecCurr,mnYrRecCurr);
         
         //model options
+        REP2R2(mod.optNM,optNM);
         REP2R2(mod.optFM,optFM);
         REP2R2(mod.optFMFit,optFMFit);
         
@@ -5026,18 +5347,6 @@ FUNCTION void writeToR_OLD(ofstream& R_out)
         //--numbers-at-size
         ivector prm5(1,5); prm5[1]=4; prm5[2]=1; prm5[3]=2; prm5[4]=3; prm5[5]=5;
         myWriteN_yxmsz(R_out,modNum_yxmsz);
-        
-//        d5_array modNum_xmsyz  = wts::permuteDims(prm5, dmodNum_yxmsz);
-//        REP2R2(pop.NatZ.INF,modNum_xmsyz(FEMALE,IMMATURE,NEW_SHELL));
-//        REP2R2(pop.NatZ.IOF,modNum_xmsyz(FEMALE,IMMATURE,OLD_SHELL));
-//        REP2R2(pop.NatZ.MNF,modNum_xmsyz(FEMALE,  MATURE,NEW_SHELL));
-//        REP2R2(pop.NatZ.MOF,modNum_xmsyz(FEMALE,  MATURE,OLD_SHELL));
-//        REP2R2(pop.NatZ.INM,modNum_xmsyz(  MALE,IMMATURE,NEW_SHELL));
-//        REP2R2(pop.NatZ.IOM,modNum_xmsyz(  MALE,IMMATURE,OLD_SHELL));
-//        REP2R2(pop.NatZ.MNM,modNum_xmsyz(  MALE,  MATURE,NEW_SHELL));
-//        REP2R2(pop.NatZ.MOM,modNum_xmsyz(  MALE,  MATURE,OLD_SHELL));
-//        REP2R2(pop.NatZ.F,modNum_xyz(FEMALE));
-//        REP2R2(pop.NatZ.M,modNum_xyz(  MALE));
         
         //survey quantities
         //--numbers-at-size (millions), biomass-at-size (1000's t)
@@ -5129,13 +5438,6 @@ FUNCTION void writeToR_OLD(ofstream& R_out)
         REP2RTS(srv.mod.PrNatZ.MNM,modSrvPrNatZ_msxyz(  MATURE,NEW_SHELL,  MALE),yrsObsZCsSrv_n);
         REP2RTS(srv.mod.PrNatZ.MOM,modSrvPrNatZ_msxyz(  MATURE,OLD_SHELL,  MALE),yrsObsZCsSrv_n);
         
-//        //--pearsons residuals for survey size comps
-//        dmatrix mod_nz(1,nObsZCsSrv,1,nZBs);
-//        dmatrix prs_nz(1,nObsZCsSrv,1,nZBs);
-//        mod_nz = value(modSrvPrNatZ_mxyz(IMMATURE,FEMALE)(yrsObsZCsSrv_n));
-//        prs_nz = elem_div(obsSrvPrNatZ_mxnz(IMMATURE,FEMALE)-mod_nz,sqrt(elem_prod(mod_nz,1.0-mod_nz)));
-//        REP2R2(srv.prs.PrNatZ.IF,prs_nz);
-        
         //--legal males in survey (in millions and 1000's t))
         REP2R2(srv.obs.num.LMs,obsSrvNumLegal_n);
         REP2R2(srv.mod.num.LMs,modSrvNumLegal_y);
@@ -5143,8 +5445,8 @@ FUNCTION void writeToR_OLD(ofstream& R_out)
         REP2R2(srv.mod.bio.LMs,modSrvBioLegal_y);        
         
         //Fisheries 
-        REP2R2(qSCF,qSCF);
-        REP2R2(qRKF,qRKF);
+        REP2R2(fsh.mod.qSCF,qSCF);
+        REP2R2(fsh.mod.qRKF,qRKF);
         //--TCF
         ivector yrs_ret(1965,endyr-1);
         yrs_ret.fill_seqadd(1965,1);
@@ -5350,24 +5652,24 @@ FUNCTION void writeToR_OLD(ofstream& R_out)
         
         if (optFM==1){
             //write out fishery capture size comps for TCF
-            R_out<<"$fsh.mod.cap.NatZ.TCF.M"<<endl;
+            R_out<<"$fsh.mod.cap.PrNatZ.TCF.M"<<endl;
             for (int yr=styr;yr<=(endyr-1);yr++) R_out <<modPrCapNatZ_fxyz(iTCF,MALE,yr)<<endl;
-            R_out<<"$fsh.mod.cap.NatZ.TCF.F"<<endl;
+            R_out<<"$fsh.mod.cap.PrNatZ.TCF.F"<<endl;
             for (int yr=styr;yr<=(endyr-1);yr++) R_out <<modPrCapNatZ_fxyz(iTCF,FEMALE,yr)<<endl;
             //write out fishery capture size comps for SCF
-            R_out<<"$fsh.mod.cap.NatZ.SCF.M"<<endl;
+            R_out<<"$fsh.mod.cap.PrNatZ.SCF.M"<<endl;
             for (int yr=styr;yr<=(endyr-1);yr++) R_out <<modPrCapNatZ_fxyz(iSCF,MALE,yr)<<endl;
-            R_out<<"$fsh.mod.cap.NatZ.SCF.F"<<endl;
+            R_out<<"$fsh.mod.cap.PrNatZ.SCF.F"<<endl;
             for (int yr=styr;yr<=(endyr-1);yr++) R_out <<modPrCapNatZ_fxyz(iSCF,FEMALE,yr)<<endl;
             //write out fishery capture size comps for RKF
-            R_out<<"$fsh.mod.cap.NatZ.RKF.M"<<endl;
+            R_out<<"$fsh.mod.cap.PrNatZ.RKF.M"<<endl;
             for (int yr=styr;yr<=(endyr-1);yr++) R_out <<modPrCapNatZ_fxyz(iRKF,MALE,yr)<<endl;
-            R_out<<"$fsh.mod.cap.NatZ.RKF.F"<<endl;
+            R_out<<"$fsh.mod.cap.PrNatZ.RKF.F"<<endl;
             for (int yr=styr;yr<=(endyr-1);yr++) R_out <<modPrCapNatZ_fxyz(iRKF,FEMALE,yr)<<endl;
             //write out fishery capture size comps for GTF
-            R_out<<"$fsh.mod.cap.NatZ.GTF.M"<<endl;
+            R_out<<"$fsh.mod.cap.PrNatZ.GTF.M"<<endl;
             for (int yr=styr;yr<=(endyr-1);yr++) R_out <<modPrCapNatZ_fxyz(iGTF,MALE,yr)<<endl;
-            R_out<<"$fsh.mod.cap.NatZ.GTF.F"<<endl;
+            R_out<<"$fsh.mod.cap.PrNatZ.GTF.F"<<endl;
             for (int yr=styr;yr<=(endyr-1);yr++) R_out <<modPrCapNatZ_fxyz(iGTF,FEMALE,yr)<<endl;
             //write out fishery captures for TCF
             //--males
@@ -5648,11 +5950,15 @@ FUNCTION void writeToR_OLD(ofstream& R_out)
             int y = yrsObsDscTCF_n(n);
             //cout<<n<<tb<<y<<endl;
             if (optTCFMfit==0){
-                zsc(MALE,y) = value(zsTotMortBio_TCFM_n(n));
-            } else {
-                zsc(MALE,y) = value(zsDscMortBio_TCFM_n(n));
+                zsc(  MALE,y) = value(zsTotMortBio_TCFM_n(n));
+                zsc(FEMALE,y) = value(zsDscMortBio_TCF_xn(FEMALE,n));
+            } else if (optTCFMfit==1){
+                zsc(  MALE,y) = value(zsDscMortBio_TCF_xn(  MALE,n));
+                zsc(FEMALE,y) = value(zsDscMortBio_TCF_xn(FEMALE,n));
+            } else if (optTCFMfit==2){
+                zsc(  MALE,y) = value(zsCapBio_TCF_xn(  MALE,n));
+                zsc(FEMALE,y) = value(zsCapBio_TCF_xn(FEMALE,n));
             }
-            zsc(FEMALE,y) = value(zsDscMortBio_TCFF_n(n));
         }
         REP2R2(fsh.bio.zscr.TCF.F,zsc(FEMALE));
         REP2R2(fsh.bio.zscr.TCF.M,zsc(  MALE));
@@ -5661,7 +5967,11 @@ FUNCTION void writeToR_OLD(ofstream& R_out)
         for (int n=1;n<=nObsDscSCF;n++){
             int y = yrsObsDscSCF(n);
             //cout<<n<<tb<<y<<endl;
-            for (int x=1;x<=nSXs;x++) zsc(x,y) = value(zsDscMortBio_SCF_xn(x,n));
+            if (optFMFit==0||optFMFit==1){
+                for (int x=1;x<=nSXs;x++) zsc(x,y) = value(zsDscMortBio_SCF_xn(x,n));
+            } else if (optFMFit==2){
+                for (int x=1;x<=nSXs;x++) zsc(x,y) = value(zsCapBio_SCF_xn(x,n));
+            }
         }
         REP2R2(fsh.bio.zscr.SCF.F,zsc(FEMALE));
         REP2R2(fsh.bio.zscr.SCF.M,zsc(  MALE));
@@ -5670,7 +5980,11 @@ FUNCTION void writeToR_OLD(ofstream& R_out)
         for (int n=1;n<=nObsDscRKF;n++){
             int y = yrsObsDscRKF(n);
             //cout<<n<<tb<<y<<endl;
-            for (int x=1;x<=nSXs;x++) zsc(x,y) = value(zsDscMortBio_RKF_xn(x,n));
+            if (optFMFit==0||optFMFit==1){
+                for (int x=1;x<=nSXs;x++) zsc(x,y) = value(zsDscMortBio_RKF_xn(x,n));
+            } else if (optFMFit==2){
+                for (int x=1;x<=nSXs;x++) zsc(x,y) = value(zsCapBio_SCF_xn(x,n));
+            }
         }
         REP2R2(fsh.bio.zscr.RKF.F,zsc(FEMALE));
         REP2R2(fsh.bio.zscr.RKF.M,zsc(  MALE));
@@ -5679,7 +5993,11 @@ FUNCTION void writeToR_OLD(ofstream& R_out)
         for (int n=1;n<=nObsDscGTF;n++){
             int y = yrsObsDscGTF(n);
             //cout<<n<<tb<<y<<endl;
-            zsc(1,y) = value(zsDscMortBio_GTF_n(n));
+            if (optFMFit==0||optFMFit==1){
+                zsc(1,y) = value(zsDscMortBio_GTF_n(n));
+            } else if (optFMFit==2){
+                zsc(1,y) = value(zsCapBio_GTF_n(n));
+            }
         }
         REP2R2(fsh.bio.zscr.GTF,zsc(1));
 
@@ -5958,30 +6276,47 @@ FUNCTION void myWriteModFshInfoToR(ostream& os)
     for (int n=1;n<=nObsDscTCF;n++){
         int y = yrsObsDscTCF_n(n);
         //cout<<n<<tb<<y<<endl;
-        if (optTCFMfit==0){
-            zsTMB_TCFM_y(y) = value(zsTotMortBio_TCFM_n(n));
-        } else {
-            zsTMB_TCFM_y(y) = value(zsDscMortBio_TCFM_n(n));
+        if (optFMFit==0||optFMFit==1){
+            if (optTCFMfit==0){
+                zsTMB_TCFM_y(y) = value(zsTotMortBio_TCFM_n(n));
+            } else {
+                zsTMB_TCFM_y(y) = value(zsDscMortBio_TCF_xn(MALE,n));
+            }
+            zsDMB_TCFF_y(y) = value(zsDscMortBio_TCF_xn(FEMALE,n));
+        } else if (optFMFit==2){
+            zsTMB_TCFM_y(y) = value(zsCapBio_TCF_xn(  MALE,n));
+            zsDMB_TCFF_y(y) = value(zsCapBio_TCF_xn(FEMALE,n));
         }
-        zsDMB_TCFF_y(y) = value(zsDscMortBio_TCFF_n(n));
     }
     //cout<<"SCF"<<endl;
     for (int n=1;n<=nObsDscSCF;n++){
         int y = yrsObsDscSCF(n);
         //cout<<n<<tb<<y<<endl;
-        for (int x=1;x<=nSXs;x++) zsDMB_SCF_xy(x,y) = value(zsDscMortBio_SCF_xn(x,n));
+        if (optFMFit==0||optFMFit==1){
+            for (int x=1;x<=nSXs;x++) zsDMB_SCF_xy(x,y) = value(zsDscMortBio_SCF_xn(x,n));
+        } else if (optFMFit==2){
+            for (int x=1;x<=nSXs;x++) zsDMB_SCF_xy(x,y) = value(zsCapBio_SCF_xn(x,n));
+        }
     }
     //cout<<"RKF"<<endl;
     for (int n=1;n<=nObsDscRKF;n++){
         int y = yrsObsDscRKF(n);
         //cout<<n<<tb<<y<<endl;
-        for (int x=1;x<=nSXs;x++) zsDMB_RKF_xy(x,y) = value(zsDscMortBio_RKF_xn(x,n));
+        if (optFMFit==0||optFMFit==1){
+            for (int x=1;x<=nSXs;x++) zsDMB_RKF_xy(x,y) = value(zsDscMortBio_RKF_xn(x,n));
+        } else if (optFMFit==2){
+            for (int x=1;x<=nSXs;x++) zsDMB_RKF_xy(x,y) = value(zsCapBio_RKF_xn(x,n));
+        }
     }
     //cout<<"GTF"<<endl;
     for (int n=1;n<=nObsDscGTF;n++){
         int y = yrsObsDscGTF(n);
         //cout<<n<<tb<<y<<endl;
-        zsDMB_GTF_y(y) = value(zsDscMortBio_GTF_n(n));
+        if (optFMFit==0||optFMFit==1){
+            zsDMB_GTF_y(y) = value(zsDscMortBio_GTF_n(n));
+        } else if (optFMFit==2) {
+            zsDMB_GTF_y(y) = value(zsCapBio_GTF_n(n));
+        }
     }
     
     os<<"fsh=list("<<endl;
@@ -5995,17 +6330,25 @@ FUNCTION void myWriteModFshInfoToR(ostream& os)
         os<<"TCFM=list("<<endl;
             os<<"fits=list("<<endl;
                 os<<"zscr="; wts::writeToR(os,zsTMB_TCFM_y,dmYm1); os<<cc<<endl;
-                if (optTCFMfit==0){
-                    os<<"like="<<lkTotMortBio_TCFM<<cc<<"type='total'"<<endl;
-                } else {
-                    os<<"like="<<lkDscMortBio_TCFM<<cc<<"type='bycatch'"<<endl;
+                if (optFMFit==0||optFMFit==1){
+                    if (optTCFMfit==0){
+                        os<<"like="<<lkTotMortBio_TCFM<<cc<<"type='total'"<<endl;
+                    } else {
+                        os<<"like="<<lkDscMortBio_TCF_x(MALE)<<cc<<"type='bycatch'"<<endl;
+                    }
+                } else if (optFMFit==2){
+                    os<<"like="<<lkCapBio_TCF_x(MALE)<<cc<<"type='captured'"<<endl;
                 }
             os<<")"; os<<endl;
         os<<")"; os<<cc<<endl;
         os<<"TCFF=list("<<endl;
             os<<"fits=list("<<endl;
                 os<<"zscr="; wts::writeToR(os,zsDMB_TCFF_y,dmYm1); os<<cc<<endl;
-                os<<"like="<<lkDscMortBio_TCFF<<cc<<"type='bycatch'"<<endl;
+                if (optFMFit==0||optFMFit==1){
+                    os<<"like="<<lkDscMortBio_TCF_x(FEMALE)<<cc<<"type='bycatch'"<<endl;
+                } else if (optFMFit==2){
+                    os<<"like="<<lkCapBio_TCF_x(FEMALE)<<cc<<"type='captured'"<<endl;
+                }
             os<<")"; os<<endl;
         os<<")"; os<<cc<<endl;
         os<<"SCF=list("<<endl;
@@ -6016,7 +6359,11 @@ FUNCTION void myWriteModFshInfoToR(ostream& os)
             os<<")"; os<<cc<<endl;
             os<<"fits=list("<<endl;
                 os<<"zscr="; wts::writeToR(os,zsDMB_SCF_xy,dmX,dmYm1);        os<<cc<<endl;
-                os<<"like="; wts::writeToR(os,value(lkDscMortBio_SCF_x),dmX); os<<cc<<"type='bycatch'"<<endl;
+                if (optFMFit==0||optFMFit==1){
+                    os<<"like="; wts::writeToR(os,value(lkDscMortBio_SCF_x),dmX); os<<cc<<"type='bycatch'"<<endl;
+                } else if (optFMFit==2){
+                    os<<"like="; wts::writeToR(os,value(lkCapBio_SCF_x),dmX); os<<cc<<"type='captured'"<<endl;
+                }
             os<<")"; os<<endl;
         os<<")"; os<<cc<<endl;
         os<<"RKF=list("<<endl;
@@ -6027,13 +6374,21 @@ FUNCTION void myWriteModFshInfoToR(ostream& os)
             os<<")"; os<<cc<<endl;
             os<<"fits=list("<<endl;
                 os<<"zscr="; wts::writeToR(os,zsDMB_RKF_xy,dmX,dmYm1);        os<<cc<<endl;
-                os<<"like="; wts::writeToR(os,value(lkDscMortBio_RKF_x),dmX); os<<cc<<"type='bycatch'"<<endl;
+                if (optFMFit==0||optFMFit==1){
+                    os<<"like="; wts::writeToR(os,value(lkDscMortBio_RKF_x),dmX); os<<cc<<"type='bycatch'"<<endl;
+                } else if (optFMFit==2){
+                    os<<"like="; wts::writeToR(os,value(lkCapBio_RKF_x),dmX); os<<cc<<"type='captured'"<<endl;
+                }
             os<<")"; os<<endl;
         os<<")"; os<<cc<<endl;
         os<<"GTF=list("<<endl;
             os<<"fits=list("<<endl;
                 os<<"zscr="; wts::writeToR(os,zsDMB_GTF_y,dmYm1); os<<cc<<endl;
-                os<<"like="<<lkDscMortBio_GTF<<cc<<"type='bycatch'"<<endl;
+                if (optFMFit==0||optFMFit==1){
+                    os<<"like="<<lkDscMortBio_GTF<<cc<<"type='bycatch'"<<endl;
+                } else if (optFMFit==2){
+                    os<<"like="<<lkCapBio_GTF<<cc<<"type='captured'"<<endl;
+                }
             os<<")"; os<<endl;
         os<<")"; os<<endl;
     os<<")";
