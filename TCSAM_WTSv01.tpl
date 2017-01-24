@@ -202,6 +202,8 @@
 //                  Requires CatchBiomass likelihood weights to DOUBLE to match old results.
 //--20170105: 1. Removed "maturity_switch", now using optInitM2M and optMatForSrvOSM to control behavior.
 //                  2016AM behavior obtained setting both to 1 (because maturity_switch=1 in 2016AM).
+//--20170124: 1. Replaced fmTCFF_yz(yr) with fcTCFF_yz(yr) in calculation for
+//                  cpN_fyxmsz(iTCF,yr,FEMALE,IMMATURE,NEW_SHELL) ["fm" was typo for "fc"].
 //
 //IMPORTANT: 2013-09 assessment model had RKC params for 1992+ discard mortality TURNED OFF. 
 //           THE ESTIMATION PHASE FOR RKC DISCARD MORTALITY IS NOW SET IN THE CONTROLLER FILE!
@@ -3864,7 +3866,7 @@ FUNCTION void get_catch_at_len(int debug,ostream& cout)                  //wts: 
             cpN_fyxmsz(iTCF,yr,MALE,MATURE,OLD_SHELL) = elem_prod(ratio1,modFT_PopNum_yxmsz(yr,MALE,  MATURE,OLD_SHELL));
             //if (debug) cout<<"--TCF: males"<<endl;
             //numbers of females captured in TCF
-            ratio1 = elem_prod(elem_div(fmTCFF_yz(yr),fmTOT_xsyz(FEMALE,NEW_SHELL,yr)),1.0-S_xsyz(FEMALE,NEW_SHELL,yr));
+            ratio1 = elem_prod(elem_div(fcTCFF_yz(yr),fmTOT_xsyz(FEMALE,NEW_SHELL,yr)),1.0-S_xsyz(FEMALE,NEW_SHELL,yr));
             cpN_fyxmsz(iTCF,yr,FEMALE,IMMATURE,NEW_SHELL) = elem_prod(ratio1,modFT_PopNum_yxmsz(yr,FEMALE,IMMATURE,NEW_SHELL));
             ratio1 = elem_prod(elem_div(fcTCFF_yz(yr),fmTOT_xsyz(FEMALE,OLD_SHELL,yr)),1.0-S_xsyz(FEMALE,OLD_SHELL,yr));
             cpN_fyxmsz(iTCF,yr,FEMALE,IMMATURE,OLD_SHELL) = elem_prod(ratio1,modFT_PopNum_yxmsz(yr,FEMALE,IMMATURE,OLD_SHELL));
