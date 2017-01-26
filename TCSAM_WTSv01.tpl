@@ -205,6 +205,7 @@
 //--20170124: 1. Replaced fmTCFF_yz(yr) with fcTCFF_yz(yr) in calculation for
 //                  cpN_fyxmsz(iTCF,yr,FEMALE,IMMATURE,NEW_SHELL) ["fm" was typo for "fc"].
 //--20170125: 1. Added std::setprecision(10) to output csv files for parameter values.
+//            2. Added streamsize prc = std::precision() to recover original precision.
 //
 //IMPORTANT: 2013-09 assessment model had RKC params for 1992+ discard mortality TURNED OFF. 
 //           THE ESTIMATION PHASE FOR RKC DISCARD MORTALITY IS NOW SET IN THE CONTROLLER FILE!
@@ -2574,11 +2575,11 @@ PRELIMINARY_CALCS_SECTION
     CheckFile<<"Initial Parameter Settings"<<endl;
     writeParameters(CheckFile,0,0);
     ofstream os1("TCSAM2013.params.all.init.csv");
-    os1<<std::setprecision(10);
+    os1.precision(10);
     writeParameters(os1,0,0);
     os1.close();
-    os2<<std::setprecision(10);
     ofstream os2("TCSAM2013.params.active.init.csv");
+    os2.precision(10);
     writeParameters(os2,0,1);
     os2.close();
 
@@ -6500,12 +6501,15 @@ REPORT_SECTION
         os.close();
     
         os.open("TCSAM2013.params.all.final.csv");
-        os<<std::setprecision(10);
+        std::streamsize prc = os.precision();
+        os.precision(10);
         writeParameters(os,0,0);
+        os.precision(prc);
         os.close();
         os.open("TCSAM2013.params.active.final.csv");
-        os<<std::setprecision(10);
+        os.precision(10);
         writeParameters(os,0,1);
+        os.precision(prc);
         os.close();
         
         os.open("TCSAM2013.final_likelihood_components.csv");
