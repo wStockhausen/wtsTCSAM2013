@@ -207,6 +207,7 @@
 //--20170125: 1. Added std::setprecision(10) to output csv files for parameter values.
 //            2. Added streamsize prc = std::precision() to recover original precision.
 //--20170126: 1. Changed precision from 10 to 12 in output parameter csv files to match par files.
+//--20170130: 1. Changed precision to 12 for all output files.
 //
 //IMPORTANT: 2013-09 assessment model had RKC params for 1992+ discard mortality TURNED OFF. 
 //           THE ESTIMATION PHASE FOR RKC DISCARD MORTALITY IS NOW SET IN THE CONTROLLER FILE!
@@ -251,7 +252,6 @@ GLOBALS_SECTION
 
     //file streams
     ofstream mcmc;
-    ofstream R_out;
     ofstream CheckFile;
     ofstream post("eval.csv");
     ofstream echo;                 //stream to echo model inputs
@@ -2557,15 +2557,21 @@ PRELIMINARY_CALCS_SECTION
     evaluate_the_objective_function(1,CheckFile);        
     
     //write reports for initial model configuration
-    ofstream initReptToR("TCSAM2013.NEWSTYLE.init.R");
-    writeToR_NEW(initReptToR);
-    initReptToR.close();
-    ofstream initReptToR1("TCSAM2013.OLDSTYLE.init.R");
-    writeToR_OLD(initReptToR1);
-    initReptToR1.close();
-    ofstream initLLsToCSV("TCSAM2013.init_likelihood_components.csv");
-    writeLikelihoodComponents(initLLsToCSV,0);
-    initLLsToCSV.close();
+    {
+        ofstream os;
+        os.open("TCSAM2013.NEWSTYLE.init.R");
+        os.precision(12);
+        writeToR_NEW(os);
+        os.close();
+        os.open("TCSAM2013.OLDSTYLE.init.R");
+        os.precision(12);
+        writeToR_OLD(os);
+        os.close();
+        os.open("TCSAM2013.init_likelihood_components.csv");
+        os.precision(12);
+        writeLikelihoodComponents(os,0);
+        os.close();
+    }
     
     if (option_match(ad_comm::argc,ad_comm::argv,"-mceval")>-1) {
         openMCMCFile();
@@ -4766,24 +4772,28 @@ FUNCTION void evaluate_the_objective_function(int debug, ostream& cout)
     
     // ------------------------------------------
     if (isnan(value(f))){
-        ofstream initReptToR("TCSAM2013.NEWSTYLE.nan.R");
-        writeToR_NEW(initReptToR);
-        initReptToR.close();
-        ofstream initReptToR1("TCSAM2013.OLDSTYLE.nan.R");
-        writeToR_OLD(initReptToR1);
-        initReptToR1.close();
-        ofstream initLLsToCSV("TCSAM2013.nan.likelihood_components.csv");
-        writeLikelihoodComponents(initLLsToCSV,0);
-        initLLsToCSV.close();
+        ofstream os("TCSAM2013.NEWSTYLE.nan.R");
+        os.precision(12);
+        writeToR_NEW(os);
+        os.close();
+        os.open("TCSAM2013.OLDSTYLE.nan.R");
+        os.precision(12);
+        writeToR_OLD(os);
+        os.close();
+        os.open("TCSAM2013.nan.likelihood_components.csv");
+        os.precision(12);
+        writeLikelihoodComponents(os,0);
+        os.close();
 
         CheckFile<<"------------------------------------------------------------------------"<<endl<<endl;
         CheckFile<<"NaN detected!"<<endl;
         CheckFile<<"phase = "<<current_phase()<<". call_no = "<<call_no<<endl;
         CheckFile<<"Parameter Settings"<<endl;
         writeParameters(CheckFile,0,0);
-        ofstream os1("TCSAM2013.params.all.nan.csv");
-        writeParameters(os1,0,0);
-        os1.close();
+        os.open("TCSAM2013.params.all.nan.csv");
+        os.precision(12);
+        writeParameters(os,0,0);
+        os.close();
         ad_exit(-1);
     }    
     if (debug) {cout <<"phase = "<< current_phase() << " call = " << call_no << " Total Like = " << f << endl;}
@@ -6490,35 +6500,37 @@ REPORT_SECTION
      }
     if (last_phase()) {
         ofstream os("TCSAM2013.NEWSTYLE.final.R", ios::trunc);    
+        os.precision(12);
         writeToR_NEW(os);
         os.close();
 
         os.open("TCSAM2013.OLDSTYLE.final.R");
+        os.precision(12);
         writeToR_OLD(os);
         os.close();
         
         os.open("TCSAM2013ProjMod.dat");
+        os.precision(12);
         writeMyProjectionFile(os);
         os.close();
     
         os.open("TCSAM2013.params.all.final.csv");
-        std::streamsize prc = os.precision();
         os.precision(12);
         writeParameters(os,0,0);
-        os.precision(prc);
         os.close();
         os.open("TCSAM2013.params.active.final.csv");
         os.precision(12);
         writeParameters(os,0,1);
-        os.precision(prc);
         os.close();
         
         os.open("TCSAM2013.final_likelihood_components.csv");
+        os.precision(12);
         writeLikelihoodComponents(os,0);
         os.close();
         
         if (option_match(ad_comm::argc,ad_comm::argv,"-jitter")>-1) {
             ofstream fs("jitterInfo.csv");
+            os.precision(20);
             fs<<"seed"<<cc<<"objfun"<<endl;
             fs<<iSeed<<cc<<f<<endl;
         }
@@ -6527,6 +6539,7 @@ REPORT_SECTION
         if (doOFL){
             cout<<"ReportToR: starting OFL calculations"<<endl;
             ofstream echoOFL; echoOFL.open("calcOFL.final.txt", ios::trunc);
+            echoOFL.precision(12);
             calcOFL(asmtYr,debugOFL,echoOFL);//updates oflResults
             oflResults.writeCSVHeader(echoOFL); echoOFL<<endl;
             oflResults.writeToCSV(echoOFL);     echoOFL<<endl;
