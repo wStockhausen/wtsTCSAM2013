@@ -330,17 +330,42 @@ void TrawlSurveyData::read(cifstream & is){
     if (debug) cout<<nyAbund<<tb<<"#nyAbund"<<endl;
     is>>unitsAbund;
     if (debug) cout<<unitsAbund<<tb<<"#unitsAbund"<<endl;
-    inpAbund_yc.allocate(1,nyAbund,1,4);
+    inpAbund_yc.allocate(1,nyAbund,1,5);
     is>>inpAbund_yc;
     if (debug) cout<<"#abund = "<<endl<<"#year abundance cv_females cv_males"<<endl<<inpAbund_yc<<endl;
     
     yrsAbund.allocate(1,nyAbund);
     abund_y.allocate(1,nyAbund);
+    abund_xy.allocate(FEMALE,MALE,1,nyAbund);
     cvsAbund_xy.allocate(FEMALE,MALE,1,nyAbund);
     
     yrsAbund = (ivector) column(inpAbund_yc,1);
-    abund_y = column(inpAbund_yc,2);
-    for (int x=FEMALE;x<=MALE;x++) cvsAbund_xy(x) = column(inpAbund_yc,2+x);
+    abund_y.initialize();
+    for (int x=FEMALE;x<=MALE;x++) {
+        abund_xy(x) = column(inpAbund_yc,1+x);
+        cvsAbund_xy(x) = column(inpAbund_yc,3+x);
+        
+        abund_y += abund_xy(x);
+    }
+    
+    //Mature BIOMASS
+    is>>nyMatBio;//number of years of biomass data
+    if (debug) cout<<nyMatBio<<tb<<"#nyMatBio"<<endl;
+    is>>unitsMatBio;
+    if (debug) cout<<unitsMatBio<<tb<<"#unitsMatBio"<<endl;
+    inpMatBio_yc.allocate(1,nyMatBio,1,5);
+    is>>inpMatBio_yc;
+    if (debug) cout<<"#mature biomass = "<<endl<<"#year females males cv_females cv_males"<<endl<<inpMatBio_yc<<endl;
+    
+    yrsMatBio.allocate(1,nyMatBio);
+    matBio_xy.allocate(FEMALE,MALE,1,nyMatBio);
+    cvsMatBio_xy.allocate(FEMALE,MALE,1,nyMatBio);
+    
+    yrsMatBio = (ivector) column(inpMatBio_yc,1);
+    for (int x=FEMALE;x<=MALE;x++) {
+        matBio_xy(x)    = column(inpMatBio_yc,1+x);
+        cvsMatBio_xy(x) = column(inpMatBio_yc,3+x);
+    }
     
     //NUMBERS-AT-SIZE 
     is>>nyNatZ;//number of years of numbers-at-size data
@@ -416,10 +441,14 @@ void TrawlSurveyData::write(ostream & os){
     os<<"#-----------------------------------------------------#"<<endl;
     os<<"#-----------------------------------------------------#"<<endl;
     os<<"#Tanner crab trawl survey data"<<endl;
-    os<<"#-----------ABUNDANCE (NUMBERS/BIOMASS)---------------#"<<endl;
-    os<<nyAbund<<tb<<"#number of years of survey biomass/abundance data"<<endl;
-    os<<unitsAbund<<tb<<"#units for numbers of crabs (males+females)"<<endl;
-    os<<"#year abundance cv_females cv_males"<<endl<<inpAbund_yc<<endl;
+    os<<"#-----------ABUNDANCE---------------#"<<endl;
+    os<<nyAbund<<tb<<"#number of years of survey abundance data"<<endl;
+    os<<unitsAbund<<tb<<"#units for crab numbers"<<endl;
+    os<<"#year females males cv_females cv_males"<<endl<<inpAbund_yc<<endl;
+    os<<"#-----------MATURE BIOMASS---------------#"<<endl;
+    os<<nyMatBio<<tb<<"#number of years of survey mature biomass data"<<endl;
+    os<<unitsMatBio<<tb<<"#units for mature biomass"<<endl;
+    os<<"#year females males cv_females cv_males"<<endl<<inpMatBio_yc<<endl;
     os<<"#-----------NUMBERS-AT-SIZE DATA----------------------#"<<endl;
     os<<nyNatZ<<tb<<"#number of years of size data"<<endl;
     os<<unitsNatZ<<tb<<"#units for numbers at size of crab"<<endl;
@@ -464,7 +493,23 @@ void TrawlSurveyData::writeToR(ostream& os, char* nm, int indent) {
                 for (int n=0;n<indent;n++) os<<tb;
                 os<<"cvs="; wts::writeToR(os,cvsAbund_xy,x,y); os<<cc<<endl;
                 for (int n=0;n<indent;n++) os<<tb;
-                os<<"data="; wts::writeToR(os,abund_y,y); os<<endl;
+                os<<"data="; wts::writeToR(os,abund_xy,x,y); os<<endl;
+            indent--;
+        for (int n=0;n<indent;n++) os<<tb; os<<"),"<<endl;
+        indent--;}
+        
+        //mature biomass
+        indent++;
+        {   for (int n=0;n<indent;n++) os<<tb;
+            adstring y = "yrs=c("+wts::to_qcsv(yrsMatBio)+")";
+            os<<"biomass=list(units="<<qt<<unitsMatBio<<qt<<cc<<endl;
+            indent++; 
+                for (int n=0;n<indent;n++) os<<tb;
+                os<<"years="; wts::writeToR(os,yrsMatBio); os<<cc<<endl;
+                for (int n=0;n<indent;n++) os<<tb;
+                os<<"cvs="; wts::writeToR(os,cvsMatBio_xy,x,y); os<<cc<<endl;
+                for (int n=0;n<indent;n++) os<<tb;
+                os<<"data="; wts::writeToR(os,matBio_xy,x,y); os<<endl;
             indent--;
         for (int n=0;n<indent;n++) os<<tb; os<<"),"<<endl;
         indent--;}

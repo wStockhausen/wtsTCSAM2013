@@ -208,6 +208,13 @@
 //            2. Added streamsize prc = std::precision() to recover original precision.
 //--20170126: 1. Changed precision from 10 to 12 in output parameter csv files to match par files.
 //--20170130: 1. Changed precision to 12 for all output files.
+//--20170131: 1. Added survey biomass to input survey file. Need to do this because observed 
+//                  survey biomass is not exactly consistent with obsSrvMatBio_xy() calculation
+//                  in this model because the former is based on 1mm size classes while the latter
+//                  is based on 5mm size classes.
+//            2. obsSrvMatBio_xy() is now set to the input survey biomass data. Previously, it
+//                  was calculated based on the size comps (using 5mm bins).
+//            3. Updated model version to '20170131'.
 //
 //IMPORTANT: 2013-09 assessment model had RKC params for 1992+ discard mortality TURNED OFF. 
 //           THE ESTIMATION PHASE FOR RKC DISCARD MORTALITY IS NOW SET IN THE CONTROLLER FILE!
@@ -238,7 +245,7 @@ GLOBALS_SECTION
     #include "ModelData.hpp"
     #include "OFLCalcs.hpp"
 
-    adstring version = "20170104";//model version
+    adstring version = "20170131";//model version
     ivector verModelControlFile(1,1);  //model control file version
     
     int maxPhase = 8;//default max phase for penalty reduction
@@ -720,17 +727,36 @@ DATA_SECTION
     CheckFile<<"ssObsZcsGTF_x   = "<<endl<<ssObsZCsGTF_n<<endl;
  END_CALCS   
     
-    //survey aggregate data
-    int nObsSrvBio                           // number of years of survey biomass data
-    !!nObsSrvBio = ptrMDS->pTSD->nyAbund;
-    ivector yrsObsSrvBio_n(1,nObsSrvBio)     // years which have survey biomass estimates
-    vector obsSrvNum_n(1,nObsSrvBio)         // survey numbers (total) in millions of crab
-    matrix obsSrvCV_xn(1,nSXs,1,nObsSrvBio)  // survey cv by sex x year
+    //survey aggregate abundance data
+    int nObsSrvNum                              // number of years of survey abundance data
+    !!nObsSrvNum = ptrMDS->pTSD->nyAbund;
+    ivector yrsObsSrvNum_n(1,nObsSrvNum)        // years which have survey abundance estimates
+    vector obsSrvNum_n(1,nObsSrvNum)            // survey numbers (total) in millions of crab
+    matrix obsSrvNumCV_xn(1,nSXs,1,nObsSrvNum)  // survey abundance cv by sex x year
  LOCAL_CALCS
-    obsSrvNum_n = ptrMDS->pTSD->abund_y;
+    CheckFile<<"nObsSrvNum = "<<nObsSrvNum<<endl;
+    yrsObsSrvNum_n = ptrMDS->pTSD->yrsAbund;
+    CheckFile<<"yrsObsSrvNum_n = "<<yrsObsSrvNum_n<<endl;
+    obsSrvNum_n = 1.0*ptrMDS->pTSD->abund_y;
     CheckFile<<"obsSrvNum_n = "<<endl<<tb<<obsSrvNum_n<<endl;
-    obsSrvCV_xn = ptrMDS->pTSD->cvsAbund_xy;
-    CheckFile<<"obsSrvCV_xn = "<<endl<<obsSrvCV_xn<<endl;
+    obsSrvNumCV_xn = 1.0*ptrMDS->pTSD->cvsAbund_xy;
+    CheckFile<<"obsSrvNumCV_xn = "<<endl<<obsSrvNumCV_xn<<endl;
+ END_CALCS   
+            
+    //survey aggregate mature biomass data
+    int nObsSrvMatBio                                 // number of years of survey mature biomass data
+    !!nObsSrvMatBio = ptrMDS->pTSD->nyMatBio;
+    ivector yrsObsSrvMatBio_n(1,nObsSrvMatBio)        // years which have survey mature biomass estimates
+    matrix obsSrvMatBio_xn(1,nSXs,1,nObsSrvMatBio)     // survey mature biomass of crab (1000's t))
+    matrix obsSrvMatBioCV_xn(1,nSXs,1,nObsSrvMatBio) // survey mature biomass cvs by sex, year
+ LOCAL_CALCS
+    CheckFile<<"nObsSrvMatBio = "<<nObsSrvMatBio<<endl;
+    yrsObsSrvMatBio_n = ptrMDS->pTSD->yrsAbund;
+    CheckFile<<"yrsObsSrvMatBio_n = "<<yrsObsSrvMatBio_n<<endl;
+    obsSrvMatBio_xn = 1.0*ptrMDS->pTSD->matBio_xy;
+    CheckFile<<"obsSrvMatBio_xn = "<<endl<<tb<<obsSrvMatBio_xn<<endl;
+    obsSrvMatBioCV_xn = 1.0*ptrMDS->pTSD->cvsMatBio_xy;
+    CheckFile<<"obsSrvMatBioCV_xn = "<<endl<<obsSrvMatBioCV_xn<<endl;
  END_CALCS   
             
     //survey numbers-at-size data
@@ -739,8 +765,6 @@ DATA_SECTION
     ivector yrsObsZCsSrv_n(1,nObsZCsSrv)                        // years which have survey size comps
     4darray ssObsZCsSrv_msxn(1,nMSs,1,nSCs,1,nSXs,1,nObsZCsSrv) // sample sizes for size comps by maturity, shell condition,sex,year
  LOCAL_CALCS
-    CheckFile<<"nObsSrvBio = "<<nObsSrvBio<<endl;
-    yrsObsSrvBio_n = ptrMDS->pTSD->yrsAbund;
     yrsObsZCsSrv_n = ptrMDS->pTSD->yrsNatZ;
     for (int m=1;m<=nMSs;m++) {
         for (int s=1;s<=nSCs;s++) {
@@ -2060,8 +2084,8 @@ PARAMETER_SECTION
     vector lkCapBio_RKF_x(1,nSXs) ///< likelihood for fit to capture biomass, by sex, in RKF 
     number lkCapBio_GTF           ///< likelihood for fit to capture biomass, in GTF 
     
-    matrix zsSrvMatBio_xn(1,nSXs,1,nObsSrvBio) ///< z-scores for fits to survey mature biomass
-    vector lkSrvMatBio_x(1,nSXs)               ///< likelihood for survey mature biomass data
+    matrix zsSrvMatBio_xn(1,nSXs,1,nObsSrvMatBio) ///< z-scores for fits to survey mature biomass
+    vector lkSrvMatBio_x(1,nSXs)                  ///< likelihood for survey mature biomass data
     
     number lkPrM2M ///< likelihood associated with the probability of molting to maturity
     
@@ -2481,7 +2505,7 @@ PRELIMINARY_CALCS_SECTION
     
     //survey numbers from aggregate input data
     obsSrvNum_y.initialize();//wts: now initializing this
-    for(int i=1;i<=nObsSrvBio;i++) obsSrvNum_y(yrsObsSrvBio_n(i)) = obsSrvNum_n(i);//<-wts : yrsObsZCsSrv_n(i) used to index obsSrvNum_y below [so yrsObsSrvBio_n=yrsObsZCsSrv_n?]
+    for(int i=1;i<=nObsSrvNum;i++) obsSrvNum_y(yrsObsSrvNum_n(i)) = obsSrvNum_n(i);//<-wts : yrsObsZCsSrv_n(i) used to index obsSrvNum_y below [so yrsObsSrvNum_n=yrsObsZCsSrv_n?]
     CheckFile<<"obsSrvNum_y"<<endl<<obsSrvNum_y<<endl;
     
     // Compute survey biomass
@@ -2491,7 +2515,6 @@ PRELIMINARY_CALCS_SECTION
     obsSrvBio_y.initialize();
     obsSrvBio_xy.initialize();
     obsSrvImmBio_xy.initialize();
-    obsSrvMatBio_xy.initialize();
     for (int m=1;m<=2;m++) { //maturity status
         for (int s=1;s<=2;s++) { //s condition
             for (int x=1;x<=2;x++) { //x
@@ -2502,7 +2525,6 @@ PRELIMINARY_CALCS_SECTION
                     //  sum to get mature biomass by x (AEP index is mature animals only?)
                     if(m==MATURE) {
                         obsSrvMatNum_sxy(s,x,yrsObsZCsSrv_n(i)) += sum(obsSrvPrNatZ_msxnz(m,s,x,i)*obsSrvNum_y(yrsObsZCsSrv_n(i)));
-                        obsSrvMatBio_xy(x,yrsObsZCsSrv_n(i))    +=     obsSrvPrNatZ_msxnz(m,s,x,i)*obsSrvNum_y(yrsObsZCsSrv_n(i))*wt_xmz(x,m);
                     } else {
                         obsSrvImmNum_sxy(s,x,yrsObsZCsSrv_n(i)) += sum(obsSrvPrNatZ_msxnz(m,s,x,i)*obsSrvNum_y(yrsObsZCsSrv_n(i)));
                         obsSrvImmBio_xy(x,yrsObsZCsSrv_n(i))    +=     obsSrvPrNatZ_msxnz(m,s,x,i)*obsSrvNum_y(yrsObsZCsSrv_n(i))*wt_xmz(x,m);
@@ -2517,6 +2539,14 @@ PRELIMINARY_CALCS_SECTION
     CheckFile<<"obsSrvBio_y"     <<endl<<obsSrvBio_y     <<endl;
     CheckFile<<"obsSrvBio_xy"    <<endl<<obsSrvBio_xy    <<endl;
     CheckFile<<"obsSrvImmBio_xy" <<endl<<obsSrvImmBio_xy <<endl;
+    
+    obsSrvMatBio_xy.initialize();
+    for (int x=1;x<=2;x++) {
+        for (int i=1;i<=nObsSrvMatBio;i++) {
+            obsSrvMatBio_xy(x)(yrsObsSrvMatBio_n(i)) = 1.0*ptrMDS->pTSD->matBio_xy(x,i);
+        }
+    }
+    
     CheckFile<<"obsSrvMatBio_xy" <<endl<<obsSrvMatBio_xy <<endl;
     
     // Number of large males
@@ -4504,30 +4534,30 @@ FUNCTION void evaluate_the_objective_function(int debug, ostream& cout)
     
     // Fit to indices (lognormal) - AEP DIFFERENT Variance multipliers
     //weight each years estimate by 1/(2*variance) - use cv of biomass in sqrt(log(cv^2+1)) as sd of log(biomass) 
-    for(int i=1;i<=nObsSrvBio;i++) {
-        cv_srv1(FEMALE,yrsObsSrvBio_n(i))  = like_wght_fbio*obsSrvCV_xn(FEMALE,i);  
-        cv_srv1(  MALE,yrsObsSrvBio_n(i))  = like_wght_mbio*obsSrvCV_xn(  MALE,i);
+    for(int i=1;i<=nObsSrvMatBio;i++) {
+        cv_srv1(FEMALE,yrsObsSrvMatBio_n(i))  = like_wght_fbio*obsSrvMatBioCV_xn(FEMALE,i);  
+        cv_srv1(  MALE,yrsObsSrvMatBio_n(i))  = like_wght_mbio*obsSrvMatBioCV_xn(  MALE,i);
     }
     // this fits mature biomass separate male and female
     zsSrvMatBio_xn.initialize();
     lkSrvMatBio_x.initialize();
-    dvector stdSrv(1,nObsSrvBio);
+    dvector stdSrv(1,nObsSrvMatBio);
     stdSrv.initialize();
     for (int x=1;x<=nSXs;x++){
-        stdSrv = sqrt(log(elem_prod(cv_srv1(x)(yrsObsSrvBio_n),cv_srv1(x)(yrsObsSrvBio_n))+1.0));
-        zsSrvMatBio_xn(x) = elem_div(log(obsSrvMatBio_xy(x)(yrsObsSrvBio_n)+smlValSrv)-log(modSrvMatBio_xy(x)(yrsObsSrvBio_n)+smlValSrv),stdSrv);
+        stdSrv = sqrt(log(elem_prod(cv_srv1(x)(yrsObsSrvMatBio_n),cv_srv1(x)(yrsObsSrvMatBio_n))+1.0));
+        zsSrvMatBio_xn(x) = elem_div(log(obsSrvMatBio_xy(x)(yrsObsSrvMatBio_n)+smlValSrv)-log(modSrvMatBio_xy(x)(yrsObsSrvMatBio_n)+smlValSrv),stdSrv);
         lkSrvMatBio_x(x)  = 0.5*norm2(zsSrvMatBio_xn(x));
         //lkSrvMatBio_x(x)  = calcNLL_normal(zsSrvMatBio_xn(x),stdSrv,debug,cout);
-        if (lkSrvMatBio_x(x)==0.0){
+        if (debug||(lkSrvMatBio_x(x)==0.0)){
             cout<<"x = "<<x<<endl;
-            cout<<"yrsObsSrvBio_n = "<<endl<<yrsObsSrvBio_n<<endl;
-            cout<<"stdSrv = "<<sqrt(log(elem_prod(cv_srv1(x)(yrsObsSrvBio_n),cv_srv1(x)(yrsObsSrvBio_n))+1.0))<<endl;
-            cout<<"log(obsSrvMatBio_xy(x)(yrsObsSrvBio_n) = "<<endl<<log(obsSrvMatBio_xy(x)(yrsObsSrvBio_n))<<endl;
-            cout<<"log(modSrvMatBio_xy(x)(yrsObsSrvBio_n) = "<<endl<<log(modSrvMatBio_xy(x)(yrsObsSrvBio_n))<<endl;
-            cout<<"stdSrv = "<<stdSrv<<endl;
-            cout<<"zsSrvMatBio_xn = "<<endl<<zsSrvMatBio_xn<<endl;
-            cout<<"lkSrvMatBio_x  = "<<lkSrvMatBio_x<<endl;
-            ad_exit(-1);
+            cout<<"yrsObsSrvMatBio_n = "<<endl<<yrsObsSrvMatBio_n<<endl;
+            cout<<"stdSrv = "<<sqrt(log(elem_prod(cv_srv1(x)(yrsObsSrvMatBio_n),cv_srv1(x)(yrsObsSrvMatBio_n))+1.0))<<endl;
+            cout<<"obsSrvMatBio_xy(x)(yrsObsSrvMatBio_n) = "<<endl<<obsSrvMatBio_xy(x)(yrsObsSrvMatBio_n)<<endl;
+            cout<<"modSrvMatBio_xy(x)(yrsObsSrvMatBio_n) = "<<endl<<modSrvMatBio_xy(x)(yrsObsSrvMatBio_n)<<endl;
+            cout<<"stdSrv = "<<endl<<stdSrv<<endl;
+            cout<<"zsSrvMatBio_xn = "<<endl<<zsSrvMatBio_xn(x)<<endl;
+            cout<<"lkSrvMatBio_x  = "<<lkSrvMatBio_x(x)<<endl;
+            if (lkSrvMatBio_x(x)==0.0) ad_exit(-1);
         }
     }
 //    cout<<"2"<<endl;    
@@ -5427,8 +5457,8 @@ FUNCTION void writeToR_OLD(ofstream& R_out)
         REP2R2(srv.obs.bio.M,obsSrvBio_xy(  MALE));
         REP2R2(srv.obs.bio.MF,obsSrvMatBio_xy(FEMALE));
         REP2R2(srv.obs.bio.MM,obsSrvMatBio_xy(  MALE));
-        REP2R2(srv.obs.bio.cv.MF,obsSrvCV_xn(FEMALE));
-        REP2R2(srv.obs.bio.cv.MM,obsSrvCV_xn(  MALE));
+        REP2R2(srv.obs.bio.cv.MF,obsSrvNumCV_xn(FEMALE));
+        REP2R2(srv.obs.bio.cv.MM,obsSrvNumCV_xn(  MALE));
         //--predicted biomass (1000's t)
         REP2R2(srv.mod.bio.F,modSrvBio_xy(FEMALE));
         REP2R2(srv.mod.bio.M,modSrvBio_xy(  MALE));
@@ -5950,8 +5980,8 @@ FUNCTION void writeToR_OLD(ofstream& R_out)
         dmatrix zsc(1,nSXs,styr,endyr);
         zsc.initialize();
         for (int x=1;x<=nSXs;x++){
-            for (int n=1;n<=nObsSrvBio;n++){
-                int y = yrsObsSrvBio_n(n);
+            for (int n=1;n<=nObsSrvMatBio;n++){
+                int y = yrsObsSrvMatBio_n(n);
                 zsc(x,y) = value(zsSrvMatBio_xn(x,n));
             }
         }
@@ -6419,8 +6449,8 @@ FUNCTION void myWriteModSrvInfoToR(ostream& os)
     dmatrix zsc(1,nSXs,styr,endyr);
     zsc.initialize();
     for (int x=1;x<=nSXs;x++){
-        for (int n=1;n<=nObsSrvBio;n++){
-            int y = yrsObsSrvBio_n(n);
+        for (int n=1;n<=nObsSrvMatBio;n++){
+            int y = yrsObsSrvMatBio_n(n);
             zsc(x,y) = value(zsSrvMatBio_xn(x,n));
         }
     }

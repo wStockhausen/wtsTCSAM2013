@@ -55,14 +55,22 @@ class GroundfishTrawlFisheryData;
     public:
         static int debug;
     private:
-        dmatrix inpAbund_yc;     //input abundance data (year,year+abundance+cv_females+cv_males)
+        dmatrix inpAbund_yc;     //input abundance data (year,year+female abundance+male abundance+cv_females+cv_males)
+        dmatrix inpMatBio_yc;    //input mature biomass data (year,year+female biomass+male biomass+cv_females+cv_males)
         d5_array inpNatZ_xsmyc;  //input numbers-at-size data (sex,shell,maturity,year,year+sample_size+nAtZ)
     public:
         int nyAbund;          //number of years of abundance data
         adstring unitsAbund;  //units for abundance data
         ivector yrsAbund;     //years for abundance data
         dvector abund_y;      //abundance by year
+        dmatrix abund_xy;     //abundance by sex, year
         dmatrix cvsAbund_xy;  //cvs by sex, year
+        
+        int nyMatBio;          //number of years of mature biomass data
+        adstring unitsMatBio;  //units for mature biomass data
+        ivector yrsMatBio;     //years for mature biomass data
+        dmatrix matBio_xy;     //mature biomass by sex, year
+        dmatrix cvsMatBio_xy;  //cvs by sex, year
         
         int nZCutPts;         //number of size bin cut pts
         dvector zCutPts;      //cut points for size bins
