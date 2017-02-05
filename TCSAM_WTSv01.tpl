@@ -215,6 +215,9 @@
 //            2. obsSrvMatBio_xy() is now set to the input survey biomass data. Previously, it
 //                  was calculated based on the size comps (using 5mm bins).
 //            3. Updated model version to '20170131'.
+//--20170205: 1. Changed conversion factor (divisor) from million lbs to 1000 t (or lbs to kg) from 
+//                  2.2045 to 2.20462262 (now using convKTtoMLBS as divisor) for fishery catch biomass.
+//            2. Updated model version to 20170205.
 //
 //IMPORTANT: 2013-09 assessment model had RKC params for 1992+ discard mortality TURNED OFF. 
 //           THE ESTIMATION PHASE FOR RKC DISCARD MORTALITY IS NOW SET IN THE CONTROLLER FILE!
@@ -245,7 +248,7 @@ GLOBALS_SECTION
     #include "ModelData.hpp"
     #include "OFLCalcs.hpp"
 
-    adstring version = "20170131";//model version
+    adstring version = "20170205";//model version
     ivector verModelControlFile(1,1);  //model control file version
     
     int maxPhase = 8;//default max phase for penalty reduction
@@ -276,9 +279,7 @@ GLOBALS_SECTION
     
     int recLag = 5;       //default lag from fertilization to recruitment (yrs)
     
-    double convLBStoG   = 0.00220462262;//conversion from lbs to g
-    double convLBStoMT  = 2204.62262;   //conversion from lbs to mt
-    double convMLBStoMT = 2.20462262;   //conversion from 10^6 lbs to mt
+    double convKTtoMLBS = 2.20462262;   //multiplier conversion from thousands t to 10^6 lbs
     
     const int nSXs = 2;//number of sexes
     const int nSCs = 2;//number of  shell 
@@ -898,21 +899,21 @@ DATA_SECTION
             nYrsTCF++;
             hasDirectedFishery_y(y) = 1;
             obsRetCatchNum_y(y)     = ptrMDS->pTCFR->catch_ty(1,i);
-            obsRetCatchBio_y(y)     = ptrMDS->pTCFR->catch_ty(2,i);
+            obsRetCatchBio_y(y)     = ptrMDS->pTCFR->catch_ty(2,i);//catch biomass in millions lbs
         }
         if (y>1990) nSelTCFM_devsZ50++;
     }
     CheckFile<<"number of directed fishery years after 1990: "<<nSelTCFM_devsZ50<<endl;
     CheckFile<<"retained numbers:        obsRetCatchNum_y"<<endl<<obsRetCatchNum_y<<endl;
     CheckFile<<"retained biomass (mlbs): obsRetCatchBio_y"<<endl<<obsRetCatchBio_y<<endl;
-    obsRetCatchBio_y /= 2.2045; // convert from millions lbs to 1000's tons   
+    obsRetCatchBio_y /= convKTtoMLBS; // convert from millions lbs to 1000's tons   
  END_CALCS
  
-    matrix obsDscBioTCF_xn(1,nSXs,1,nObsDscTCF)    // observed directed discard catch millions lbs female,male
+    matrix obsDscBioTCF_xn(1,nSXs,1,nObsDscTCF)   // observed directed discard catch millions lbs female,male
     !! obsDscBioTCF_xn = ptrMDS->pTCFD->catch_xy;
     !! CheckFile <<"obsDscBioTCF_xn (millions lbs)"<<endl;
     !! CheckFile <<obsDscBioTCF_xn<<endl;
-    !! obsDscBioTCF_xn /= 2.2045;                  // in 1000's of tons
+    !! obsDscBioTCF_xn /= convKTtoMLBS;           // now in 1000's of tons
     
     matrix obsDscBioSCF_xn(1,nSXs,1,nObsDscSCF)   // observed snow discard million lbs female,male
     !! cout<<wts::getBounds(obsDscBioSCF_xn)<<endl;
@@ -920,20 +921,20 @@ DATA_SECTION
     !! obsDscBioSCF_xn = ptrMDS->pSCF->catch_xy;
     !! CheckFile <<"obsDscBioSCF_xn (millions lbs)"<<endl;
     !! CheckFile <<obsDscBioSCF_xn<<endl;
-    !! obsDscBioSCF_xn /= 2.2045;                 // in 1000's of tons
+    !! obsDscBioSCF_xn /= convKTtoMLBS;           // now in 1000's of tons
     
-    matrix obsDscBioRKF_xn(1,nSXs,1,nObsDscRKF)     // observed red king discard millions lbs female,male
+    matrix obsDscBioRKF_xn(1,nSXs,1,nObsDscRKF)   // observed red king discard millions lbs female,male
     !! obsDscBioRKF_xn = ptrMDS->pRKF->catch_xy;
     !! CheckFile <<"obsDscBioRKF_xn (millions lbs)"<<endl;
     !! CheckFile <<obsDscBioRKF_xn<<endl;
-    !! obsDscBioRKF_xn /= 2.2045;                  // in 1000's of tons
+    !! obsDscBioRKF_xn /= convKTtoMLBS;           // now in 1000's of tons
         
-    vector obsDscBioGTF_n(1,nObsDscGTF)             // trawl bycatch millions lbs sex combined need to apply mort 80%
+    vector obsDscBioGTF_n(1,nObsDscGTF)           // trawl bycatch millions lbs sex combined need to apply mort 80%
     !! obsDscBioGTF_n = ptrMDS->pGTF->catch_y;
     !! CheckFile <<"obsDscBioGTF_n (millions lbs)"<<endl<<tb<<obsDscBioGTF_n<<endl;
-    !! obsDscBioGTF_n /= 2.2045;                   // convert to 1000s tons
+    !! obsDscBioGTF_n /= convKTtoMLBS;            // convert to 1000s tons
     
-    3darray wt_xmz(1,nSXs,1,nMSs,1,nZBs)  // weight at length (from kodiak program) in kg (??)
+    3darray wt_xmz(1,nSXs,1,nMSs,1,nZBs)  // weight at length (from kodiak program) in kg
  LOCAL_CALCS
     wt_xmz = ptrMDS->pBio->wAtZ_xmz;
     CheckFile<<"wt_xmz(FEMALE,IMMATURE)= "<<endl<<tb<<wt_xmz(FEMALE,IMMATURE)<<endl;
