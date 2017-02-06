@@ -218,6 +218,8 @@
 //--20170205: 1. Changed conversion factor (divisor) from million lbs to 1000 t (or lbs to kg) from 
 //                  2.2045 to 2.20462262 (now using convKTtoMLBS as divisor) for fishery catch biomass.
 //            2. Updated model version to 20170205.
+//            3. Now re-calculating selTCFR_sxz if optFshSel==1 using normalized versions
+//                  of selTCFM_sxz and retFcn_sxz.
 //
 //IMPORTANT: 2013-09 assessment model had RKC params for 1992+ discard mortality TURNED OFF. 
 //           THE ESTIMATION PHASE FOR RKC DISCARD MORTALITY IS NOW SET IN THE CONTROLLER FILE!
@@ -3227,12 +3229,14 @@ FUNCTION void get_selectivity(int debug,ostream& cout)                  //wts: r
 //    cout<<"done"<<endl;
     
      if (optFshSel==1){//set logistic selectivity = 1 in largest size bin
-        //TCFM and retFcn_syz
+        //TCFM, retFcn_syz, and selTCFR_syz
         for(int iy=styr;iy<endyr;iy++){
             selTCFM_syz(NEW_SHELL,iy) /= selTCFM_syz(NEW_SHELL,iy,nZBs);
             retFcn_syz( NEW_SHELL,iy) /= retFcn_syz( NEW_SHELL,iy,nZBs);
+            selTCFR_syz(NEW_SHELL,iy) = elem_prod(retFcn_syz(NEW_SHELL,iy),selTCFM_syz(NEW_SHELL,iy));
             selTCFM_syz(OLD_SHELL,iy) /= selTCFM_syz(OLD_SHELL,iy,nZBs);
             retFcn_syz( OLD_SHELL,iy) /= retFcn_syz( OLD_SHELL,iy,nZBs);
+            selTCFR_syz(OLD_SHELL,iy) = elem_prod(retFcn_syz(OLD_SHELL,iy),selTCFM_syz(OLD_SHELL,iy));
         }
         //TCFF
         selTCFF_z /= selTCFF_z(nZBs);
