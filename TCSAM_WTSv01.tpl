@@ -231,6 +231,12 @@
 //            7. Switched order in DATA_SECTION of reading data and model control files
 //            8. increased max function evaluations from 5k to 10k in phase 7
 //            9. decreased convergence criterion from 1e-3 to 1e-4 in phase 7
+//--20170207: 1. Added optEff_RKF option to control file
+//            2. Updated model version to 20170207.
+//            3. Increased precision in CheckFile to 12.
+//            4. Implemented changes associated with optEff_RKF for effort extrapolation for RKF
+//            5. Changed verModelControl to an integer (not an ivector) and 
+//                  incremented model control file version to 20170207.
 //
 //IMPORTANT: 2013-09 assessment model had RKC params for 1992+ discard mortality TURNED OFF. 
 //           THE ESTIMATION PHASE FOR RKC DISCARD MORTALITY IS NOW SET IN THE CONTROLLER FILE!
@@ -261,8 +267,8 @@ GLOBALS_SECTION
     #include "ModelData.hpp"
     #include "OFLCalcs.hpp"
 
-    adstring version = "20170206";//model version
-    ivector verModelControlFile(1,1);  //model control file version
+    adstring version = "20170207";       //model version
+    int verModelControlFile = 20170207;  //model control file version
     
     int maxPhase = 8;//default max phase for penalty reduction
     
@@ -353,16 +359,15 @@ DATA_SECTION
     //start writing to EchoOut.dat
     ///////////////////////////////////////////////////////////
  LOCAL_CALCS
-    verModelControlFile[1] = 20170206;
     echo.open("EchoOut.dat", ios::trunc);
     echo<<"#Starting TCSAM2013 Code"<<endl;
     echo<<"#model version                 = "<<version<<endl;
-    echo<<"#model control file version(s) = "<<verModelControlFile<<endl;
+    echo<<"#model control file version = "<<verModelControlFile<<endl;
     echo<<"#Starting DATA_SECTION"<<endl;
     
     cout<<"#Starting TCSAM2013 Code"<<endl;
     cout<<"#model version = "<<version<<endl;
-    cout<<"#model control file version(s) = "<<verModelControlFile<<endl;
+    cout<<"#model control file version = "<<verModelControlFile<<endl;
     cout<<"#Starting DATA_SECTION"<<endl;
  END_CALCS
  
@@ -560,13 +565,11 @@ DATA_SECTION
     init_int inpVerMCF   //input version number for control file
  LOCAL_CALCS
     CheckFile<<"Model ControlFile version = "<<inpVerMCF<<endl;
-    bool tst = false;
-    for (int i=1;i<=verModelControlFile.indexmax();i++) tst = tst|(inpVerMCF==verModelControlFile[i]);
-    if (!tst){
+    if (inpVerMCF!=verModelControlFile){
         cout<<"Model Control File version inconsistent with model."<<endl;
-        cout<<"Current versions = "<<verModelControlFile<<endl;
+        cout<<"Current version = "<<verModelControlFile<<endl;
         cout<<"Version in file = "<<inpVerMCF<<endl;
-        cout<<"Please use one of the current versions."<<endl;
+        cout<<"Please use the current version."<<endl;
         cout<<"Aborting..."<<endl;
         exit(-1);
     }
@@ -665,6 +668,10 @@ DATA_SECTION
     !!CHECK1(optFshBioConv);
     !!if (optFshBioConv==0) convKTtoMLBS = 2.2045; else convKTtoMLBS = 2.20462262;
     !!CHECK1(convKTtoMLBS);
+    
+    !!CheckFile<<"##--options for extrapolating effort for RKF bycatch"<<endl;
+    init_int optEff_RKF;
+    !!CHECK1(optEff_RKF);
     
     //population process-related
     !!CheckFile<<"##--options for estimating recruitment"<<endl;
@@ -1605,32 +1612,32 @@ LOCAL_CALCS
 //     !! CheckFile<<"catch_ghl"<<endl;
 //     !! CheckFile<<catch_ghl<<endl;
     
-    vector effSCF_y(1978,endyr-1)       //fixed index          
+    vector effSCF_y(styr,endyr-1)       //fixed index          
  LOCAL_CALCS
     effSCF_y.initialize();
      for (int i=1;i<=ptrMDS->pSCF->nyEff;i++){
          int y = (int) ptrMDS->pSCF->effort_yc(i,1);
-         if ((1978<=y)&&(y<endyr)) effSCF_y(y) = ptrMDS->pSCF->effort_yc(i,2);
+         if ((styr<=y)&&(y<endyr)) effSCF_y(y) = ptrMDS->pSCF->effort_yc(i,2);
     }
     CheckFile<<"effSCF_y"<<endl<<tb<<effSCF_y<<endl;
  END_CALCS   
  
-    vector effRKF_y(1953,endyr-1)       //fixed index          wts: now includes rkceffortjap values
+    vector effRKF_y(styr,endyr-1)       //fixed index          wts: now includes rkceffortjap values
  LOCAL_CALCS
     effRKF_y.initialize();
      for (int i=1;i<=ptrMDS->pRKF->nyEff;i++){
          int y = (int) ptrMDS->pRKF->effort_yc(i,1);
-         if ((1953<=y)&&(y<endyr)) effRKF_y(y) = ptrMDS->pRKF->effort_yc(i,2);
+         if ((styr<=y)&&(y<endyr)) effRKF_y(y) = ptrMDS->pRKF->effort_yc(i,2);
     }
     CheckFile<<"effRKF_y"<<endl<<tb<<effRKF_y<<endl;
  END_CALCS
     
-    vector effTCF_y(1968,endyr-1)     //fixed index
+    vector effTCF_y(styr,endyr-1)     //fixed index
  LOCAL_CALCS
     effTCF_y.initialize();
      for (int i=1;i<=ptrMDS->pTCFD->nyEff;i++){
          int y = (int) ptrMDS->pTCFD->effort_yc(i,1);
-         if ((1968<=y)&&(y<endyr)) effTCF_y(y) = ptrMDS->pTCFD->effort_yc(i,2);
+         if ((styr<=y)&&(y<endyr)) effTCF_y(y) = ptrMDS->pTCFD->effort_yc(i,2);
     }
     CheckFile<<"effTCF_y"<<endl<<tb<<effTCF_y<<endl;
  END_CALCS
@@ -2622,6 +2629,8 @@ PRELIMINARY_CALCS_SECTION
     //mean effort in bycatch fisheries over years with bycatch data
     mnEff_SCF = mean(effSCF_y(yrsObsDscSCF));
     mnEff_RKF = mean(effRKF_y(yrsObsDscRKF));
+    CheckFile<<"mnEff_SCF ="<<mnEff_SCF<<endl;
+    CheckFile<<"mnEff_RKF ="<<mnEff_RKF<<endl;
 
     //make sure these calculations get done at least once!!
     // Compute the moulting probabilities
@@ -3431,7 +3440,6 @@ FUNCTION void get_mortality(int debug,ostream& cout)
     // need to have the devs 1992 to present
     //20150601: ratio is now either mortality rate/effort OR fishing capture rate/effort
     fRKF_xy.initialize();
-    fRKF_xy(MALE)(styr,1952)= 0.02; //qRKF*mean(rkccatch(1969,1973));
     //20160325: scaling factor can now be related to a model parameter
     if (active(pLnEffXtr_RKF)){
         qRKF = mfexp(pLnEffXtr_RKF);//parameter being estimated
@@ -3445,13 +3453,16 @@ FUNCTION void get_mortality(int debug,ostream& cout)
         }
     }
     if (optEffXtr_RKF==1){
-        fRKF_xy(MALE)(1953,endyr-1) = qRKF*effRKF_y(1953,endyr-1)/mnEff_RKF;
+        fRKF_xy(MALE) = qRKF*effRKF_y/mnEff_RKF;
     } else if (optEffXtr_RKF==2) {
-        fRKF_xy(MALE)(1953,endyr-1) = -log(1-qRKF*effRKF_y(1953,endyr-1)/mnEff_RKF);//old style
+        fRKF_xy(MALE) = -log(1-qRKF*effRKF_y/mnEff_RKF);//old style
     }
+    fRKF_xy(MALE)(styr,1952)= 0.02; //
     if (optMinFs>0) {for (int iy=1953;iy<=1991;iy++) if(fRKF_xy(MALE)(iy)< 0.01) fRKF_xy(MALE)(iy) = 0.01;}
-    for (int iy=1984;iy<=1985;iy++) fRKF_xy(MALE)(iy) = 0.0;
-    for (int iy=1994;iy<=1995;iy++) fRKF_xy(MALE)(iy) = 0.0;
+    if (optEff_RKF==0){
+        for (int iy=1984;iy<=1985;iy++) fRKF_xy(MALE)(iy) = 0.0;
+        for (int iy=1994;iy<=1995;iy++) fRKF_xy(MALE)(iy) = 0.0;
+    }
     for (int iy=1;iy<=nObsDscRKF;iy++) {
         int y = yrsObsDscRKF(iy);
         fRKF_xy(MALE)(y) = mfexp(pAvgLnF_RKF+pF_DevsRKF(iy));
@@ -6681,6 +6692,7 @@ TOP_OF_MAIN_SECTION
   gradient_structure::set_NUM_DEPENDENT_VARIABLES(10000);//7000
   time(&start);
   CheckFile.open("CheckFile.dat");
+  CheckFile.precision(12);
   
 
 // ===============================================================================
