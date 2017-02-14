@@ -237,6 +237,9 @@
 //            4. Implemented changes associated with optEff_RKF for effort extrapolation for RKF
 //            5. Changed verModelControl to an integer (not an ivector) and 
 //                  incremented model control file version to 20170207.
+//--20170214: 1. Added optTCF_z50pre1991 and optGTF_Fpre1973 options to control file
+//            2. Updated model version to 20170214.
+//            3. Changed verModelControl to 20170214. 
 //
 //IMPORTANT: 2013-09 assessment model had RKC params for 1992+ discard mortality TURNED OFF. 
 //           THE ESTIMATION PHASE FOR RKC DISCARD MORTALITY IS NOW SET IN THE CONTROLLER FILE!
@@ -267,8 +270,8 @@ GLOBALS_SECTION
     #include "ModelData.hpp"
     #include "OFLCalcs.hpp"
 
-    adstring version = "20170207";       //model version
-    int verModelControlFile = 20170207;  //model control file version
+    adstring version = "20170214";       //model version
+    int verModelControlFile = 20170214;  //model control file version
     
     int maxPhase = 8;//default max phase for penalty reduction
     
@@ -658,6 +661,13 @@ DATA_SECTION
     !!CheckFile<<"#---------------------------------------------------"<<endl;
     !!CheckFile<<"#options"<<endl;
     !!CheckFile<<"#---------------------------------------------------"<<endl;
+    //new parameter averaging options
+    !!CheckFile<<"##--options for TCF capture selectivity z50 pre-1991"<<endl;
+    init_int optTCF_z50pre1991;
+    !!CHECK1(optTCF_z50pre1991);
+    !!CheckFile<<"##--options for GTF capture rate pre-1973"<<endl;
+    init_int optGTF_Fpre1973;
+    !!CHECK1(optGTF_Fpre1973);
     //input data-related options
     !!CheckFile<<"##--options for observed survey mature biomass"<<endl;
     init_int optSrvMatBio;
@@ -3194,7 +3204,11 @@ FUNCTION void get_selectivity(int debug,ostream& cout)                  //wts: r
     retFcn_syz.initialize();
     selTCFM_syz.initialize();
     
-    dvariable tmpSel50 = mean(mfexp(pSelTCFM_mnLnZ50A2+pSelTCFM_devsZ50(1,6)));
+    dvariable tmpSel50;
+    if (optTCF_z50pre1991==0) 
+        tmpSel50 = mean(mfexp(pSelTCFM_mnLnZ50A2+pSelTCFM_devsZ50(1,6)));
+    else 
+        tmpSel50 = mfexp(pSelTCFM_mnLnZ50A2);
     for(int iy=styr;iy<=1990;iy++){ 
         retFcn_syz(NEW_SHELL, iy) = 1./(1.+mfexp(-1.*pRetTCFM_slpA1*(zBs-pRetTCFM_z50A1)));
         selTCFM_syz(NEW_SHELL,iy) = 1./(1.+mfexp(-1.*pSelTCFM_slpA1*(zBs-tmpSel50)));    
@@ -3471,7 +3485,11 @@ FUNCTION void get_mortality(int debug,ostream& cout)
     if (debug) cout<<"5"<<endl;
     
     fGTF_xy.initialize();
-    for (int iy=styr;iy<=1972;iy++) fGTF_xy(MALE)(iy) = mean(mfexp(pAvgLnF_GTF+pF_DevsGTF));    
+    if (optGTF_Fpre1973==0)
+        fGTF_xy(MALE)(styr,1972) = mean(mfexp(pAvgLnF_GTF+pF_DevsGTF));//2016 way
+    else
+        fGTF_xy(MALE)(styr,1972) = mfexp(pAvgLnF_GTF);                 //way to match TCSAM02
+//    for (int iy=styr;iy<=1972;iy++) fGTF_xy(MALE)(iy) = mean(mfexp(pAvgLnF_GTF+pF_DevsGTF));    
     for (int iy=1973;iy<endyr;iy++) fGTF_xy(MALE)(iy) = mfexp(pAvgLnF_GTF+pF_DevsGTF(iy));
     fGTF_xy(FEMALE) = fGTF_xy(MALE)*mfexp(pAvgLnF_GTFF);
     if (debug) cout<<"6"<<endl;
@@ -5408,6 +5426,8 @@ FUNCTION void writeToR_OLD(ofstream& R_out)
         REP2R2(mod.optNM,optNM);
         REP2R2(mod.optFM,optFM);
         REP2R2(mod.optFMFit,optFMFit);
+        REP2R2(mod.optTCF_z50pre1991,optTCF_z50pre1991);
+        REP2R2(mod.optGTF_Fpre1973,optGTF_Fpre1973);
         
         //model processes
         //--molting
